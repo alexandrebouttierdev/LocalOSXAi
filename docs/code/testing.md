@@ -26,6 +26,9 @@ Run with `make test`. The full gate is `make check`.
 | `Recorder` | Capturing values from `@Sendable` callbacks | Thread-safe append-only log |
 | `StubURLProtocol` | Testing providers over real `URLSession` requests | Per-test host routing, chunked/delayed/hanging responses, `URLError`s, captured requests, `stopLoading` count |
 | `OllamaFixtures`, `OpenAIFixtures` | Decoder and provider tests | Recorded (Ollama text stream) and documented wire payloads |
+| `StubApprover` | Tool execution and runtime tests | Fixed approval decision, records requests |
+| `StubResolver`, `StubInstructionsLoader` | Runtime tests | Fixed model/provider resolution, fixed AGENTS.md |
+| `SlowTool`, `FailingTool`, `RecordingWriteTool`, `EchoTool` | Executor and runtime tests | Timeout/cancellation, failure, approval-gated writes, echo |
 
 **Unit tests never contact Ollama or LM Studio.** The opt-in live suite
 (`Tests/Integration/LiveProviderTests.swift`) runs with `make test-live`, which sets
@@ -35,8 +38,8 @@ Run with `make test`. The full gate is `make check`.
 
 | Area | Required cases |
 |---|---|
-| Agent (Phase 3) | normal completion, one tool call, multiple tool calls, invalid tool call, tool failure, provider failure, cancellation, timeout, max iterations, context overflow |
-| Filesystem tools (Phase 3) | read existing, read missing, write, edit, invalid path, path outside project, permission error |
+| Agent ✅ | normal completion, one tool call, multiple tool calls, invalid tool call, tool failure, provider failure, cancellation, timeout, max iterations, context overflow |
+| Filesystem tools ✅ | read existing, read missing, write, edit, invalid path, path outside project, permission error |
 | Terminal (Phase 4) | success, failure exit code, timeout, cancellation, policy refusal |
 | Providers (Phase 2) | request encoding, stream decoding (fixtures), malformed chunks, HTTP errors, unreachable server |
 | Repositories | CRUD, ordering, migrations (Phase 5) |

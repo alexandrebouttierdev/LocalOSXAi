@@ -56,6 +56,6 @@ struct ProjectService: Sendable {
     /// Canonical form used as the project boundary: absolute, standardized,
     /// symlinks resolved (so `/var/…` and `/private/var/…` are the same project).
     static func normalized(_ url: URL) -> URL {
-        url.standardizedFileURL.resolvingSymlinksInPath()
+        ProjectBoundary.canonical(url.standardizedFileURL)
     }
 }

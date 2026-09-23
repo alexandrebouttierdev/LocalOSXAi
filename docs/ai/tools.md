@@ -8,8 +8,9 @@
 | Registry: unique, valid names, stable order | `ToolRegistry` | ✅ |
 | Parsing: raw model JSON → arguments | `ToolArguments.parse` | ✅ |
 | Validation: required, types, enums, unknown keys | `ToolParameterSchema.validate` | ✅ |
-| Permission: allowed / approval / blocked | `ToolExecutor` + policy | Phase 3–4 |
-| Execution | `AgentTool.execute` | Phase 3–4 |
+| Permission: allowed / approval / blocked | `ToolPermissionPolicy`, applied by `ToolExecutor` | ✅ (command policy: Phase 4) |
+| Approval | `ToolApprover` (`AgentViewModel` + `ApprovalBanner`) | ✅ |
+| Execution with timeout and output limit | `ToolExecutor` | ✅ |
 | Presentation | `ToolCallRecord` + `ToolCallView` (Agent feature) | ✅ |
 
 A tool never decides its own permission and never renders UI. The executor never contains
@@ -41,30 +42,37 @@ the UI).
 - **`null` means absent** for optional parameters.
 - Validation errors are **returned to the model** as tool results, not thrown out of the run.
 
-## Execution pipeline (Phase 3)
+## Execution pipeline
 
 ```
 LLMToolCall ─▶ registry.tool(named:)          unknownTool ─┐
             ─▶ ToolArguments.parse            malformed  ──┤
             ─▶ tool.parameters.validate       invalid    ──┼─▶ failed ToolResult to the model
-            ─▶ policy.decision(tool, args)    blocked    ──┤
-               └ approval? ─▶ ApprovalHandler  denied    ──┘
+            ─▶ policy.permission(tool, args)  blocked    ──┤
+               └ approval? ─▶ ToolApprover     denied    ──┘
             ─▶ withTimeout(tool.execute)      timedOut / error ─▶ failed ToolResult
             ─▶ ToolResult (output truncated to a budget, e.g. 16K characters, with a marker)
 ```
 
-## Initial catalog
+## Catalog
 
-| Tool | Effect | Phase | Notes |
+| Tool | Effect | Status | Notes |
 |---|---|---|---|
-| `read_file` | readOnly | 3 | `path`, optional `offset`/`limit` lines; refuses binaries; caps size |
-| `list_directory` | readOnly | 3 | `path`, optional `recursive`, respects `.gitignore` |
-| `search_files` | readOnly | 3 | glob on paths |
-| `search_text` | readOnly | 3 | regex/literal content search, capped results |
-| `write_file` | writesFiles | 3 (review in 4) | creates or replaces; produces a `FileChange` |
-| `edit_file` | writesFiles | 3 (review in 4) | exact-match `old_string` → `new_string`; fails if not unique |
-| `run_command` | executesCommands | 4 | goes through `CommandPolicy` |
-| `git_status`, `git_diff`, `git_log` | readOnly | 4 | through `GitService` |
+| `read_file` | readOnly | ✅ | `path`, `offset` (1-based), `limit` (default 400, max 2000). Numbered lines. Refuses folders, binaries (NUL byte), non-UTF-8 files and files over 2 MB |
+| `list_directory` | readOnly | ✅ | `path`, `recursive`. At most 500 entries |
+| `search_files` | readOnly | ✅ | Glob `pattern` (`*`, `**`, `?`, `{a,b}`; a pattern without `/` matches file names), `path`. At most 200 results |
+| `search_text` | readOnly | ✅ | `query`, `is_regex`, `case_sensitive`, `path`, `file_pattern`. At most 200 matches, lines capped at 300 characters, files over 1 MB skipped |
+| `edit_file` | writesFiles | ✅ | Exact `old_string` → `new_string`. Fails if the string is not found or not unique, unless `replace_all` is set |
+| `write_file` | writesFiles | ✅ | Creates parent folders, atomic write |
+| `run_command` | executesCommands | Phase 4 | Goes through `CommandPolicy` |
+| `git_status`, `git_diff`, `git_log` | readOnly | Phase 4 | Through `GitService` |
+
+Listing and searching skip hidden files and folders, and a fixed set of folders that are never
+useful to an agent (`.git`, `.build`, `DerivedData`, `node_modules`, `Pods`, `dist`, `.venv`, `target`…).
+`.gitignore` rules are **not** applied yet: that is planned for Phase 4, alongside Git.
+`search_text` never searches files that look like secrets (see the security docs).
+
+Write tools describe themselves for the approval banner (“Edit notes.md”, “Write a.txt (12 lines)”).
 
 ## Boundary
 

@@ -30,11 +30,11 @@
 | CommandPalette | ⌘K palette: filtering, ranking, keyboard selection | 1 |
 | Projects | Opening folders, recent projects | 1 (storage in 5) |
 | Sessions | Conversations per project, resume, auto-title | 1 (storage in 5) |
-| Agent | Conversation UI, run lifecycle, transcript model, `AgentService` contract | 1 (runtime in 3) |
+| Agent | Conversation UI, agent runtime (loop, context, tool execution, approvals) | 1–3 |
 | Models | Model discovery (`ProviderRegistry`), selection, resolution for the agent | 1–2 |
 | Settings | Appearance, provider settings (endpoints, context, timeout) with live status | 1–2 |
 
-Planned features: Files (3), Changes (4), Terminal (4), Git (4). Their folders are created
+Planned features: Files, Changes, Terminal and Git (Phase 4). Their folders are created
 when their implementation starts; the UI already shows labelled placeholders for them.
 
 ## Single module, enforced boundaries

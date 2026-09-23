@@ -6,8 +6,8 @@ abstract capabilities, never providers.**
 ```
 User request
     │
-AgentViewModel ──▶ AgentService (protocol)            ◀── DirectChatAgentService (Phase 2, no tools)
-                        │                                  AgentRuntime (Phase 3) · SimulatedAgentService (demo)
+AgentViewModel ──▶ AgentService (protocol)            ◀── AgentRuntime · SimulatedAgentService (demo)
+   (ToolApprover)       │
                         ▼
                  ┌─ Agent loop ─────────────────────────────────────────┐
                  │ ContextManager ─▶ LLMProvider.stream ─▶ LLMEvent…     │
@@ -26,10 +26,10 @@ AgentViewModel ──▶ AgentService (protocol)            ◀── DirectChat
 | Provider | `LLMProvider`: `listModels()`, `stream(request:)` | ✅ Ollama, LM Studio, generic OpenAI-compatible |
 | Model resolution | `ModelResolving` → `ProviderRegistry` (discovery, per-provider isolation) | ✅ |
 | Model | `AIModel` + `ModelCapabilities` + `ContextWindow` | ✅ |
-| Agent service | `AgentService.run(_:) -> AsyncThrowingStream<AgentEvent, Error>` | ✅ `DirectChatAgentService` (streaming chat, no tools), simulated ✅, tool runtime Phase 3 |
-| Tools | `AgentTool`, `ToolRegistry`, `ToolParameterSchema`, `ToolArguments`, `ToolResult` | Contract ✅, tools Phase 3–4 |
-| Context | `ContextUsage`, `TokenEstimator`, `ConversationWindow` (drop oldest) | ✅, `ContextManager` Phase 3 |
-| Tool executor, permission policy | `ToolExecutor`, `CommandPolicy` | Phase 3–4 |
+| Agent service | `AgentService.run(_:approver:)` | ✅ `AgentRuntime` (tool loop), simulated ✅ |
+| Tools | `AgentTool`, `ToolRegistry`, `ToolParameterSchema`, `ToolArguments`, `ToolResult` | ✅ 6 filesystem tools; terminal and Git in Phase 4 |
+| Context | `ContextUsage`, `TokenEstimator`, `AgentPrompt`, `RunContext` | ✅ (summarization planned) |
+| Tool executor, permissions, approvals | `ToolExecutor`, `ToolPermissionPolicy`, `ToolApprover` | ✅ (`CommandPolicy`: Phase 4) |
 
 ## Documents
 

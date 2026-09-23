@@ -24,19 +24,19 @@ struct AppEnvironment {
         ProcessInfo.processInfo.environment["LOCALOSXAI_SIMULATED"] == "1" ? simulated() : live()
     }
 
-    /// Real providers from the saved settings, streaming chat without tools
-    /// (Phase 2). Phase 3 replaces `agentService` and `toolRegistry`,
-    /// Phase 5 the repositories.
+    /// Real providers from the saved settings and the tool-using agent
+    /// runtime. Phase 4 adds terminal and Git tools, Phase 5 the repositories.
     static func live() -> AppEnvironment {
         let store = UserDefaultsProviderSettingsStore()
         let registry = ProviderRegistry(providers: ProviderFactory.providers(for: store.load()))
+        let tools = builtInTools()
         return AppEnvironment(
             projectRepository: InMemoryProjectRepository(),
             sessionRepository: InMemorySessionRepository(),
             settingsStore: store,
             registry: registry,
-            agentService: DirectChatAgentService(resolver: registry),
-            toolRegistry: .empty,
+            agentService: AgentRuntime(resolver: registry, tools: tools, instructionsLoader: FileProjectInstructionsLoader()),
+            toolRegistry: tools,
             makeProviders: ProviderFactory.providers(for:),
             isSimulated: false
         )
@@ -54,6 +54,16 @@ struct AppEnvironment {
             makeProviders: { _ in [SimulatedLLMProvider()] },
             isSimulated: true
         )
+    }
+
+    /// The built-in tools. Their names are constants, so a registration
+    /// failure is a programming error caught by the first launch and by tests.
+    static func builtInTools() -> ToolRegistry {
+        do {
+            return try ToolRegistry(FileSystemTools.all())
+        } catch {
+            preconditionFailure("Invalid built-in tool registry: \(error)")
+        }
     }
 
     func makeWorkspaceViewModel() -> WorkspaceViewModel {

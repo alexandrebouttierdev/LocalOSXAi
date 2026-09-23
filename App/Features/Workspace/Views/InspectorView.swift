@@ -17,16 +17,26 @@ struct InspectorView: View {
                     } else {
                         placeholder("Context usage appears after the first run.")
                     }
+                    if let sources = viewModel.activeAgent?.instructionSources, !sources.isEmpty {
+                        Label("Instructions: \(sources.joined(separator: ", "))", systemImage: "doc.text")
+                            .font(AppTypography.caption)
+                            .foregroundStyle(AppColors.textSecondary)
+                    }
                 }
                 InspectorSection(title: "Tools") {
                     if viewModel.toolDefinitions.isEmpty {
-                        placeholder("No tools registered. Filesystem tools arrive in Phase 3; terminal and Git tools in Phase 4.")
+                        placeholder("No tools available.")
                     } else {
                         ForEach(viewModel.toolDefinitions, id: \.name) { tool in
                             Text(tool.name)
                                 .font(AppTypography.code)
                                 .foregroundStyle(AppColors.textPrimary)
                                 .help(tool.description)
+                        }
+                        if viewModel.models.selectedModel?.supportsTools == false {
+                            placeholder("The selected model does not support tools: the agent can only chat.")
+                        } else {
+                            placeholder("File changes ask for your approval. Terminal and Git tools arrive in Phase 4.")
                         }
                     }
                 }

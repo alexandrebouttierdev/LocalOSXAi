@@ -7,6 +7,8 @@ import SwiftUI
 /// and cached, not recomputed in `body` on every streamed token.
 struct AgentMessageView: View {
     let message: AgentMessage
+    /// False for follow-up messages of the same agent turn.
+    var showsHeader = true
 
     var body: some View {
         switch message.role {
@@ -33,7 +35,9 @@ struct AgentMessageView: View {
 
     private var assistantMessage: some View {
         VStack(alignment: .leading, spacing: AppSpacing.sm) {
-            header
+            if showsHeader || message.state != .complete {
+                header
+            }
             if !message.reasoning.isEmpty {
                 ReasoningView(text: message.reasoning, isStreaming: message.state == .streaming && message.text.isEmpty)
             }

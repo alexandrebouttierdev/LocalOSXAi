@@ -17,6 +17,9 @@ struct AgentView: View {
             } else {
                 transcript
             }
+            if let request = viewModel.pendingApproval {
+                ApprovalBanner(request: request, onDecision: viewModel.resolveApproval)
+            }
             ComposerView(
                 draft: $viewModel.draft,
                 isRunning: viewModel.isRunning,
@@ -31,8 +34,10 @@ struct AgentView: View {
     private var transcript: some View {
         ScrollView {
             LazyVStack(alignment: .leading, spacing: AppSpacing.xl) {
-                ForEach(viewModel.messages) { message in
-                    AgentMessageView(message: message)
+                ForEach(Array(viewModel.messages.enumerated()), id: \.element.id) { index, message in
+                    // Consecutive agent messages (one per tool iteration) share one header.
+                    let continuesAgentTurn = index > 0 && viewModel.messages[index - 1].role == .assistant
+                    AgentMessageView(message: message, showsHeader: !continuesAgentTurn)
                 }
             }
             .frame(maxWidth: AppLayout.readableWidth, alignment: .leading)

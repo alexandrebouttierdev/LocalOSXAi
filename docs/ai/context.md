@@ -1,10 +1,10 @@
 # Context management
 
-**Status:** `ContextUsage`, `TokenEstimator`, the inspector meter (“38.4K / 100K context”) and
-`ConversationWindow` are implemented. `ConversationWindow` keeps the system prompt and the new
-message, reserves 25% (at least 1K) of the context for the answer, and drops the oldest turns.
-Reported usage replaces the estimate after each answer. `ContextManager` (Phase 3) replaces it
-with the full design below.
+**Status:** implemented in Phase 3 by `AgentPrompt` (system prompt, instructions, history
+conversion) and `RunContext` (budget and compaction), with the inspector meter
+(“38.4K / 100K context”) and the list of loaded instruction files. **Not implemented yet:**
+summarizing old turns with the model (see the compaction steps below). History is dropped instead.
+Git context and attached files arrive with Phases 4 and 6.
 
 ## Inputs, in priority order
 
@@ -36,12 +36,14 @@ budget = model.contextWindow.effectiveTokens − reserved output (e.g. 25%, min 
 
 When a project opens, the manager loads instruction files, in this documented precedence:
 
-1. `AGENTS.md` at the project root: **primary**, and the only one loaded by default.
-2. `AGENTS.md` in subdirectories: loaded when the agent works on files under them. The nearest
-   file wins on conflicts.
-3. `CLAUDE.md` and `.cursor/rules/*.mdc`: **opt-in per project**, off by default. Mixing rule
-   systems silently would make behavior unpredictable, so the user explicitly chooses to
-   include them, and they are then appended *after* AGENTS.md, labelled with their source.
+1. `AGENTS.md` at the project root: **primary**, and the only file loaded today
+   (`FileProjectInstructionsLoader`, capped at 16,000 characters with a reported truncation).
+2. `AGENTS.md` in subdirectories: planned. It will be loaded when the agent works on files under
+   them, and the nearest file will win on conflicts.
+3. `CLAUDE.md` and `.cursor/rules/*.mdc`: planned as **opt-in per project** (project settings,
+   Phase 5), off by default. Mixing rule systems silently would make behavior unpredictable, so
+   the user will explicitly choose to include them. They will be appended *after* AGENTS.md,
+   labelled with their source.
 
 Every loaded file is listed in the inspector so the user knows what the model was told.
 
@@ -49,10 +51,14 @@ Every loaded file is listed in the inspector so the user knows what the model wa
 
 When the next request would exceed the budget:
 
-1. truncate large tool outputs from earlier iterations (keep head and tail, add a marker);
-2. summarize the oldest conversation turns with the same model into a “Conversation summary”
-   message (the original messages remain in the session, and only the prompt changes);
-3. if still over budget, fail the run with `contextOverflow` and suggest starting a new session.
+1. ✅ truncate tool outputs from earlier iterations of the run to 1,500 characters (head and
+   tail, with a marker), keeping the latest result intact;
+2. ✅ drop earlier conversation, oldest first, never leaving an answer without its question.
+   Earlier runs' tool calls are already summarized to one line each in history;
+3. *planned*: summarize the oldest turns with the same model into a “Conversation summary”
+   message instead of dropping them (the session keeps the originals);
+4. ✅ if the run still does not fit, fail with `contextOverflow` and suggest a shorter message
+   or a larger context.
 
 Compaction never removes priorities 1–3.
 

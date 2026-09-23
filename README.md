@@ -12,7 +12,7 @@ prototype, and it is not meant to be a clone of Cline or OpenCode.
 
 ## Features
 
-Status as of **Phase 2 (providers)**:
+Status as of **Phase 3 (agent runtime)**:
 
 | Area | Status |
 |---|---|
@@ -21,18 +21,21 @@ Status as of **Phase 2 (providers)**:
 | Command palette (⌘K), menu commands and shortcuts | ✅ |
 | Project selection (open folder, recent projects) | ✅ (in memory until Phase 5) |
 | Sessions (create, resume, auto-title) | ✅ (in memory until Phase 5) |
-| Streaming chat with local models (reasoning, stop, context meter) | ✅ no tools yet |
+| Agent with tools: read, list, search files and text, edit and write files | ✅ |
+| Approval of file changes (allow once / for the session / deny), stop anytime | ✅ |
+| Context management: budget, compaction, `AGENTS.md` loading | ✅ |
+| Streaming with reasoning, context meter | ✅ |
 | Ollama and LM Studio providers, model discovery, provider settings | ✅ |
 | Model selection grouped by provider (inspector, ⌘L) | ✅ |
 | Core contracts: `LLMProvider`, `AgentTool`, `ToolRegistry`, schema validation | ✅ |
-| Agent runtime, context manager, filesystem tools | Phase 3 |
-| Terminal, Git, diff/changes review, command permissions | Phase 4 |
+| Terminal, Git, diff/changes review, command permissions, Files tab | Phase 4 |
 | SQLite persistence, history, settings | Phase 5 |
 | Polish, animations, accessibility audit, performance | Phase 6 |
 
-The agent can chat but cannot read or modify files yet (tools arrive in Phase 3). To work on
-the UI without any model server, run with `LOCALOSXAI_SIMULATED=1`. A **Simulated** badge
-then appears in the sidebar.
+The agent works inside the opened project folder only. It reads freely, but every file change
+needs your approval. It cannot run commands yet (Phase 4). To work on the UI without any
+model server, run with `LOCALOSXAI_SIMULATED=1`. A **Simulated** badge then appears in the
+sidebar.
 
 ## Architecture
 
@@ -118,8 +121,8 @@ first.
 1. **Foundation** ✅: app shell, design system, navigation, command palette, projects,
    core protocols, test doubles, docs.
 2. **Providers** ✅: Ollama and LM Studio providers, model discovery, streaming chat, provider settings.
-3. **Agent runtime**: agent loop, context manager (AGENTS.md loading, budgeting, compaction),
-   tool executor, filesystem tools.
+3. **Agent runtime** ✅: agent loop, context manager (AGENTS.md loading, budgeting, compaction),
+   tool executor with approvals, filesystem tools.
 4. **Execution**: terminal, Git service, changes/diff review, command permission policy.
 5. **Persistence**: SQLite store with migrations, session history, settings.
 6. **Polish**: Markdown rendering, animations, accessibility audit, performance, error recovery.

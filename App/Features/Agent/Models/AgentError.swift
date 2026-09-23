@@ -7,6 +7,8 @@ enum AgentError: Error, Hashable, Sendable {
     case modelUnavailable(name: String)
     /// Even the minimal prompt (instructions and the new message) exceeds the budget.
     case contextOverflow(usedTokens: Int, budgetTokens: Int)
+    /// The model kept producing tool calls that could not be executed.
+    case tooManyInvalidToolCalls(count: Int)
 }
 
 extension AgentError: LocalizedError {
@@ -19,6 +21,8 @@ extension AgentError: LocalizedError {
         case let .contextOverflow(used, budget):
             "The message is too long for the model's context (\(TokenCountFormatter.string(for: used)) of "
                 + "\(TokenCountFormatter.string(for: budget)) tokens)."
+        case .tooManyInvalidToolCalls(let count):
+            "The model produced \(count) rounds of invalid tool calls in a row, so the run was stopped."
         }
     }
 
@@ -30,6 +34,8 @@ extension AgentError: LocalizedError {
             "Check that its server is running, then refresh the model list."
         case .contextOverflow:
             "Shorten the message, or increase the context length in Settings."
+        case .tooManyInvalidToolCalls:
+            "Try again, rephrase the request, or choose a model with better tool support."
         }
     }
 }

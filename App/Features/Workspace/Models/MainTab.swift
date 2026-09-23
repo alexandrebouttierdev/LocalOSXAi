@@ -32,15 +32,14 @@ enum MainTab: String, CaseIterable, Identifiable, Sendable {
     var plannedPhase: Int? {
         switch self {
         case .agent: nil
-        case .files: 3
-        case .changes, .terminal: 4
+        case .files, .changes, .terminal: 4
         }
     }
 
     var placeholderMessage: String {
         switch self {
         case .agent: ""
-        case .files: "Browse and search project files. Arrives with the filesystem tools."
+        case .files: "Browse and preview project files. The agent can already read and search them."
         case .changes: "Review, accept or reject the agent's edits as diffs before they are applied."
         case .terminal: "Run commands with streamed output, subject to the command permission policy."
         }

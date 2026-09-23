@@ -24,11 +24,21 @@ protocol AgentTool: Sendable {
     /// during long operations, and must refuse paths outside
     /// `context.projectRoot` by throwing `ToolError.outsideProjectBoundary`.
     func execute(arguments: ToolArguments, context: ToolContext) async throws -> ToolResult
+
+    /// Human description of a call, used in approval prompts. Has a default.
+    func describe(arguments: ToolArguments) -> String
 }
 
 extension AgentTool {
     var definition: ToolDefinition {
         ToolDefinition(name: name, description: description, parameters: parameters)
+    }
+
+    /// One line describing what a call will do, shown when asking the user
+    /// for approval (“Write Sources/App.swift (42 lines)”). Tools with side
+    /// effects should override it with something more precise.
+    func describe(arguments: ToolArguments) -> String {
+        "\(name) \(JSONValue.object(arguments.values).serialized())"
     }
 }
 

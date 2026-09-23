@@ -161,7 +161,7 @@ final class WorkspaceViewModel {
         case .newSession, .showAgent, .showFiles, .showChanges, .openTerminal:
             selectedProjectID == nil ? "Open a project first" : nil
         case .searchFiles:
-            "Available in Phase 3"
+            "Available in Phase 4"
         case .changeModel:
             models.allModels.isEmpty ? "No models available" : nil
         }

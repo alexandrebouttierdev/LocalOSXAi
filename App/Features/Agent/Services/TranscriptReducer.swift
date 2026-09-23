@@ -19,13 +19,15 @@ enum TranscriptReducer {
             updateStreaming(&messages, now: now) { $0.reasoning += delta }
         case .toolCallStarted(let record):
             updateStreaming(&messages, now: now) { $0.toolCalls.append(record) }
+        case let .toolCallStatusChanged(id, status):
+            updateToolCall(id: id, in: &messages) { $0.status = status }
         case let .toolCallFinished(id, status, summary, output):
             updateToolCall(id: id, in: &messages) { record in
                 record.status = status
                 record.summary = summary
                 record.output = output
             }
-        case .contextUsageUpdated:
+        case .contextUsageUpdated, .instructionsLoaded:
             break
         case .finished:
             finishStreaming(&messages, as: .complete)

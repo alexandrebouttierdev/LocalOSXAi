@@ -11,8 +11,12 @@ enum AgentEvent: Sendable, Hashable {
     case textDelta(String)
     case reasoningDelta(String)
     case toolCallStarted(ToolCallRecord)
+    /// A started call moved to another non-final state (awaiting approval, running).
+    case toolCallStatusChanged(id: String, status: ToolCallRecord.Status)
     case toolCallFinished(id: String, status: ToolCallRecord.Status, summary: String, output: String)
     case contextUsageUpdated(ContextUsage)
+    /// Instruction files loaded into the context, by relative path.
+    case instructionsLoaded([String])
     /// Last event of a run that was not cancelled and did not throw.
     case finished(AgentRunOutcome)
 }

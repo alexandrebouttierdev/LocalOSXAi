@@ -4,7 +4,7 @@ import Foundation
 ///
 /// It exists for two reasons (docs/decisions/0005-agent-runtime.md):
 /// 1. it proves the UI is independent of the AI runtime — the whole interface
-///    runs on it until the real agent lands in Phase 3;
+///    can run on it without any model server (`LOCALOSXAI_SIMULATED=1`);
 /// 2. it gives previews and manual UI testing a deterministic session.
 ///
 /// It never touches the filesystem: the tool call it shows is simulated.
@@ -13,7 +13,7 @@ struct SimulatedAgentService: AgentService {
     var chunkDelay: Duration = .milliseconds(18)
     var contextBudget = ContextWindow.fallbackTokens
 
-    func run(_ request: AgentRunRequest) -> AsyncThrowingStream<AgentEvent, Error> {
+    func run(_ request: AgentRunRequest, approver: any ToolApprover) -> AsyncThrowingStream<AgentEvent, Error> {
         let script = Self.script(for: request)
         let delay = chunkDelay
         let usage = ContextUsage(
@@ -50,15 +50,15 @@ struct SimulatedAgentService: AgentService {
             id: callID,
             status: .succeeded,
             summary: "Simulated result",
-            output: "This is a simulated tool result. Real filesystem tools arrive in Phase 3."
+            output: "This is a simulated tool result: simulated mode never reads files."
         ))
         let answer = """
             This is a simulated session running in \(request.projectRoot.lastPathComponent). \
             No model was called and no file was read or changed.
 
-            The interface is driven by the same event stream the real agent will produce, \
+            The interface is driven by the same event stream the real agent produces, \
             so conversation, tool calls, cancellation and context tracking can be exercised \
-            before Ollama and LM Studio are connected in Phase 2.
+            without a model server. Launch without LOCALOSXAI_SIMULATED to use Ollama or LM Studio.
             """
         events += words(answer).map(AgentEvent.textDelta)
         events.append(.finished(.completed))

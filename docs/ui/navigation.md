@@ -16,7 +16,7 @@
 - `NavigationSplitView` (sidebar + detail) plus the `.inspector` modifier (right panel).
   These are native, resizable columns that collapse correctly at small window sizes.
 - Minimum window size 900×560. Column widths come from `AppLayout`.
-- Main content tabs: **Agent** (Phase 1), **Files** (3), **Changes** (4), **Terminal** (4).
+- Main content tabs: **Agent** (Phase 1), **Files**, **Changes** and **Terminal** (Phase 4).
   Tabs that are not yet implemented show a placeholder that names their phase.
 
 ## State ownership
@@ -49,7 +49,7 @@ never disagree.
 | ⌘K | Command palette |
 | ⌘O | Open Project… |
 | ⌘N | New Session |
-| ⌘P | Search Files… (Phase 3) |
+| ⌘P | Search Files… (Phase 4) |
 | ⌘L | Change Model… |
 | ⌘1 – ⌘4 | Agent / Files / Changes / Terminal |
 | ⌃⌘S | Toggle sidebar |

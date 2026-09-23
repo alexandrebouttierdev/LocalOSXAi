@@ -1,6 +1,6 @@
 # 0013: Ship a direct streaming chat in Phase 2, before the tool runtime
 
-**Status:** Accepted
+**Status:** Accepted. Completed in Phase 3: `AgentRuntime` replaced `DirectChatAgentService` as planned.
 
 ## Context
 Phase 2 delivers providers, model discovery and streaming. Without a consumer, streaming would

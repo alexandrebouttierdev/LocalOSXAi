@@ -131,4 +131,74 @@ struct AgentViewModelTests {
         #expect(viewModel.messages[1].state == .failed)
         #expect(viewModel.messages[2].text == ProviderError.unreachable(endpoint: "x").errorDescription)
     }
+
+    // MARK: Approvals
+
+    private let approval = ToolApprovalRequest(id: "c1", toolName: "write_file", summary: "Write a.txt (1 lines)",
+                                               reason: "This changes files in your project.")
+
+    private func waitForPendingApproval(_ viewModel: AgentViewModel) async throws {
+        for _ in 0..<200 where viewModel.pendingApproval == nil {
+            try await Task.sleep(for: .milliseconds(5))
+        }
+    }
+
+    @Test("an approval request is shown and answered by the user")
+    func approvalAnswered() async throws {
+        let decisions = Recorder<ToolApprovalDecision>()
+        let viewModel = makeViewModel(StubAgentService(.askApproval(approval, decisions: decisions)))
+        viewModel.draft = "Go"
+        viewModel.send()
+        try await waitForPendingApproval(viewModel)
+
+        #expect(viewModel.pendingApproval == approval)
+        viewModel.resolveApproval(.allowOnce)
+        await viewModel.waitUntilIdle()
+
+        #expect(decisions.values == [.allowOnce])
+        #expect(viewModel.pendingApproval == nil)
+    }
+
+    @Test("allowing for the session stops asking for that tool")
+    func allowForSession() async throws {
+        let decisions = Recorder<ToolApprovalDecision>()
+        let viewModel = makeViewModel(StubAgentService(.askApproval(approval, decisions: decisions)))
+        viewModel.draft = "First"
+        viewModel.send()
+        try await waitForPendingApproval(viewModel)
+        viewModel.resolveApproval(.allowForSession)
+        await viewModel.waitUntilIdle()
+
+        viewModel.draft = "Second"
+        viewModel.send()
+        await viewModel.waitUntilIdle()
+
+        #expect(decisions.values == [.allowForSession, .allowOnce])
+        #expect(viewModel.toolsAllowedForSession == ["write_file"])
+    }
+
+    @Test("stopping the run while an approval is pending denies it")
+    func cancelDeniesPendingApproval() async throws {
+        let decisions = Recorder<ToolApprovalDecision>()
+        let viewModel = makeViewModel(StubAgentService(.askApproval(approval, decisions: decisions)))
+        viewModel.draft = "Go"
+        viewModel.send()
+        try await waitForPendingApproval(viewModel)
+
+        viewModel.cancel()
+        await viewModel.waitUntilIdle()
+
+        #expect(viewModel.pendingApproval == nil)
+        for _ in 0..<200 where decisions.values.isEmpty { try await Task.sleep(for: .milliseconds(5)) }
+        #expect(decisions.values == [.deny])
+    }
+
+    @Test("instruction sources are exposed")
+    func instructionSources() async {
+        let viewModel = makeViewModel(StubAgentService(.events([.instructionsLoaded(["AGENTS.md"]), .finished(.completed)])))
+        viewModel.draft = "Go"
+        viewModel.send()
+        await viewModel.waitUntilIdle()
+        #expect(viewModel.instructionSources == ["AGENTS.md"])
+    }
 }

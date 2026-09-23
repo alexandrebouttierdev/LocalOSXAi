@@ -47,7 +47,7 @@ struct WorkspaceViewModelTests {
         #expect(workspace.isEnabled(.openProject))
         #expect(!workspace.isEnabled(.newSession))
         #expect(workspace.disabledReason(for: .openTerminal) == "Open a project first")
-        #expect(workspace.disabledReason(for: .searchFiles) == "Available in Phase 3")
+        #expect(workspace.disabledReason(for: .searchFiles) == "Available in Phase 4")
     }
 
     @Test("change model is disabled when no model is available")

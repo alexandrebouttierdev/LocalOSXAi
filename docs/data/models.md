@@ -1,6 +1,6 @@
 # Data models
 
-## Implemented (Phases 1–2)
+## Implemented (Phases 1–3)
 
 | Model | Feature / layer | Key fields | Notes |
 |---|---|---|---|
@@ -12,6 +12,8 @@
 | `ContextWindow` | Core | `advertisedTokens`, `loadedTokens`, `configuredTokens`, `effectiveTokens` | See [model capabilities](../ai/model-capabilities.md) |
 | `LLMRequest`, `LLMMessage`, `LLMEvent`, `LLMToolCall` | Core | | Wire-independent provider contract |
 | `ToolDefinition`, `ToolParameterSchema`, `ToolArguments`, `ToolResult` | Core | | Tool contract |
+| `ToolApprovalRequest`, `ToolApprovalDecision` | Agent | `id` (call id), `toolName`, `summary`, `reason` / allowOnce, allowForSession, deny | Transient, not persisted |
+| `ProjectInstruction` | Agent | `source`, `content`, `isTruncated` | Loaded per run from `AGENTS.md` |
 | `ProviderSettings` | Settings | Ollama and LM Studio endpoints (enabled, base URL), Ollama context tokens, idle timeout | Stored as versioned JSON in `UserDefaults` |
 
 ## Planned

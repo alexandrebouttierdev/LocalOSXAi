@@ -11,6 +11,8 @@ final class StubAgentService: AgentService {
         case failAfter([AgentEvent], any Error)
         /// Emits the events, then waits until cancelled.
         case hangAfter([AgentEvent])
+        /// Asks the approver, records its decision, then finishes.
+        case askApproval(ToolApprovalRequest, decisions: Recorder<ToolApprovalDecision>)
     }
 
     private let behavior: Behavior
@@ -24,7 +26,7 @@ final class StubAgentService: AgentService {
     var requests: [AgentRunRequest] { recordedRequests.withLock { $0 } }
     var cancellationCount: Int { cancellations.withLock { $0 } }
 
-    func run(_ request: AgentRunRequest) -> AsyncThrowingStream<AgentEvent, Error> {
+    func run(_ request: AgentRunRequest, approver: any ToolApprover) -> AsyncThrowingStream<AgentEvent, Error> {
         recordedRequests.withLock { $0.append(request) }
         let behavior = self.behavior
         return AsyncThrowingStream { continuation in
@@ -36,6 +38,11 @@ final class StubAgentService: AgentService {
                 case let .failAfter(events, error):
                     events.forEach { continuation.yield($0) }
                     continuation.finish(throwing: error)
+                case let .askApproval(request, decisions):
+                    let decision = await approver.decide(request)
+                    decisions.record(decision)
+                    continuation.yield(.finished(.completed))
+                    continuation.finish()
                 case .hangAfter(let events):
                     events.forEach { continuation.yield($0) }
                     do {

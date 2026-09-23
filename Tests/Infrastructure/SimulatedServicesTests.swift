@@ -11,7 +11,7 @@ struct SimulatedServicesTests {
 
     @Test("simulated agent emits a complete, well-formed run")
     func completeRun() async {
-        let result = await collect(SimulatedAgentService(chunkDelay: .zero).run(request))
+        let result = await collect(SimulatedAgentService(chunkDelay: .zero).run(request, approver: StubApprover()))
         #expect(result.error == nil)
         #expect(result.elements.last == .finished(.completed))
 
@@ -29,7 +29,7 @@ struct SimulatedServicesTests {
 
     @Test("simulated agent reports context usage first")
     func contextUsageFirst() async {
-        let result = await collect(SimulatedAgentService(chunkDelay: .zero, contextBudget: 1_000).run(request))
+        let result = await collect(SimulatedAgentService(chunkDelay: .zero, contextBudget: 1_000).run(request, approver: StubApprover()))
         guard case .contextUsageUpdated(let usage) = result.elements.first else {
             Issue.record("Expected context usage first")
             return
@@ -40,7 +40,7 @@ struct SimulatedServicesTests {
 
     @Test("simulated agent stops when cancelled", .timeLimit(.minutes(1)))
     func cancellation() async throws {
-        let consumer = Task { await collect(SimulatedAgentService(chunkDelay: .milliseconds(50)).run(request)) }
+        let consumer = Task { await collect(SimulatedAgentService(chunkDelay: .milliseconds(50)).run(request, approver: StubApprover())) }
         try await Task.sleep(for: .milliseconds(20))
         consumer.cancel()
         let result = await consumer.value

@@ -1,76 +1,83 @@
 # Agent runtime
 
-**Status:** the contract (`AgentService`, `AgentEvent`, `AgentRunRequest`) and the UI are
-implemented. Since Phase 2 the live app runs `DirectChatAgentService`: a real streaming chat
-with the selected model, **without tools** ([ADR 0013](../decisions/0013-direct-chat-before-agent-runtime.md)).
-The tool-using runtime described below is Phase 3.
+**Status:** implemented in Phase 3 (`AgentRuntime`, `ToolExecutor`, `RunContext`), verified
+with `gemma4:26b` on Ollama: list → read → edit with approval → answer. It replaces the Phase 2
+`DirectChatAgentService` ([ADR 0013](../decisions/0013-direct-chat-before-agent-runtime.md)). With a
+model that does not support tools, it behaves as a plain chat.
 
 ## Contract with the UI
 
 ```swift
 protocol AgentService: Sendable {
-    func run(_ request: AgentRunRequest) -> AsyncThrowingStream<AgentEvent, Error>
+    func run(_ request: AgentRunRequest, approver: any ToolApprover) -> AsyncThrowingStream<AgentEvent, Error>
 }
 ```
 
-Events: `assistantMessageStarted`, `textDelta`, `reasoningDelta`, `toolCallStarted`,
-`toolCallFinished`, `contextUsageUpdated`, `finished(outcome)`. Failures throw. The UI applies
-events through `TranscriptReducer`, so any service that honors this contract drives the UI
-correctly.
+Events: `instructionsLoaded`, `contextUsageUpdated`, `assistantMessageStarted`, `textDelta`,
+`reasoningDelta`, `toolCallStarted`, `toolCallStatusChanged` (awaiting approval → running),
+`toolCallFinished`, `finished(outcome)`. Failures throw. The UI applies events through
+`TranscriptReducer`. `AgentViewModel` is the `ToolApprover`: it shows the approval banner and
+suspends the run until the user answers.
 
-## The loop (Phase 3)
+## The loop
 
 ```
-run(request):
-  context = ContextManager.build(system prompt, instructions, history, prompt)
-  for iteration in 1...limits.maxIterations:
-      emit contextUsageUpdated(context.usage)
-      if context.usage.isOverBudget: compact, or fail with .contextOverflow
-      emit assistantMessageStarted
-      stream = provider.stream(context.request(tools: registry.definitions))
-      collect text/reasoning deltas (forwarded as events) and tool calls
-      if no tool calls: emit finished(.completed); return
-      for call in toolCalls (sequentially):
+run(request, approver):
+  resolve model (ModelResolving) · load AGENTS.md · build RunContext
+  tools offered only if the model declares .tools
+  repeat up to maxIterations:
+      fit context (compact / drop history, or fail with contextOverflow) → emit contextUsageUpdated
+      emit assistantMessageStarted; stream the model (text & reasoning forwarded live)
+      no tool calls → emit finished(.completed); done
+      for each tool call, sequentially:
           emit toolCallStarted
-          result = ToolExecutor.execute(call)   // validate → permission → run with timeout
-          emit toolCallFinished
-          context.append(assistant tool call, tool result)
+          ToolExecutor: lookup → parse → validate → permission → approval? → run with timeout
+          emit toolCallFinished; append the result to the context
+      all calls invalid 3 iterations in a row → fail with tooManyInvalidToolCalls
   emit finished(.reachedIterationLimit)
 ```
 
+Each iteration is its own assistant message in the transcript. The UI shows one “Agent”
+header per turn.
+
 ## Responsibilities
 
-| Concern | Owner | Notes |
-|---|---|---|
-| Iteration, limits, stopping | `AgentLoop` | Knows no provider and no tool implementation |
-| Building and budgeting the prompt | `ContextManager` | See [context.md](context.md) |
-| Model I/O | `LLMProvider` | Injected |
-| Tool validation, permission, execution, timeout | `ToolExecutor` | See [tools.md](tools.md) |
-| Approval prompts | `ApprovalHandler` protocol, implemented by the UI layer | The loop suspends (`await`) until the user answers |
+| Concern | Owner |
+|---|---|
+| Iteration, limits, stopping | `AgentRuntime`: knows no provider and no tool implementation |
+| Prompt building and budgeting | `AgentPrompt` (system prompt, history conversion) and `RunContext` (budget, compaction), see [context.md](context.md) |
+| Model I/O | `LLMProvider`, resolved through `ModelResolving` |
+| Tool lookup, validation, permission, approval, timeout, output limit | `ToolExecutor`, see [tools.md](tools.md) |
+| Asking the user | `ToolApprover`, implemented by `AgentViewModel` |
 
-## Limits (configurable, with conservative defaults)
+## Limits (`AgentLimits`)
 
 | Limit | Default | On breach |
 |---|---|---|
-| Max iterations per run | 25 | `finished(.reachedIterationLimit)`, and the user can continue |
-| Model first-token timeout | 120 s (models may load) | `ProviderError.timedOut` |
-| Model inactivity timeout (between chunks) | 60 s | `ProviderError.timedOut` |
-| Tool timeout | 30 s (commands: 120 s) | Tool result `failure`, run continues |
-| Consecutive invalid tool calls | 3 | Run fails with an explanation |
+| Model calls per run | 25 | `finished(.reachedIterationLimit)`. The user can send “continue” |
+| Tool timeout | 30 s | Failed tool result, and the run continues |
+| Consecutive all-invalid iterations | 3 | Run fails with `AgentError.tooManyInvalidToolCalls` |
+| Tool output sent to the model | 16,000 characters (head + tail) | Truncated with a marker |
+| Model silence | Provider idle timeout, 300 s by default (Settings) | `ProviderError.timedOut` |
+
+The limits are constants in Phase 3. They become settings in Phase 5.
 
 ## Error recovery
 
 | Failure | Behavior |
 |---|---|
-| Malformed arguments, unknown tool, schema violation | Returned to the model as a tool result (`isError`) with the validation message, so the model can self-correct |
-| Tool execution error | Returned to the model as a failed tool result |
-| Permission denied by the user | Returned as a `denied` tool result. The model is told not to retry the same action |
-| Provider error mid-stream | Run fails. Partial text is kept and marked failed. The user can retry |
-| Context overflow | Compaction first. If still over budget, the run fails with a clear message |
-| Cancellation | Everything stops. Partial content is kept and marked “Stopped” |
+| Unknown tool, malformed or invalid arguments | Returned to the model as an error result (listing the available tools, if the tool is unknown), so the model can self-correct. Counted as invalid |
+| Tool execution error or timeout | Returned to the model as a failed result |
+| Denied by the user | `denied` result telling the model not to retry. The run continues |
+| Provider error mid-stream | Run fails. Partial text is kept and marked failed |
+| Context overflow | Compaction first (see [context.md](context.md)). If the run still does not fit, it fails with a clear message |
+| Cancellation (⌘.) | Stops streaming, any running tool and any pending approval (answered “deny”). Partial content is marked “Stopped” |
 
-## Required tests (Phase 3)
+## Tests
 
-Normal completion, a single tool call, multiple tool calls, invalid tool call, tool failure,
-provider failure, cancellation (during streaming and during a tool), timeout, max iterations,
-context overflow. All are built on `FakeLLMProvider` scripts.
+`AgentRuntimeTests` covers every case the specification requires: normal completion, a single
+tool call, multiple tool calls, an invalid tool call (with recovery), too many invalid calls, a
+tool failure, a provider failure, a provider timeout, a tool timeout, max iterations, context
+overflow, cancellation during streaming and during a tool, a denied approval, a model without
+tools, instruction loading, missing or unavailable models, and an end-to-end read with the real
+filesystem tools.
