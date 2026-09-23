@@ -9,6 +9,10 @@ enum AgentError: Error, Hashable, Sendable {
     case contextOverflow(usedTokens: Int, budgetTokens: Int)
     /// The model kept producing tool calls that could not be executed.
     case tooManyInvalidToolCalls(count: Int)
+    /// The model stopped without any answer or tool call.
+    case emptyResponse
+    /// The model hit its output or context limit before producing anything usable.
+    case outputLimitReached
 }
 
 extension AgentError: LocalizedError {
@@ -23,6 +27,10 @@ extension AgentError: LocalizedError {
                 + "\(TokenCountFormatter.string(for: budget)) tokens)."
         case .tooManyInvalidToolCalls(let count):
             "The model produced \(count) rounds of invalid tool calls in a row, so the run was stopped."
+        case .emptyResponse:
+            "The model finished without answering."
+        case .outputLimitReached:
+            "The model reached its length limit before answering (it may have spent it reasoning)."
         }
     }
 
@@ -36,6 +44,10 @@ extension AgentError: LocalizedError {
             "Shorten the message, or increase the context length in Settings."
         case .tooManyInvalidToolCalls:
             "Try again, rephrase the request, or choose a model with better tool support."
+        case .emptyResponse:
+            "Try again, or rephrase the request."
+        case .outputLimitReached:
+            "Split the task into smaller steps, or load the model with a larger context in its server."
         }
     }
 }

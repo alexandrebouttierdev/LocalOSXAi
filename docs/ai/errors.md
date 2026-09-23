@@ -7,7 +7,7 @@
 | `ProviderError` | Core / providers | unreachable, HTTP status, invalid response, model not found, unsupported capability, timed out | ✅ |
 | `ToolError` | Core / tools | duplicate/invalid/unknown tool, malformed/missing/invalid/unexpected argument, permission denied, outside project, execution failed, timed out | ✅ |
 | `ProjectError` | Projects | folder not found, not a folder | ✅ |
-| `AgentError` | Agent | no model selected, model unavailable, context overflow, too many invalid tool calls | ✅ |
+| `AgentError` | Agent | no model selected, model unavailable, context overflow, too many invalid tool calls, empty response, output limit reached | ✅ |
 | `TerminalError` | Terminal | launch failed (timeouts are reported in `CommandExit`) | ✅ |
 | `GitError` | Git | not a repository, command failed | ✅ |
 | `PersistenceError` | Persistence | open failed, migration failed, corrupt data | Phase 5 |

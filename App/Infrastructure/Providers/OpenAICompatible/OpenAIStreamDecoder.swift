@@ -14,6 +14,10 @@ struct OpenAIStreamDecoder: LLMStreamDecoder, Sendable {
     }
 
     private var partialCalls: [Int: PartialToolCall] = [:]
+    /// Argument length last reported per call, to throttle progress events.
+    private var reportedCharacters: [Int: Int] = [:]
+    /// Characters of new arguments between two progress events.
+    static let progressStep = 512
     private var finishReason: FinishReason?
     private var usage: TokenUsage?
     private var isComplete = false
@@ -53,7 +57,7 @@ struct OpenAIStreamDecoder: LLMStreamDecoder, Sendable {
             events.append(.textDelta(content))
         }
         for fragment in choice.delta?.toolCalls ?? [] {
-            accumulate(fragment)
+            if let progress = accumulate(fragment) { events.append(.toolCallProgress(progress)) }
         }
         if let reason = choice.finishReason {
             finishReason = Self.finishReason(reason)
@@ -74,13 +78,22 @@ struct OpenAIStreamDecoder: LLMStreamDecoder, Sendable {
 
     // MARK: Helpers
 
-    private mutating func accumulate(_ fragment: OpenAIWire.ToolCallDelta) {
+    /// Adds a fragment; returns a progress event when the call first gets a
+    /// name or its arguments grew by `progressStep` since the last report.
+    private mutating func accumulate(_ fragment: OpenAIWire.ToolCallDelta) -> ToolCallProgress? {
         let index = fragment.index ?? 0
         var call = partialCalls[index] ?? PartialToolCall()
         if let id = fragment.id, !id.isEmpty { call.id = id }
         if let name = fragment.function?.name { call.name += name }
         if let arguments = fragment.function?.arguments { call.arguments += arguments }
         partialCalls[index] = call
+
+        guard !call.name.isEmpty else { return nil }
+        let characters = call.arguments.count
+        if let reported = reportedCharacters[index], characters - reported < Self.progressStep { return nil }
+        reportedCharacters[index] = characters
+        return ToolCallProgress(index: index, name: call.name, characters: characters,
+                                argumentsPrefix: String(call.arguments.prefix(ToolCallProgress.prefixLength)))
     }
 
     private mutating func flushToolCalls() -> [LLMEvent] {
@@ -89,6 +102,7 @@ struct OpenAIStreamDecoder: LLMStreamDecoder, Sendable {
         }
         if !events.isEmpty { finishReason = .toolCalls }
         partialCalls = [:]
+        reportedCharacters = [:]
         return events
     }
 

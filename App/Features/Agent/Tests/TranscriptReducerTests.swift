@@ -44,6 +44,20 @@ struct TranscriptReducerTests {
         #expect(call.output == "a\nb\nc")
     }
 
+    @Test("a tool call being prepared shows until it starts, and never outlives the message")
+    func preparingToolCall() {
+        let draft = ToolCallDraft(name: "write_file", path: "index.html", characters: 1_024)
+        var messages = reduce([.assistantMessageStarted(id: UUID()), .toolCallPreparing(draft)])
+        #expect(messages[0].preparingToolCall == draft)
+
+        TranscriptReducer.apply(.toolCallStarted(running), to: &messages, now: now)
+        #expect(messages[0].preparingToolCall == nil)
+
+        messages = reduce([.assistantMessageStarted(id: UUID()), .toolCallPreparing(draft)])
+        TranscriptReducer.cancel(&messages)
+        #expect(messages[0].preparingToolCall == nil)
+    }
+
     @Test("a finish event for an unknown tool call is ignored")
     func unknownToolCallFinish() {
         let messages = reduce([

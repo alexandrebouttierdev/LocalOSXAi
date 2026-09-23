@@ -50,10 +50,13 @@ struct AgentMessageView: View {
                 if !message.reasoning.isEmpty {
                     ReasoningView(text: message.reasoning, isStreaming: message.state == .streaming && message.text.isEmpty)
                 }
-                if !message.toolCalls.isEmpty {
+                if !message.toolCalls.isEmpty || message.preparingToolCall != nil {
                     VStack(alignment: .leading, spacing: AppSpacing.xs) {
                         ForEach(message.toolCalls) { call in
                             ToolCallView(call: call)
+                        }
+                        if let draft = message.preparingToolCall {
+                            PreparingToolCallView(draft: draft)
                         }
                     }
                 }
@@ -79,9 +82,7 @@ struct AgentMessageView: View {
                 .foregroundStyle(AppColors.textPrimary)
             switch message.state {
             case .streaming:
-                Text(message.text.isEmpty && message.toolCalls.isEmpty ? "Thinking…" : "Working…")
-                    .font(AppTypography.caption)
-                    .foregroundStyle(AppColors.textTertiary)
+                StreamingStatusView(message: message)
             case .cancelled:
                 StatusBadge(title: "Stopped", systemImage: "stop.circle", tone: .neutral)
             case .failed:
@@ -114,13 +115,98 @@ struct AgentMessageView: View {
     }
 }
 
-/// Collapsible model reasoning, collapsed by default to keep answers scannable.
+/// What the agent is doing while a message streams, with the elapsed time
+/// when nothing has arrived yet (a model may take a while to load).
+private struct StreamingStatusView: View {
+    let message: AgentMessage
+
+    var body: some View {
+        TimelineView(.periodic(from: message.createdAt, by: 1)) { context in
+            Text(label(now: context.date))
+                .font(AppTypography.caption.monospacedDigit())
+                .foregroundStyle(AppColors.textTertiary)
+                .contentTransition(.numericText())
+        }
+    }
+
+    private func label(now: Date) -> String {
+        let seconds = max(Int(now.timeIntervalSince(message.createdAt)), 0)
+        if message.text.isEmpty, message.reasoning.isEmpty, message.toolCalls.isEmpty, message.preparingToolCall == nil {
+            return seconds < 5 ? "Waiting for the model…" : "Waiting for the model… \(seconds) s (it may be loading)"
+        }
+        if message.preparingToolCall != nil { return "Preparing a tool call… \(seconds) s" }
+        if message.text.isEmpty, message.toolCalls.isEmpty { return "Thinking… \(seconds) s" }
+        return "Working…"
+    }
+}
+
+/// A tool call the model is still writing, e.g. a whole file for write_file.
+private struct PreparingToolCallView: View {
+    let draft: ToolCallDraft
+
+    var body: some View {
+        HStack(spacing: AppSpacing.sm) {
+            ProgressView().controlSize(.mini)
+            Text(title)
+                .font(AppTypography.callout.weight(.medium))
+                .foregroundStyle(AppColors.textPrimary)
+                .lineLimit(1)
+                .truncationMode(.middle)
+            Spacer(minLength: AppSpacing.sm)
+            Text("\(TokenCountFormatter.string(for: draft.characters)) characters")
+                .font(AppTypography.caption.monospacedDigit())
+                .foregroundStyle(AppColors.textTertiary)
+                .contentTransition(.numericText())
+        }
+        .padding(.horizontal, AppSpacing.sm + AppSpacing.xxs)
+        .frame(minHeight: 32)
+        .overlay(
+            RoundedRectangle(cornerRadius: AppRadius.medium, style: .continuous)
+                .strokeBorder(AppColors.border, style: StrokeStyle(lineWidth: AppBorders.hairline, dash: [4, 3]))
+        )
+        .accessibilityElement(children: .combine)
+    }
+
+    private var title: String {
+        let target = draft.path ?? "a file"
+        switch draft.name {
+        case "write_file": return "Writing \(target)…"
+        case "edit_file": return "Preparing an edit of \(target)…"
+        case "run_command": return "Preparing a command…"
+        default: return "Preparing \(draft.name)…"
+        }
+    }
+}
+
+/// Collapsible model reasoning, collapsed by default to keep answers
+/// scannable; while it streams, its latest lines show as a live preview.
 private struct ReasoningView: View {
     let text: String
     let isStreaming: Bool
     @State private var isExpanded = false
 
     var body: some View {
+        VStack(alignment: .leading, spacing: AppSpacing.xs) {
+            disclosure
+            if isStreaming, !isExpanded {
+                Text(Self.tail(of: text))
+                    .font(AppTypography.caption)
+                    .foregroundStyle(AppColors.textTertiary)
+                    .lineLimit(2)
+                    .truncationMode(.head)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(.leading, AppSpacing.lg)
+                    .accessibilityHidden(true)
+            }
+        }
+    }
+
+    /// The last 200 characters, on one line.
+    static func tail(of text: String) -> String {
+        String(text.suffix(200)).replacingOccurrences(of: "\n", with: " ").trimmingCharacters(in: .whitespaces)
+    }
+
+    private var disclosure: some View {
         DisclosureGroup(isExpanded: $isExpanded) {
             Text(text)
                 .font(AppTypography.callout)
@@ -139,5 +225,5 @@ private struct ReasoningView: View {
                 .font(AppTypography.callout)
                 .foregroundStyle(AppColors.textTertiary)
         }
-    }
+     }
 }

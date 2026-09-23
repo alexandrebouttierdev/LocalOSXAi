@@ -22,11 +22,31 @@ struct OpenAIStreamDecoderTests {
 
     @Test("fragmented tool calls are assembled and emitted once, in index order")
     func fragmentedToolCalls() throws {
-        #expect(try decode(OpenAIFixtures.fragmentedToolCalls) == [
+        let events = try decode(OpenAIFixtures.fragmentedToolCalls).filter { if case .toolCallProgress = $0 { false } else { true } }
+        #expect(events == [
             .toolCall(LLMToolCall(id: "call_a", name: "read_file", rawArguments: #"{"path":"a.swift"}"#)),
             .toolCall(LLMToolCall(id: "call_b", name: "list_directory", rawArguments: #"{"path":"."}"#)),
             .finished(.toolCalls)
         ])
+    }
+
+    @Test("progress is reported when a call gets its name, then every 512 characters of arguments")
+    func progress() throws {
+        var decoder = OpenAIStreamDecoder()
+        let prefix = #"data: {"choices":[{"delta":{"tool_calls":[{"index":0,"#
+        let start = prefix + #""id":"c","function":{"name":"write_file","arguments":"{\"path\":\"index.html\","}}]}}]}"#
+        let chunk = prefix + #""function":{"arguments":""# + String(repeating: "x", count: 300) + #""}}]}}]}"#
+
+        let first = try decoder.decode(line: start)
+        guard case .toolCallProgress(let progress) = first.first else {
+            Issue.record("Expected progress when the name arrives")
+            return
+        }
+        #expect(progress.name == "write_file")
+        #expect(PartialJSON.string(forKey: "path", in: progress.argumentsPrefix) == "index.html")
+
+        #expect(try decoder.decode(line: chunk).isEmpty)
+        #expect(try decoder.decode(line: chunk).count == 1)
     }
 
     @Test("tool calls without an id get one")
@@ -35,7 +55,8 @@ struct OpenAIStreamDecoderTests {
             data: {"choices":[{"delta":{"tool_calls":[{"index":0,"function":{"name":"x","arguments":"{}"}}]},"finish_reason":"tool_calls"}]}
             data: [DONE]
             """
-        #expect(try decode(stream).first == .toolCall(LLMToolCall(id: "generated", name: "x", rawArguments: "{}")))
+        let call = try decode(stream).first { if case .toolCall = $0 { true } else { false } }
+        #expect(call == .toolCall(LLMToolCall(id: "generated", name: "x", rawArguments: "{}")))
     }
 
     @Test("the alternative reasoning field is supported")

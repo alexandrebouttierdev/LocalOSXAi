@@ -5,9 +5,14 @@
 1. Text and reasoning arrive as ordered deltas (`textDelta`, `reasoningDelta`).
 2. A tool call is emitted **once, fully assembled**. Providers whose wire format streams
    argument fragments (OpenAI-compatible SSE) buffer them internally.
-3. `usage` may appear at most once, before `finished`.
-4. `finished(reason)` is the last event of a successful stream: `.stop`, `.length` or `.toolCalls`.
-5. Failures end the stream by **throwing** (`ProviderError`, `CancellationError`), never as events.
+3. `toolCallProgress` is **informational**: while a provider buffers argument fragments, it
+   reports the call's name, the characters received so far and a prefix of the arguments
+   (the first report when the name is known, then every 512 characters). Consumers may ignore
+   it. It exists because a model writing a whole file into `write_file` can stream for minutes
+   with nothing else to show.
+4. `usage` may appear at most once, before `finished`.
+5. `finished(reason)` is the last event of a successful stream: `.stop`, `.length` or `.toolCalls`.
+6. Failures end the stream by **throwing** (`ProviderError`, `CancellationError`), never as events.
 
 ## Agent stream contract (`AgentEvent`)
 
@@ -15,6 +20,15 @@
 2. `toolCallFinished(id:)` always refers to a previously started call.
 3. `finished(outcome)` ends a successful run. Errors throw.
 4. `contextUsageUpdated` may appear at any time.
+5. `toolCallPreparing(draft)` reports a tool call still being generated (name, target path once
+   readable from the partial arguments, characters so far). The draft is cleared when the call
+   starts or the message ends.
+
+The transcript shows a live status while a message has no content yet: “Waiting for the
+model… 12 s (it may be loading)”, “Thinking… 40 s” during reasoning, or “Writing index.html…
+12.3K characters” while a tool call is prepared. A local runtime that loads a model on demand
+(LM Studio JIT loading) can take tens of seconds before the first byte, and a reasoning model
+can think for minutes: the user must always see that something is happening.
 
 `TranscriptReducer` tolerates small deviations. For example, deltas without a started message
 create one. The contract still stands, and tests assert it for `SimulatedAgentService`.

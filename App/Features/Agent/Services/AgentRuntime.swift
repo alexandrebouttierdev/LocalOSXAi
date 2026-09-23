@@ -86,23 +86,20 @@ struct AgentRuntime: AgentService {
             )
             context.appendAssistant(text: response.text, toolCalls: response.toolCalls)
             guard !response.toolCalls.isEmpty else {
+                // A silent end would look like a hang: say why nothing came back.
+                if response.text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                    throw response.finishReason == .length ? AgentError.outputLimitReached : AgentError.emptyResponse
+                }
                 emit(.finished(.completed))
                 return
             }
 
             var invalidCalls = 0
             for call in response.toolCalls {
-                try Task.checkCancellation()
-                emit(.toolCallStarted(ToolCallRecord(id: call.id, name: call.name, argumentsJSON: call.rawArguments, status: .running)))
-                let outcome = await executor.execute(call, context: toolContext, approver: approver) { status in
-                    emit(.toolCallStatusChanged(id: call.id, status: status))
-                }
-                guard outcome.status != .cancelled else { throw CancellationError() }
-                emit(.toolCallFinished(id: call.id, status: outcome.status, summary: outcome.summary, output: outcome.output))
+                let outcome = try await runTool(call, executor: executor, toolContext: toolContext, approver: approver, emit: emit)
                 context.appendToolResult(outcome.output, callID: call.id, toolName: call.name)
                 if outcome.isInvalidCall { invalidCalls += 1 }
             }
-
             consecutiveInvalidIterations = invalidCalls == response.toolCalls.count ? consecutiveInvalidIterations + 1 : 0
             if consecutiveInvalidIterations >= limits.maxConsecutiveInvalidIterations {
                 throw AgentError.tooManyInvalidToolCalls(count: consecutiveInvalidIterations)
@@ -111,9 +108,24 @@ struct AgentRuntime: AgentService {
         emit(.finished(.reachedIterationLimit))
     }
 
+    /// Runs one tool call, reporting its progress; a cancelled call ends the run.
+    private func runTool(_ call: LLMToolCall, executor: ToolExecutor, toolContext: ToolContext,
+                         approver: any ToolApprover,
+                         emit: @escaping @Sendable (AgentEvent) -> Void) async throws -> ToolExecutor.Outcome {
+        try Task.checkCancellation()
+        emit(.toolCallStarted(ToolCallRecord(id: call.id, name: call.name, argumentsJSON: call.rawArguments, status: .running)))
+        let outcome = await executor.execute(call, context: toolContext, approver: approver) { status in
+            emit(.toolCallStatusChanged(id: call.id, status: status))
+        }
+        guard outcome.status != .cancelled else { throw CancellationError() }
+        emit(.toolCallFinished(id: call.id, status: outcome.status, summary: outcome.summary, output: outcome.output))
+        return outcome
+    }
+
     private struct ModelResponse {
         var text = ""
         var toolCalls: [LLMToolCall] = []
+        var finishReason: FinishReason?
     }
 
     /// Streams one model response, forwarding text and reasoning as they arrive.
@@ -130,11 +142,17 @@ struct AgentRuntime: AgentService {
                 emit(.reasoningDelta(text))
             case .toolCall(let call):
                 response.toolCalls.append(call)
+            case .toolCallProgress(let progress):
+                emit(.toolCallPreparing(ToolCallDraft(
+                    name: progress.name,
+                    path: PartialJSON.string(forKey: "path", in: progress.argumentsPrefix),
+                    characters: progress.characters
+                )))
             case .usage(let usage):
                 // Replace the estimate with what the server actually counted.
                 emit(.contextUsageUpdated(ContextUsage(usedTokens: usage.totalTokens, budgetTokens: contextTokens)))
-            case .finished:
-                break
+            case .finished(let reason):
+                response.finishReason = reason
             }
         }
         try Task.checkCancellation()

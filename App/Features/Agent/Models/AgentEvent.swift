@@ -10,6 +10,8 @@ enum AgentEvent: Sendable, Hashable {
     case assistantMessageStarted(id: UUID)
     case textDelta(String)
     case reasoningDelta(String)
+    /// The model is generating a tool call; its arguments keep growing.
+    case toolCallPreparing(ToolCallDraft)
     case toolCallStarted(ToolCallRecord)
     /// A started call moved to another non-final state (awaiting approval, running).
     case toolCallStatusChanged(id: String, status: ToolCallRecord.Status)

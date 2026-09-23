@@ -159,7 +159,7 @@ struct ProviderHTTPIntegrationTests {
         let result = await collect(lmStudio(route).stream(request: LLMRequest(model: "m", messages: [.user("x")])))
 
         #expect(result.error == nil)
-        #expect(result.elements.count == 3)
+        #expect(result.elements.filter { if case .toolCallProgress = $0 { false } else { true } }.count == 3)
         #expect(result.elements.last == .finished(.toolCalls))
         #expect(route.requests.first?.path == "/v1/chat/completions")
     }

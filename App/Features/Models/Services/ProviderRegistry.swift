@@ -61,10 +61,17 @@ actor ProviderRegistry: ModelResolving {
         return catalog
     }
 
-    func resolve(_ id: AIModel.ID) -> ResolvedModel? {
-        guard let model = models[id], let provider = providers.first(where: { $0.descriptor.id == id.provider }) else {
-            return nil
+    /// Resolves a model, refreshing its provider's listing first so runtime
+    /// facts are current: a model loaded since discovery reports the context
+    /// size it was actually loaded with (ADR 0014). Falls back to the last
+    /// discovery when the refresh fails.
+    func resolve(_ id: AIModel.ID) async -> ResolvedModel? {
+        guard let provider = providers.first(where: { $0.descriptor.id == id.provider }) else { return nil }
+        let startedGeneration = generation
+        if let fresh = try? await provider.listModels(), startedGeneration == generation {
+            for model in fresh { models[model.id] = model }
         }
+        guard let model = models[id] else { return nil }
         return ResolvedModel(model: model, provider: provider)
     }
 

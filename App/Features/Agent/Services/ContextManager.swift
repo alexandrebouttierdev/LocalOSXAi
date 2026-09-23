@@ -50,7 +50,17 @@ struct RunContext: Sendable {
         let budget = promptBudget
         var total = estimate()
 
-        // 1. Truncate tool results, oldest first, keeping the latest one intact.
+        // 1. Shorten large arguments of tool calls already executed (e.g. a whole
+        //    file passed to write_file): the result says what happened.
+        for index in turn.indices where !turn[index].toolCalls.isEmpty && total > budget {
+            turn[index].toolCalls = turn[index].toolCalls.map { call in
+                let arguments = PartialJSON.compactingLongStrings(in: call.rawArguments,
+                                                                  maxLength: Self.compactedToolOutputCharacters)
+                return LLMToolCall(id: call.id, name: call.name, rawArguments: arguments)
+            }
+            total = estimate()
+        }
+        // 2. Truncate tool results, oldest first, keeping the latest one intact.
         let toolIndices = turn.indices.filter { turn[$0].role == .tool }.dropLast()
         for index in toolIndices where total > budget {
             let compacted = OutputLimiter.limit(turn[index].content, maxCharacters: Self.compactedToolOutputCharacters,
@@ -59,7 +69,7 @@ struct RunContext: Sendable {
             turn[index].content = compacted
             total = estimate()
         }
-        // 2. Drop earlier conversation, oldest first, never leaving an orphan answer first.
+        // 3. Drop earlier conversation, oldest first, never leaving an orphan answer first.
         while total > budget, !history.isEmpty {
             history.removeFirst()
             while history.first?.role == .assistant { history.removeFirst() }

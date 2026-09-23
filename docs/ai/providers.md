@@ -21,7 +21,9 @@ translates them to and from its own format.
 
 The agent never receives a concrete provider. It receives an `AIModel.ID`, and resolves it
 through `ModelResolving` (implemented by `ProviderRegistry`) into a `ResolvedModel` (model +
-`any LLMProvider`). It must never:
+`any LLMProvider`). Resolution refreshes that provider's model list first, so a model loaded
+since discovery is budgeted with the context it was actually loaded with, not the 8K
+fallback. If the refresh fails, the last discovery is used. It must never:
 
 - branch on `descriptor.id` or `displayName`;
 - import or reference a concrete provider type;
@@ -69,11 +71,12 @@ API exposes capabilities, the loaded context and `num_ctx`.
 | Concern | Behavior |
 |---|---|
 | Model list | `GET /api/v0/models` (LM Studio native): `type` (`llm`/`vlm`/`embeddings`), `state`, `max_context_length`, `loaded_context_length`, `capabilities` (`tool_use`). Only `llm`/`vlm` are kept. The provider falls back to `GET /v1/models` if the native endpoint is missing |
-| Loaded context | `loaded_context_length` of loaded models → `loadedTokens`, which is reliable. Unloaded models get the 8K fallback |
+| Loaded context | `loaded_context_length` of loaded models → `loadedTokens`, which is reliable. Unloaded models get the 8K fallback until they are loaded (resolution refreshes the list before each run) |
+| JIT loading | LM Studio may unload an idle model and reload it on the next request: the first byte can take 15 s or more (measured with a 26B model). The UI shows “Waiting for the model… (it may be loading)” |
 | Chat | `POST /v1/chat/completions`, `stream: true`, `stream_options.include_usage`. The response is Server-Sent Events (`data: {…}`, ending with `data: [DONE]`) |
 | Context | Cannot be set through this API: it is fixed when LM Studio loads the model |
 | Reasoning | `reasoning_effort` for low/medium/high. Deltas are read from `reasoning_content` or `reasoning` |
-| Tool calls | **Streamed in fragments** by `index`. They are buffered and emitted once, complete, when the choice finishes. Results are sent back with `tool_call_id` |
+| Tool calls | **Streamed in fragments** by `index`. They are buffered and emitted once, complete, when the choice finishes, with `toolCallProgress` events in between. Results are sent back with `tool_call_id` |
 | Errors | `{"error": {"message": "..."}}` in the body or as a stream event |
 
 The `.generic` flavor (any OpenAI-compatible server) uses only `/v1/models`, with no capability

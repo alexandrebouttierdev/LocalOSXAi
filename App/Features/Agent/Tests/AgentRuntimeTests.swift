@@ -205,6 +205,29 @@ struct AgentRuntimeTests {
         #expect(provider.requests.first?.messages.first?.content.contains("Always write tests.") == true)
     }
 
+    @Test("a model that answers nothing fails clearly instead of ending silently")
+    func emptyAnswer() async throws {
+        let silent = FakeLLMProvider(turns: [.events([.reasoningDelta("hmm"), .finished(.stop)])])
+        let result = await collect(try runtime(silent).run(Fixtures.runRequest(), approver: StubApprover()))
+        #expect(result.error as? AgentError == .emptyResponse)
+
+        let cut = FakeLLMProvider(turns: [.events([.reasoningDelta("long thoughts"), .finished(.length)])])
+        let cutResult = await collect(try runtime(cut).run(Fixtures.runRequest(), approver: StubApprover()))
+        #expect(cutResult.error as? AgentError == .outputLimitReached)
+    }
+
+    @Test("tool-call progress is forwarded with the target path")
+    func preparingProgress() async throws {
+        let provider = FakeLLMProvider(turns: [
+            .events([.toolCallProgress(ToolCallProgress(index: 0, name: "echo", characters: 2_048,
+                                                        argumentsPrefix: #"{"path":"index.html","text":"#)),
+                     .toolCall(Fixtures.call("echo", #"{"text":"x"}"#)), .finished(.toolCalls)]),
+            .response("Done")
+        ])
+        let result = await collect(try runtime(provider).run(Fixtures.runRequest(), approver: StubApprover()))
+        #expect(result.elements.contains(.toolCallPreparing(ToolCallDraft(name: "echo", path: "index.html", characters: 2_048))))
+    }
+
     @Test("no model or an unavailable model fail clearly")
     func modelErrors() async throws {
         let provider = FakeLLMProvider()
@@ -247,6 +270,21 @@ struct RunContextTests {
         let (messages, _) = try context.fittedMessages()
         #expect(messages.map(\.role) == [.system, .user, .assistant, .user, .assistant, .user])
         #expect(messages.last?.content == "P")
+    }
+
+    @Test("large arguments of executed tool calls are shortened when over budget")
+    func compactsToolArguments() throws {
+        var context = RunContext(contextTokens: 4_096, systemPrompt: "S", history: [], prompt: "Write the page")
+        let content = String(repeating: "<div>x</div>", count: 1_500)
+        let arguments = JSONValue.object(["path": "index.html", "content": .string(content)]).serialized()
+        context.appendAssistant(text: "", toolCalls: [Fixtures.call("write_file", arguments, id: "w")])
+        context.appendToolResult("Created index.html (1 lines).", callID: "w", toolName: "write_file")
+
+        let (messages, tokens) = try context.fittedMessages()
+        #expect(tokens <= context.promptBudget)
+        let call = try #require(messages.first { !$0.toolCalls.isEmpty }?.toolCalls.first)
+        #expect(call.rawArguments.contains("shortened to save context"))
+        #expect(try JSONValue.parse(call.rawArguments).objectValue?["path"] == "index.html")
     }
 
     @Test("old tool results are truncated before history is dropped")

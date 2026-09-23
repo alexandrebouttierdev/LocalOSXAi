@@ -13,6 +13,10 @@ enum LLMEvent: Sendable, Hashable {
     case textDelta(String)
     case reasoningDelta(String)
     case toolCall(LLMToolCall)
+    /// A tool call still being generated. Informational only (the complete
+    /// call still arrives as `.toolCall`), so the UI can show progress while
+    /// a model writes a large argument such as a whole file.
+    case toolCallProgress(ToolCallProgress)
     case usage(TokenUsage)
     case finished(FinishReason)
 }
@@ -28,6 +32,20 @@ struct LLMToolCall: Sendable, Hashable, Codable, Identifiable {
     let id: String
     let name: String
     let rawArguments: String
+}
+
+/// Progress of a tool call whose arguments are still streaming.
+struct ToolCallProgress: Sendable, Hashable {
+    /// Position of the call in the response (several calls can stream).
+    let index: Int
+    let name: String
+    /// Characters of arguments received so far.
+    let characters: Int
+    /// The beginning of the arguments (at most `prefixLength` characters),
+    /// enough to recognize e.g. the target path.
+    let argumentsPrefix: String
+
+    static let prefixLength = 400
 }
 
 /// Token accounting reported by the provider, when available.

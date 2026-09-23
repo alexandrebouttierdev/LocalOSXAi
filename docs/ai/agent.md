@@ -14,7 +14,7 @@ protocol AgentService: Sendable {
 ```
 
 Events: `instructionsLoaded`, `contextUsageUpdated`, `assistantMessageStarted`, `textDelta`,
-`reasoningDelta`, `toolCallStarted`, `toolCallStatusChanged` (awaiting approval → running),
+`reasoningDelta`, `toolCallPreparing`, `toolCallStarted`, `toolCallStatusChanged` (awaiting approval → running),
 `toolCallFinished`, `finished(outcome)`. Failures throw. The UI applies events through
 `TranscriptReducer`. `AgentViewModel` is the `ToolApprover`: it shows the approval banner and
 suspends the run until the user answers.
@@ -28,7 +28,8 @@ run(request, approver):
   repeat up to maxIterations:
       fit context (compact / drop history, or fail with contextOverflow) → emit contextUsageUpdated
       emit assistantMessageStarted; stream the model (text & reasoning forwarded live)
-      no tool calls → emit finished(.completed); done
+      no tool calls → empty text? fail (outputLimitReached if cut by length, else emptyResponse)
+                      otherwise emit finished(.completed); done
       for each tool call, sequentially:
           emit toolCallStarted
           ToolExecutor: lookup → parse → validate → permission → approval? → run with timeout
@@ -70,6 +71,7 @@ The limits are constants in Phase 3. They become settings in Phase 5.
 | Tool execution error or timeout | Returned to the model as a failed result |
 | Denied by the user | `denied` result telling the model not to retry. The run continues |
 | Provider error mid-stream | Run fails. Partial text is kept and marked failed |
+| Model returns neither text nor tool calls | Run fails with `AgentError.emptyResponse`, or `outputLimitReached` when the response was cut by the output limit (for example, all tokens spent reasoning). A silent completion would look like a hang |
 | Context overflow | Compaction first (see [context.md](context.md)). If the run still does not fit, it fails with a clear message |
 | Cancellation (⌘.) | Stops streaming, any running tool and any pending approval (answered “deny”). Partial content is marked “Stopped” |
 

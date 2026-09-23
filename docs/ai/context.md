@@ -51,13 +51,16 @@ Every loaded file is listed in the inspector so the user knows what the model wa
 
 When the next request would exceed the budget:
 
-1. ✅ truncate tool outputs from earlier iterations of the run to 1,500 characters (head and
+1. ✅ shorten large string arguments of tool calls already executed (typically a whole file
+   passed to `write_file`) to 1,500 characters, keeping the JSON valid
+   (`PartialJSON.compactingLongStrings`). The tool result already says what happened;
+2. ✅ truncate tool outputs from earlier iterations of the run to 1,500 characters (head and
    tail, with a marker), keeping the latest result intact;
-2. ✅ drop earlier conversation, oldest first, never leaving an answer without its question.
+3. ✅ drop earlier conversation, oldest first, never leaving an answer without its question.
    Earlier runs' tool calls are already summarized to one line each in history;
-3. *planned*: summarize the oldest turns with the same model into a “Conversation summary”
+4. *planned*: summarize the oldest turns with the same model into a “Conversation summary”
    message instead of dropping them (the session keeps the originals);
-4. ✅ if the run still does not fit, fail with `contextOverflow` and suggest a shorter message
+5. ✅ if the run still does not fit, fail with `contextOverflow` and suggest a shorter message
    or a larger context.
 
 Compaction never removes priorities 1–3.

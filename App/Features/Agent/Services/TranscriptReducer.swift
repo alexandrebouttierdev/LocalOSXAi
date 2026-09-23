@@ -17,8 +17,13 @@ enum TranscriptReducer {
             updateStreaming(&messages, now: now) { $0.text += delta }
         case .reasoningDelta(let delta):
             updateStreaming(&messages, now: now) { $0.reasoning += delta }
+        case .toolCallPreparing(let draft):
+            updateStreaming(&messages, now: now) { $0.preparingToolCall = draft }
         case .toolCallStarted(let record):
-            updateStreaming(&messages, now: now) { $0.toolCalls.append(record) }
+            updateStreaming(&messages, now: now) { message in
+                message.preparingToolCall = nil
+                message.toolCalls.append(record)
+            }
         case let .toolCallStatusChanged(id, status):
             updateToolCall(id: id, in: &messages) { $0.status = status }
         case let .toolCallFinished(id, status, summary, output):
@@ -72,6 +77,7 @@ enum TranscriptReducer {
     private static func finishStreaming(_ messages: inout [AgentMessage], as state: AgentMessage.State) {
         for index in messages.indices where messages[index].state == .streaming {
             messages[index].state = state
+            messages[index].preparingToolCall = nil
             for callIndex in messages[index].toolCalls.indices where !messages[index].toolCalls[callIndex].status.isFinished {
                 messages[index].toolCalls[callIndex].status = state == .complete ? .failed : .cancelled
             }
