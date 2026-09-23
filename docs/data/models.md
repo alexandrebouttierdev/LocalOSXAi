@@ -1,6 +1,6 @@
 # Data models
 
-## Implemented (Phases 1–3)
+## Implemented (Phases 1–4)
 
 | Model | Feature / layer | Key fields | Notes |
 |---|---|---|---|
@@ -14,6 +14,9 @@
 | `ToolDefinition`, `ToolParameterSchema`, `ToolArguments`, `ToolResult` | Core | | Tool contract |
 | `ToolApprovalRequest`, `ToolApprovalDecision` | Agent | `id` (call id), `toolName`, `summary`, `reason` / allowOnce, allowForSession, deny | Transient, not persisted |
 | `ProjectInstruction` | Agent | `source`, `content`, `isTruncated` | Loaded per run from `AGENTS.md` |
+| `FileChange`, `FileDiff` | Changes, Core | file, relative path, status (created/modified/deleted), diff hunks with line numbers and +/− counts | Original contents live in `ChangeTracker` (memory) until accepted or reverted |
+| `GitStatus`, `GitFileChange`, `GitCommit` | Git | branch, upstream, ahead/behind, changes (staged/unstaged), commits | Read from Git on demand |
+| `TerminalEntry` | Terminal | command, output chunks per stream, state (running/finished/cancelled/failed) | Per project, in memory |
 | `ProviderSettings` | Settings | Ollama and LM Studio endpoints (enabled, base URL), Ollama context tokens, idle timeout | Stored as versioned JSON in `UserDefaults` |
 
 ## Planned
@@ -22,8 +25,7 @@
 |---|---|---|
 | `AgentRun` | 3 | One execution: start/end dates, outcome, iterations, token usage, model used. Makes history auditable |
 | `ModelConfiguration` | 5 | Per-model user settings: configured context, temperature, reasoning effort |
-| `FileChange` | 4 | Proposed/applied edit: path, diff hunks, added/removed counts, status (pending/accepted/rejected/reverted) |
-| `CommandExecution` | 4 | Command, working directory, policy decision, exit code, duration, truncated output |
+| `CommandExecution` | 5 | Persisted audit of commands run by the agent: policy decision, exit code, duration |
 | `Settings` | 5 | Agent limits, permission policy overrides, terminal and Git preferences |
 
 ## Why `Session` embeds messages today

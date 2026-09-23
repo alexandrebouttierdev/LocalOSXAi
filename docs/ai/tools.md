@@ -8,7 +8,7 @@
 | Registry: unique, valid names, stable order | `ToolRegistry` | ✅ |
 | Parsing: raw model JSON → arguments | `ToolArguments.parse` | ✅ |
 | Validation: required, types, enums, unknown keys | `ToolParameterSchema.validate` | ✅ |
-| Permission: allowed / approval / blocked | `ToolPermissionPolicy`, applied by `ToolExecutor` | ✅ (command policy: Phase 4) |
+| Permission: allowed / approval / blocked | `ToolPermissionPolicy` (+ `CommandPolicy` for commands), applied by `ToolExecutor` | ✅ |
 | Approval | `ToolApprover` (`AgentViewModel` + `ApprovalBanner`) | ✅ |
 | Execution with timeout and output limit | `ToolExecutor` | ✅ |
 | Presentation | `ToolCallRecord` + `ToolCallView` (Agent feature) | ✅ |
@@ -50,6 +50,9 @@ LLMToolCall ─▶ registry.tool(named:)          unknownTool ─┐
             ─▶ tool.parameters.validate       invalid    ──┼─▶ failed ToolResult to the model
             ─▶ policy.permission(tool, args)  blocked    ──┤
                └ approval? ─▶ ToolApprover     denied    ──┘
+            ─▶ proposedChange (writes only)   cannot apply ─▶ failed ToolResult
+            ─▶ policy.permission …            (the approval request carries the diff preview)
+            ─▶ recorder.willModify (writes)
             ─▶ withTimeout(tool.execute)      timedOut / error ─▶ failed ToolResult
             ─▶ ToolResult (output truncated to a budget, e.g. 16K characters, with a marker)
 ```
@@ -64,15 +67,20 @@ LLMToolCall ─▶ registry.tool(named:)          unknownTool ─┐
 | `search_text` | readOnly | ✅ | `query`, `is_regex`, `case_sensitive`, `path`, `file_pattern`. At most 200 matches, lines capped at 300 characters, files over 1 MB skipped |
 | `edit_file` | writesFiles | ✅ | Exact `old_string` → `new_string`. Fails if the string is not found or not unique, unless `replace_all` is set |
 | `write_file` | writesFiles | ✅ | Creates parent folders, atomic write |
-| `run_command` | executesCommands | Phase 4 | Goes through `CommandPolicy` |
-| `git_status`, `git_diff`, `git_log` | readOnly | Phase 4 | Through `GitService` |
+| `run_command` | executesCommands | ✅ | `command`. zsh in the project folder, 120 s limit; allowed / approval / blocked by `CommandPolicy` |
+| `git_status`, `git_diff`, `git_log` | readOnly | ✅ | Through `GitService` (`git_diff`: `path`, `staged`; `git_log`: `limit` 1–50) |
 
 Listing and searching skip hidden files and folders, and a fixed set of folders that are never
 useful to an agent (`.git`, `.build`, `DerivedData`, `node_modules`, `Pods`, `dist`, `.venv`, `target`…).
-`.gitignore` rules are **not** applied yet: that is planned for Phase 4, alongside Git.
+The root `.gitignore` is applied too (`name`, `*.ext`, `dir/`, `/anchored`, `**`, `!negation`).
+Nested `.gitignore` files are not read yet.
 `search_text` never searches files that look like secrets (see the security docs).
 
-Write tools describe themselves for the approval banner (“Edit notes.md”, “Write a.txt (12 lines)”).
+Write tools describe themselves for the approval banner (“Edit notes.md”, “Write a.txt (12 lines)”)
+and implement `proposedChange`: the change is computed **without writing**, so the executor can
+show its diff before approval and fail an edit that cannot apply without bothering the user.
+Around each write, the executor asks the `FileChangeRecording` (the `ChangeTracker`) to keep the
+original content, for review and revert in the Changes tab ([ADR 0018](../decisions/0018-change-review-before-and-after.md)).
 
 ## Boundary
 

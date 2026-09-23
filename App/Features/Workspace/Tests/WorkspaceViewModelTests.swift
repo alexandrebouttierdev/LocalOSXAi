@@ -17,9 +17,7 @@ struct WorkspaceViewModelTests {
             models: ModelsViewModel(registry: ProviderRegistry(providers: [
                 MockLLMProvider(id: "fake", displayName: "Fake", models: .success(models))
             ])),
-            agentService: agent,
-            toolDefinitions: [],
-            isSimulated: false
+            services: .stub(agent: agent)
         )
     }
 
@@ -47,7 +45,7 @@ struct WorkspaceViewModelTests {
         #expect(workspace.isEnabled(.openProject))
         #expect(!workspace.isEnabled(.newSession))
         #expect(workspace.disabledReason(for: .openTerminal) == "Open a project first")
-        #expect(workspace.disabledReason(for: .searchFiles) == "Available in Phase 4")
+        #expect(workspace.disabledReason(for: .searchFiles) == "Open a project first")
     }
 
     @Test("change model is disabled when no model is available")
@@ -73,6 +71,35 @@ struct WorkspaceViewModelTests {
         workspace.perform(.openProject)
         #expect(workspace.isProjectImporterPresented)
         #expect(workspace.perform(.openSettings) == .openSettings)
+    }
+
+    @Test("each project gets its own panels, kept when switching back")
+    func projectPanels() async throws {
+        let first = Fixtures.project(name: "First", openedAt: Date(timeIntervalSinceReferenceDate: 2))
+        let second = Fixtures.project(name: "Second", root: URL(fileURLWithPath: "/tmp/Second"),
+                                      openedAt: Date(timeIntervalSinceReferenceDate: 1))
+        let workspace = makeWorkspace(projects: [first, second])
+        await workspace.load()
+        let firstTerminal = try #require(workspace.activePanels?.terminal)
+        #expect(firstTerminal.projectRoot == first.rootURL)
+
+        await workspace.selectProject(second.id)
+        #expect(workspace.activePanels?.terminal.projectRoot == second.rootURL)
+        await workspace.selectProject(first.id)
+        #expect(workspace.activePanels?.terminal === firstTerminal)
+    }
+
+    @Test("search files opens the Files tab and asks to focus its search")
+    func searchFiles() async throws {
+        let workspace = makeWorkspace(projects: [Fixtures.project()])
+        await workspace.load()
+        let files = try #require(workspace.activePanels?.files)
+        let before = files.searchFocusRequest
+
+        workspace.perform(.searchFiles)
+
+        #expect(workspace.selectedTab == .files)
+        #expect(files.searchFocusRequest == before + 1)
     }
 
     @Test("disabled commands have no effect")

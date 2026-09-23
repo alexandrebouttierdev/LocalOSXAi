@@ -29,6 +29,7 @@ Run with `make test`. The full gate is `make check`.
 | `StubApprover` | Tool execution and runtime tests | Fixed approval decision, records requests |
 | `StubResolver`, `StubInstructionsLoader` | Runtime tests | Fixed model/provider resolution, fixed AGENTS.md |
 | `SlowTool`, `FailingTool`, `RecordingWriteTool`, `EchoTool` | Executor and runtime tests | Timeout/cancellation, failure, approval-gated writes, echo |
+| `StubCommandRunner`, `StubGitService`, `StubFileBrowser`, `WorkspaceServices.stub` | Terminal, Git, Files and workspace tests | Scripted command events (or a hang), fixed Git data, in-memory files |
 
 **Unit tests never contact Ollama or LM Studio.** The opt-in live suite
 (`Tests/Integration/LiveProviderTests.swift`) runs with `make test-live`, which sets
@@ -40,7 +41,7 @@ Run with `make test`. The full gate is `make check`.
 |---|---|
 | Agent ✅ | normal completion, one tool call, multiple tool calls, invalid tool call, tool failure, provider failure, cancellation, timeout, max iterations, context overflow |
 | Filesystem tools ✅ | read existing, read missing, write, edit, invalid path, path outside project, permission error |
-| Terminal (Phase 4) | success, failure exit code, timeout, cancellation, policy refusal |
+| Terminal ✅ | success, failure exit code, timeout, cancellation (children killed), policy refusal and confirmation |
 | Providers (Phase 2) | request encoding, stream decoding (fixtures), malformed chunks, HTTP errors, unreachable server |
 | Repositories | CRUD, ordering, migrations (Phase 5) |
 | ViewModels | every action, loading/error/success states, cancellation |

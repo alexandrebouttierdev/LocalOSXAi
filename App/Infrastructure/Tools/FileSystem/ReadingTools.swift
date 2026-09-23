@@ -150,7 +150,7 @@ struct SearchTextTool: AgentTool {
         guard let regex = try? NSRegularExpression(pattern: pattern, options: options) else {
             throw ToolError.invalidArgument(name: "query", reason: "not a valid regular expression")
         }
-        let filter = try arguments.optionalString("file_pattern").map(GlobMatcher.init)
+        let filter = try arguments.optionalString("file_pattern").map { GlobMatcher($0) }
         let directory = try ProjectBoundary.resolve(try arguments.optionalString("path") ?? ".", in: context.projectRoot)
 
         let files = try ProjectFileWalker(root: context.projectRoot).files(in: directory, limit: 20_000).entries

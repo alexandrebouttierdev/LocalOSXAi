@@ -1,55 +1,78 @@
 # Command execution
 
-**Status:** Phase 4. This is the design the terminal and `run_command` implementation must follow.
-See also [ADR 0007](../decisions/0007-terminal-execution.md).
+**Status:** implemented in Phase 4. `CommandPolicy` and `ShellCommandParser` are in `Core/Tools`,
+`PosixCommandRunner` in `Infrastructure/Process`, `run_command` in `Infrastructure/Tools/Terminal`,
+and the Terminal tab in `Features/Terminal`. See [ADR 0007](../decisions/0007-terminal-execution.md)
+and [ADR 0017](../decisions/0017-posix-spawn-process-groups.md).
 
 ## Classification
 
-`CommandPolicy` classifies a command line into **allowed**, **requires approval** or **blocked**.
+`CommandPolicy.decision(for:projectRoot:)` classifies a command line as **allowed**,
+**requires approval** or **blocked**.
 
-The command is **parsed, not pattern-matched on raw text**. It is tokenized with shell quoting
-rules, and every segment of a compound command (`&&`, `||`, `;`, `|`) is classified. The
-strictest segment decides the result. Anything the parser cannot understand confidently
-(substitutions `$(…)`/backticks, `eval`, redirection to paths outside the project, here-docs)
-requires approval.
+The command is **parsed, not pattern-matched on raw text**. `ShellCommandParser` applies POSIX
+quoting rules (single quotes, double quotes, backslashes) and splits the line into simple
+commands on `&&`, `||`, `;`, `|` and `&`, recording output redirections. Each segment is
+classified on its own, and **the strictest decision wins**. Leading assignments (`FOO=1 npm test`)
+are skipped to find the program.
 
-| Default decision | Examples |
+Anything whose meaning depends on runtime expansion requires approval: `$VAR`, `$(…)`,
+backticks, `{a,b}`, subshells and here-documents. Unbalanced quotes also require approval.
+
+| Decision | Examples (from `CommandPolicyTests`) |
 |---|---|
-| Allowed (read-only / test) | `git status`, `git diff`, `git log`, `ls`, `cat`, `rg`, `npm test`, `swift test`, `make test`, `xcodebuild test` |
-| Requires approval | `npm install`, `pip install`, `brew install`, `git commit`, `git checkout`, `git stash`, `git push`, `git pull`, `rm` of files inside the project, any unknown command |
-| Blocked | `rm -rf /`, `rm -rf ~`, recursive deletion outside the project, `sudo`, `curl … \| sh`, `chmod -R` / `chown -R` outside the project, `mkfs`, `dd of=/dev/…`, `git push --force` to protected branches, fork bombs |
+| Allowed | `git status`, `git diff --stat`, `git log`, `git branch`, `git stash list`, `ls`, `cat … \| head`, `rg`, `find` (without `-delete`/`-exec`), `npm test`, `npm run test:*`, `swift test`, `swift build`, `make check`, `xcodebuild test`, `cargo test`, `<tool> --version`, `… > /dev/null` |
+| Requires approval | `npm install`, `brew install`, `git commit`, `git push`, `git checkout`, bare `git stash`, `git branch -D`, `rm` inside the project, `mv`, `curl`, writing to a file (`> notes.txt`), `find -delete`, any unknown program, expansion or substitution |
+| Blocked | `sudo`/`su`/`doas`; recursive `rm`/`chmod`/`chown` on `/`, `~`, `..`, `.`, `*` or an absolute path outside the project; `curl`/`wget` piped into a shell or interpreter; `git push --force` to `main`/`master`; `dd of=/dev/…`; `mkfs`, `diskutil`, `shutdown`, `reboot`, `launchctl`, `csrutil`, `nvram`; fork bombs; an empty command |
 
-Rules are data: an ordered list of `(matcher, decision, reason)` that users can extend per
-project (Phase 5). The reason is shown to the user and returned to the model.
+The rules are data (program sets in `CommandPolicy`). Making them configurable per project is
+Phase 5 (project settings).
 
-## Execution
+## Who decides
 
-- `Process` with `/bin/zsh -lc` **only after** classification. The classified tokens are what
-  runs, so a string that parses differently in the shell is not possible.
-- Working directory: the project root.
-- Environment: inherited minus secret-looking variables (see [permissions.md](permissions.md)).
-- stdout/stderr streamed separately as `AsyncStream`s to the terminal UI and captured (capped,
-  e.g. 64 KB, keeping head and tail) for the model.
-- Timeout (default 120 s), after which it is terminated: `SIGINT`, then `SIGTERM`, then `SIGKILL`
-  after grace periods. The whole process group is signalled so child processes stop too.
-- Cancellation from the UI or agent follows the same termination sequence.
-- The result records the exit code, duration, a truncation flag and the policy decision.
+| Caller | Allowed | Requires approval | Blocked |
+|---|---|---|---|
+| The agent (`run_command`, via `ToolPermissionPolicy`) | Runs | Approval banner (allow once / for the session / deny) | Refused, and the model is told why |
+| The user (Terminal tab) | Runs | Runs: it is the user's own action | Explicit “Run anyway?” confirmation, since the likely cause is a pasted mistake |
 
-## Integrated terminal
+## Execution (`PosixCommandRunner`)
 
-The Terminal tab (Phase 4) is a *command runner* with history, working directory, streaming,
-interrupt and exit codes. Commands typed by the user are the user's own actions and run
-without approval. Destructive patterns from the blocked list still ask for an explicit
-confirmation, because the most likely cause is a pasted mistake.
+- **`posix_spawn`, not `Foundation.Process`**, so the command becomes the leader of a **new
+  process group** (`POSIX_SPAWN_SETPGROUP`). Stopping a command therefore stops everything it
+  started (`npm` → `node` → workers). `POSIX_SPAWN_CLOEXEC_DEFAULT` prevents any other descriptor
+  of the app from leaking into the child.
+- **Shell commands** run as `/bin/zsh -l -c <command>`. The login shell gives the same `PATH` as
+  the user's terminal (Homebrew, version managers). Git runs **without a shell**
+  (`/usr/bin/git --no-optional-locks -C <root> …`), so paths never need quoting.
+- **Working directory:** the project root. **stdin:** `/dev/null`.
+- **Environment:** inherited, minus every variable whose name contains `KEY`, `TOKEN`, `SECRET`,
+  `PASSWORD`, `PASSWD` or `CREDENTIAL`.
+- **Output:** stdout and stderr are streamed separately, decoded as UTF-8 without splitting
+  multi-byte characters across chunks.
+- **Termination** (timeout, Stop, cancellation): `SIGINT` to the group, then `SIGTERM`, then
+  `SIGKILL`, 1.5 s apart, stopping as soon as the process exits. If background children keep
+  the pipes open after the command exits, the group is killed after 2 s.
+- **Exit:** code, duration and a timed-out flag. A process killed by a signal reports 128 + the signal.
+
+| Limit | Value |
+|---|---|
+| `run_command` timeout | 120 s (the tool's own limit is 130 s, so the command's timeout fires first) |
+| Output sent to the model | 16,000 characters, keeping head and tail |
+| Output kept per terminal entry | 200,000 characters (the oldest are dropped, with a notice) |
+| Git commands | 20 s |
 
 ## Git
 
-`GitService` (Phase 4) wraps the `git` CLI (status, diff, log, branch, then commit, checkout,
-stash). Destructive or remote operations (checkout with local changes, stash drop, reset,
-push) require confirmation regardless of who initiates them.
+`GitService` (implemented by `CLIGitService`) reads status (porcelain v2, NUL-separated, so any
+file name is safe), diff and log. The agent gets `git_status`, `git_diff` and `git_log`, which
+are read-only. Git operations that change the repository (commit, checkout, stash, push) go
+through `run_command`, so they are classified and need approval. Dedicated, confirmed Git
+actions in the UI are a later step.
 
-## Required tests
+## Tests
 
-Classification tables for each decision, compound commands, quoting edge cases, unparsable
-input, successful and failing commands, timeout, cancellation, output truncation, and
-environment scrubbing.
+`CommandPolicyTests` (tables for every decision, compound commands, quoting), `ShellCommandParserTests`,
+`PosixCommandRunnerTests` (streams, exit codes, working directory, timeout, cancellation that
+**verifies child processes are gone**, environment scrubbing, UTF-8, direct executables),
+`RunCommandToolTests` (policy through the executor), `TerminalViewModelTests`, `CLIGitServiceTests`
+(real temporary repositories).

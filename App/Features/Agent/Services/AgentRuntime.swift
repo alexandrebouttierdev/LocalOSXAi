@@ -24,14 +24,17 @@ struct AgentRuntime: AgentService {
     private let instructionsLoader: any ProjectInstructionsLoading
     private let policy: ToolPermissionPolicy
     private let limits: AgentLimits
+    private let changeRecorder: (any FileChangeRecording)?
 
     init(resolver: any ModelResolving, tools: ToolRegistry, instructionsLoader: any ProjectInstructionsLoading,
-         policy: ToolPermissionPolicy = ToolPermissionPolicy(), limits: AgentLimits = AgentLimits()) {
+         policy: ToolPermissionPolicy = ToolPermissionPolicy(), limits: AgentLimits = AgentLimits(),
+         changeRecorder: (any FileChangeRecording)? = nil) {
         self.resolver = resolver
         self.tools = tools
         self.instructionsLoader = instructionsLoader
         self.policy = policy
         self.limits = limits
+        self.changeRecorder = changeRecorder
     }
 
     func run(_ request: AgentRunRequest, approver: any ToolApprover) -> AsyncThrowingStream<AgentEvent, Error> {
@@ -67,7 +70,7 @@ struct AgentRuntime: AgentService {
         )
         let executor = ToolExecutor(registry: tools, policy: policy, timeout: limits.toolTimeout,
                                     maxOutputCharacters: limits.maxToolOutputCharacters)
-        let toolContext = ToolContext(projectRoot: request.projectRoot)
+        let toolContext = ToolContext(projectRoot: request.projectRoot, changeRecorder: changeRecorder)
         var consecutiveInvalidIterations = 0
 
         for _ in 0..<limits.maxIterations {

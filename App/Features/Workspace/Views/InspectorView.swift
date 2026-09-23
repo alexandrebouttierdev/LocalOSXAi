@@ -36,12 +36,17 @@ struct InspectorView: View {
                         if viewModel.models.selectedModel?.supportsTools == false {
                             placeholder("The selected model does not support tools: the agent can only chat.")
                         } else {
-                            placeholder("File changes ask for your approval. Terminal and Git tools arrive in Phase 4.")
+                            placeholder("File changes and commands that change things ask for your approval.")
                         }
                     }
                 }
                 InspectorSection(title: "Git") {
-                    placeholder("Branch and working tree status arrive in Phase 4.")
+                    if let git = viewModel.activePanels?.git {
+                        GitSummaryView(viewModel: git)
+                            .task(id: git.projectRoot) { await git.refresh() }
+                    } else {
+                        placeholder("Open a project to see its Git status.")
+                    }
                 }
             }
             .padding(AppSpacing.lg)

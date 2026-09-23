@@ -97,3 +97,76 @@ extension Fixtures {
         AgentRunRequest(sessionID: UUID(), projectRoot: root, prompt: prompt, history: history, model: model)
     }
 }
+
+/// A `CommandRunner` that replays scripted events and records requests.
+final class StubCommandRunner: CommandRunner {
+    private let events: [CommandEvent]
+    private let hangs: Bool
+    private let recorded = Recorder<CommandRequest>()
+
+    init(_ events: [CommandEvent] = [.exited(CommandExit(code: 0, duration: .zero, timedOut: false))], hangs: Bool = false) {
+        self.events = events
+        self.hangs = hangs
+    }
+
+    var requests: [CommandRequest] { recorded.values }
+
+    func run(_ request: CommandRequest) -> AsyncThrowingStream<CommandEvent, Error> {
+        recorded.record(request)
+        let events = events
+        let hangs = hangs
+        return AsyncThrowingStream { continuation in
+            let task = Task {
+                events.forEach { continuation.yield($0) }
+                if hangs {
+                    do { try await Task.sleep(for: .seconds(3_600)) } catch {
+                        continuation.finish(throwing: CancellationError())
+                        return
+                    }
+                }
+                continuation.finish()
+            }
+            continuation.onTermination = { _ in task.cancel() }
+        }
+    }
+}
+
+/// A `GitService` returning fixed data.
+struct StubGitService: GitService {
+    var status = GitStatus(branch: "main")
+    var commits: [GitCommit] = []
+    var error: GitError?
+
+    func status(in root: URL) async throws -> GitStatus {
+        if let error { throw error }
+        return status
+    }
+
+    func diff(in root: URL, path: String?, staged: Bool) async throws -> String { "" }
+
+    func log(in root: URL, limit: Int) async throws -> [GitCommit] {
+        if let error { throw error }
+        return Array(commits.prefix(limit))
+    }
+}
+
+/// A `ProjectFileBrowsing` over an in-memory file table.
+struct StubFileBrowser: ProjectFileBrowsing {
+    var files: [String: String] = [:]
+
+    func files(in projectRoot: URL) async throws -> [String] { files.keys.sorted() }
+
+    func contents(of path: String, in projectRoot: URL) async throws -> String {
+        guard let text = files[path] else { throw ToolError.executionFailed("No file at “\(path)”.") }
+        return text
+    }
+}
+
+extension WorkspaceServices {
+    @MainActor
+    static func stub(agent: any AgentService = StubAgentService(.events([.finished(.completed)])),
+                     git: any GitService = StubGitService(), browser: any ProjectFileBrowsing = StubFileBrowser()) -> WorkspaceServices {
+        WorkspaceServices(agentService: agent, commandRunner: StubCommandRunner(), git: git, changeTracker: ChangeTracker(),
+                          fileBrowser: browser, toolDefinitions: [], isSimulated: false)
+    }
+}

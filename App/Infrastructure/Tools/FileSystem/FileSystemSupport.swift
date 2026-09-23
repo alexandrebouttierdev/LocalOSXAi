@@ -43,8 +43,9 @@ enum TextFileReader {
 }
 
 /// Enumerates project files, skipping folders that are never useful to a
-/// coding agent (dependencies, build products, VCS internals) and hidden
-/// files, which often hold local configuration or secrets.
+/// coding agent (dependencies, build products, VCS internals), paths ignored
+/// by the root `.gitignore`, and hidden files, which often hold local
+/// configuration or secrets.
 struct ProjectFileWalker: Sendable {
     static let ignoredDirectoryNames: Set<String> = [
         ".git", ".hg", ".svn", ".build", ".swiftpm", "DerivedData", "build", "Pods", "Carthage",
@@ -59,6 +60,12 @@ struct ProjectFileWalker: Sendable {
     }
 
     let root: URL
+    private let ignore: GitIgnore
+
+    init(root: URL) {
+        self.root = root
+        ignore = GitIgnore(root: root)
+    }
 
     /// Entries under `directory`, sorted by path.
     ///
@@ -78,15 +85,17 @@ struct ProjectFileWalker: Sendable {
         while let url = enumerator.nextObject() as? URL {
             if Task.isCancelled { break }
             let isDirectory = (try? url.resourceValues(forKeys: [.isDirectoryKey]).isDirectory) ?? false
-            if isDirectory, Self.ignoredDirectoryNames.contains(url.lastPathComponent) {
-                enumerator.skipDescendants()
+            let path = ProjectBoundary.relativePath(of: url, in: root)
+            let isSkippedFolder = isDirectory && Self.ignoredDirectoryNames.contains(url.lastPathComponent)
+            if isSkippedFolder || ignore.isIgnored(path, isDirectory: isDirectory) {
+                if isDirectory { enumerator.skipDescendants() }
                 continue
             }
             guard entries.count < limit else {
                 truncated = true
                 break
             }
-            entries.append(Entry(url: url, path: ProjectBoundary.relativePath(of: url, in: root), isDirectory: isDirectory))
+            entries.append(Entry(url: url, path: path, isDirectory: isDirectory))
         }
         return (entries.sorted { $0.path.localizedStandardCompare($1.path) == .orderedAscending }, truncated)
     }
@@ -106,8 +115,10 @@ struct GlobMatcher: Sendable {
     private let regex: NSRegularExpression?
     private let matchesNameOnly: Bool
 
-    init(_ pattern: String) {
-        matchesNameOnly = !pattern.contains("/")
+    /// - Parameter matchesFullPath: force matching the whole relative path
+    ///   (default: only when the pattern contains `/`).
+    init(_ pattern: String, matchesFullPath: Bool? = nil) {
+        matchesNameOnly = !(matchesFullPath ?? pattern.contains("/"))
         regex = try? NSRegularExpression(pattern: "^" + Self.translate(pattern) + "$", options: [.caseInsensitive])
     }
 
@@ -141,5 +152,50 @@ struct GlobMatcher: Sendable {
             }
         }
         return result
+    }
+}
+
+/// The rules of a project's root `.gitignore`.
+///
+/// Supports the common forms: `name`, `*.ext`, `dir/`, `/anchored`,
+/// `a/**/b` and `!negation`, with the last matching rule winning, as in Git.
+/// Nested `.gitignore` files and `.git/info/exclude` are not read.
+struct GitIgnore: Sendable {
+    private struct Rule: Sendable {
+        let matcher: GlobMatcher
+        let directoryOnly: Bool
+        let negated: Bool
+    }
+
+    private let rules: [Rule]
+
+    init(root: URL) {
+        let text = (try? String(contentsOf: root.appending(path: ".gitignore"), encoding: .utf8)) ?? ""
+        self.init(contents: text)
+    }
+
+    init(contents: String) {
+        rules = contents.split(whereSeparator: \.isNewline).compactMap { rawLine in
+            var line = String(rawLine).trimmingCharacters(in: .whitespaces)
+            guard !line.isEmpty, !line.hasPrefix("#") else { return nil }
+            let negated = line.hasPrefix("!")
+            if negated { line.removeFirst() }
+            let directoryOnly = line.hasSuffix("/")
+            if directoryOnly { line.removeLast() }
+            // A slash anywhere but the end anchors the pattern to the root;
+            // without one, the pattern matches a name at any depth.
+            let anchored = line.contains("/")
+            if line.hasPrefix("/") { line.removeFirst() }
+            guard !line.isEmpty else { return nil }
+            return Rule(matcher: GlobMatcher(line, matchesFullPath: anchored), directoryOnly: directoryOnly, negated: negated)
+        }
+    }
+
+    func isIgnored(_ relativePath: String, isDirectory: Bool) -> Bool {
+        var ignored = false
+        for rule in rules where !rule.directoryOnly || isDirectory {
+            if rule.matcher.matches(path: relativePath) { ignored = !rule.negated }
+        }
+        return ignored
     }
 }

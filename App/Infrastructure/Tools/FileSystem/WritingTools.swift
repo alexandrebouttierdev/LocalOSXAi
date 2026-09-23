@@ -41,6 +41,13 @@ struct WriteFileTool: AgentTool {
         let lines = arguments.values["content"]?.stringValue?.split(separator: "\n", omittingEmptySubsequences: false).count ?? 0
         return "Write \(path) (\(lines) lines)"
     }
+
+    func proposedChange(arguments: ToolArguments, context: ToolContext) async throws -> ProposedFileChange? {
+        let url = try ProjectBoundary.resolve(try arguments.string("path"), in: context.projectRoot)
+        let relative = ProjectBoundary.relativePath(of: url, in: context.projectRoot)
+        let current = FileManager.default.fileExists(atPath: url.path) ? try? TextFileReader.read(url, relativePath: relative) : nil
+        return ProposedFileChange(file: url, path: relative, currentContent: current, proposedContent: try arguments.string("content"))
+    }
 }
 
 /// `edit_file`: replaces an exact text fragment.
@@ -65,6 +72,32 @@ struct EditFileTool: AgentTool {
     let effect = ToolEffect.writesFiles
 
     func execute(arguments: ToolArguments, context: ToolContext) async throws -> ToolResult {
+        let edit = try computeEdit(arguments: arguments, context: context)
+        try Task.checkCancellation()
+        do {
+            try Data(edit.updated.utf8).write(to: edit.url, options: .atomic)
+        } catch {
+            throw ToolError.executionFailed("Cannot write “\(edit.relative)”: \(error.localizedDescription)")
+        }
+        return .success("Edited \(edit.relative): \(edit.count) replacement\(edit.count == 1 ? "" : "s").",
+                        summary: "Edited \(edit.relative)")
+    }
+
+    func proposedChange(arguments: ToolArguments, context: ToolContext) async throws -> ProposedFileChange? {
+        let edit = try computeEdit(arguments: arguments, context: context)
+        return ProposedFileChange(file: edit.url, path: edit.relative, currentContent: edit.original, proposedContent: edit.updated)
+    }
+
+    private struct Edit {
+        let url: URL
+        let relative: String
+        let original: String
+        let updated: String
+        let count: Int
+    }
+
+    /// Validates the edit and computes the new content without writing.
+    private func computeEdit(arguments: ToolArguments, context: ToolContext) throws -> Edit {
         let url = try ProjectBoundary.resolve(try arguments.string("path"), in: context.projectRoot)
         let relative = ProjectBoundary.relativePath(of: url, in: context.projectRoot)
         let oldString = try arguments.string("old_string")
@@ -85,7 +118,6 @@ struct EditFileTool: AgentTool {
                 "old_string appears \(occurrences) times in “\(relative)”. Add surrounding lines to make it unique, or set replace_all."
             )
         }
-
         let updated: String
         if replaceAll {
             updated = text.replacingOccurrences(of: oldString, with: newString)
@@ -94,14 +126,7 @@ struct EditFileTool: AgentTool {
         } else {
             updated = text
         }
-        try Task.checkCancellation()
-        do {
-            try Data(updated.utf8).write(to: url, options: .atomic)
-        } catch {
-            throw ToolError.executionFailed("Cannot write “\(relative)”: \(error.localizedDescription)")
-        }
-        let count = replaceAll ? occurrences : 1
-        return .success("Edited \(relative): \(count) replacement\(count == 1 ? "" : "s").", summary: "Edited \(relative)")
+        return Edit(url: url, relative: relative, original: text, updated: updated, count: replaceAll ? occurrences : 1)
     }
 
     func describe(arguments: ToolArguments) -> String {

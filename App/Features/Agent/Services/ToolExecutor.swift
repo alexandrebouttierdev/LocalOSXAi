@@ -49,45 +49,68 @@ struct ToolExecutor: Sendable {
             return invalid(error, toolName: call.name)
         }
 
-        switch policy.permission(for: tool, arguments: arguments) {
+        // For file writes, compute the change first: an edit that cannot apply
+        // fails now (to the model) instead of asking the user for nothing.
+        var proposal: ProposedFileChange?
+        if tool.effect == .writesFiles {
+            do {
+                proposal = try await tool.proposedChange(arguments: arguments, context: context)
+            } catch {
+                return failure(error)
+            }
+        }
+
+        switch policy.permission(for: tool, arguments: arguments, projectRoot: context.projectRoot) {
         case .allowed:
             break
         case .blocked(let reason):
             return Outcome(status: .denied, summary: "Blocked", output: "Blocked by policy: \(reason) Do not retry.", isInvalidCall: false)
         case .requiresApproval(let reason):
             statusChanged(.awaitingApproval)
-            let request = ToolApprovalRequest(id: call.id, toolName: tool.name,
+            var request = ToolApprovalRequest(id: call.id, toolName: tool.name,
                                               summary: tool.describe(arguments: arguments), reason: reason)
-            let decision = await approver.decide(request)
-            if Task.isCancelled { return cancelled }
-            guard decision != .deny else {
-                return Outcome(
-                    status: .denied, summary: "Denied by the user",
-                    output: "The user denied this action. Do not retry it; continue without it or ask the user how to proceed.",
-                    isInvalidCall: false
-                )
+            request.preview = proposal.map {
+                .init(path: $0.path, isNewFile: $0.currentContent == nil,
+                      diff: FileDiff(old: $0.currentContent ?? "", new: $0.proposedContent))
             }
+            if let refusal = await requestApproval(request, from: approver) { return refusal }
         }
 
         statusChanged(.running)
+        if let proposal { await context.changeRecorder?.willModify(proposal.file, in: context.projectRoot) }
         do {
-            let result = try await Self.withTimeout(timeout) {
+            let result = try await Self.withTimeout(tool.timeout ?? timeout) {
                 try await tool.execute(arguments: arguments, context: context)
             }
+            if let proposal { await context.changeRecorder?.didModify(proposal.file, in: context.projectRoot) }
             let output = OutputLimiter.limit(result.output, maxCharacters: maxOutputCharacters)
             return Outcome(status: result.status == .success ? .succeeded : .failed, summary: result.summary,
                            output: output, isInvalidCall: false)
-        } catch is CancellationError {
-            return cancelled
-        } catch let error as ToolError {
-            if Task.isCancelled { return cancelled }
-            let message = error.errorDescription ?? "The tool failed."
-            // Argument errors raised during execution are also the model's to fix.
-            return Outcome(status: .failed, summary: message, output: "Error: \(message)", isInvalidCall: Self.isArgumentError(error))
         } catch {
-            if Task.isCancelled { return cancelled }
-            return Outcome(status: .failed, summary: "Failed", output: "Error: \(error.localizedDescription)", isInvalidCall: false)
+            return Task.isCancelled || error is CancellationError ? cancelled : failure(error)
         }
+    }
+
+    private func failure(_ error: any Error) -> Outcome {
+        guard let toolError = error as? ToolError else {
+            let message = (error as? LocalizedError)?.errorDescription ?? error.localizedDescription
+            return Outcome(status: .failed, summary: "Failed", output: "Error: \(message)", isInvalidCall: false)
+        }
+        let message = toolError.errorDescription ?? "The tool failed."
+        // Argument errors raised during execution are also the model's to fix.
+        return Outcome(status: .failed, summary: message, output: "Error: \(message)", isInvalidCall: Self.isArgumentError(toolError))
+    }
+
+    /// Asks the user; returns the outcome to report when the call must not run.
+    private func requestApproval(_ request: ToolApprovalRequest, from approver: any ToolApprover) async -> Outcome? {
+        let decision = await approver.decide(request)
+        if Task.isCancelled { return cancelled }
+        guard decision == .deny else { return nil }
+        return Outcome(
+            status: .denied, summary: "Denied by the user",
+            output: "The user denied this action. Do not retry it; continue without it or ask the user how to proceed.",
+            isInvalidCall: false
+        )
     }
 
     private var cancelled: Outcome {

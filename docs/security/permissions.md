@@ -40,8 +40,8 @@ Defaults:
 |---|---|
 | `readOnly` (inside project) | Allowed |
 | `readOnly` on a secret-looking file (`.env*`, `*.pem`, `*.key`, `id_rsa*`, `.npmrc`, `credentials*`…) | Requires approval |
-| `writesFiles` | Requires approval ✅. The banner shows what will change; the full diff review arrives in Phase 4. “Allow for This Session” stops asking for that tool |
-| `executesCommands` | Per command: see [command-execution.md](command-execution.md) |
+| `writesFiles` | Requires approval. The banner shows the **diff before anything is written**. Every change is then kept in the Changes tab, where it can be reverted. “Allow for Session” stops asking for that tool |
+| `executesCommands` | Per command, by `CommandPolicy`: read-only and test commands run, others need approval, dangerous ones are blocked. See [command-execution.md](command-execution.md) |
 
 Approvals are answered in the banner above the composer (⌘↩ to allow, ⌘⌫ to deny). Stopping
 the run denies a pending request. Listing and searching never include hidden files, and
@@ -59,8 +59,9 @@ every action appears in the transcript with its arguments and result.
 - Provider URLs are not secrets and live in `UserDefaults` (`providers.v1`). Only `http`/`https`
   URLs with a host are accepted. A warning for non-local URLs (prompts, including file
   contents, would leave the machine) is planned with remote-server support.
-- Environment variables that look like secrets (`*_KEY`, `*_TOKEN`, `*_SECRET`, `PASSWORD`)
-  are stripped from the command environment unless the user allowlists them (Phase 4).
+- Environment variables whose names contain `KEY`, `TOKEN`, `SECRET`, `PASSWORD`, `PASSWD` or
+  `CREDENTIAL` are removed from the environment of every command. An allowlist is planned with
+  project settings (Phase 5).
 
 ## Logging and privacy
 

@@ -26,31 +26,30 @@ final class WorkspaceViewModel {
     let sessions: SessionsViewModel
     let models: ModelsViewModel
     let palette = CommandPaletteViewModel()
-    let toolDefinitions: [ToolDefinition]
-    /// True in simulated mode (`LOCALOSXAI_SIMULATED=1`): no model is called.
-    let isSimulated: Bool
+    let services: WorkspaceServices
+    var toolDefinitions: [ToolDefinition] { services.toolDefinitions }
+    var isSimulated: Bool { services.isSimulated }
 
     private(set) var selectedProjectID: Project.ID?
     private(set) var selectedSessionID: Session.ID?
     private(set) var activeAgent: AgentViewModel?
+    /// Terminal, Git, changes and files of the selected project.
+    private(set) var activePanels: ProjectPanels?
     var selectedTab: MainTab = .agent
     var isSidebarVisible = true
     var isInspectorPresented = true
     var isCommandPalettePresented = false
     var isProjectImporterPresented = false
 
-    private let agentService: any AgentService
     private var agents: [Session.ID: AgentViewModel] = [:]
+    private var panels: [Project.ID: ProjectPanels] = [:]
     private var paletteModelIDs: [String: AIModel.ID] = [:]
 
-    init(projects: ProjectsViewModel, sessions: SessionsViewModel, models: ModelsViewModel,
-         agentService: any AgentService, toolDefinitions: [ToolDefinition], isSimulated: Bool) {
+    init(projects: ProjectsViewModel, sessions: SessionsViewModel, models: ModelsViewModel, services: WorkspaceServices) {
         self.projects = projects
         self.sessions = sessions
         self.models = models
-        self.agentService = agentService
-        self.toolDefinitions = toolDefinitions
-        self.isSimulated = isSimulated
+        self.services = services
     }
 
     // MARK: Derived state
@@ -90,10 +89,18 @@ final class WorkspaceViewModel {
 
     /// Selects a project and resumes its most recently updated session.
     func selectProject(_ id: Project.ID) async {
-        guard projects.project(id: id) != nil else { return }
+        guard let project = projects.project(id: id) else { return }
         selectedProjectID = id
+        activatePanels(for: project)
         await sessions.load(projectID: id)
         activateSession(sessions.sessions.first?.id)
+    }
+
+    private func activatePanels(for project: Project) {
+        if panels[project.id] == nil {
+            panels[project.id] = ProjectPanels(projectRoot: project.rootURL, services: services)
+        }
+        activePanels = panels[project.id]
     }
 
     /// Selects a session, switching project first when it belongs to another one.
@@ -101,6 +108,7 @@ final class WorkspaceViewModel {
         guard let session = sessions.session(id: id) else { return }
         if session.projectID != selectedProjectID {
             selectedProjectID = session.projectID
+            if let project = projects.project(id: session.projectID) { activatePanels(for: project) }
             await sessions.load(projectID: session.projectID)
         }
         activateSession(id)
@@ -134,7 +142,7 @@ final class WorkspaceViewModel {
             sessionID: session.id,
             projectRoot: project.rootURL,
             messages: session.messages,
-            agentService: agentService,
+            agentService: services.agentService,
             currentModel: { [weak models] in models?.selectedModelID },
             persist: { [weak self] sessionID, messages in
                 await self?.persist(messages, in: sessionID)
@@ -144,8 +152,12 @@ final class WorkspaceViewModel {
         return agent
     }
 
+    /// Saves the transcript after a run and refreshes what the run may have changed.
     private func persist(_ messages: [AgentMessage], in sessionID: Session.ID) async {
         await sessions.updateMessages(messages, model: models.selectedModelID, in: sessionID)
+        guard let panels = activePanels else { return }
+        await panels.changes.refresh()
+        await panels.git.refresh()
     }
 
     // MARK: Commands
@@ -158,10 +170,8 @@ final class WorkspaceViewModel {
         switch command {
         case .openProject, .toggleSidebar, .toggleInspector, .openSettings:
             nil
-        case .newSession, .showAgent, .showFiles, .showChanges, .openTerminal:
+        case .newSession, .showAgent, .showFiles, .showChanges, .openTerminal, .searchFiles:
             selectedProjectID == nil ? "Open a project first" : nil
-        case .searchFiles:
-            "Available in Phase 4"
         case .changeModel:
             models.allModels.isEmpty ? "No models available" : nil
         }
@@ -179,11 +189,14 @@ final class WorkspaceViewModel {
         switch command {
         case .openProject: isProjectImporterPresented = true
         case .newSession: Task { await createSession() }
+        case .searchFiles:
+            selectedTab = .files
+            activePanels?.files.requestSearchFocus()
         case .changeModel: showModelPalette()
         case .toggleSidebar: isSidebarVisible.toggle()
         case .toggleInspector: isInspectorPresented.toggle()
         case .openSettings: return .openSettings
-        case .searchFiles, .showAgent, .showFiles, .showChanges, .openTerminal: break
+        case .showAgent, .showFiles, .showChanges, .openTerminal: break
         }
         return .none
     }

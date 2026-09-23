@@ -9,6 +9,14 @@ struct ToolApprovalRequest: Identifiable, Hashable, Sendable {
     let summary: String
     /// Why approval is needed (“This changes files in your project.”).
     let reason: String
+    /// The change a file-writing call would make, shown as a diff before approving.
+    var preview: Preview?
+
+    struct Preview: Hashable, Sendable {
+        let path: String
+        let isNewFile: Bool
+        let diff: FileDiff
+    }
 }
 
 enum ToolApprovalDecision: Hashable, Sendable {

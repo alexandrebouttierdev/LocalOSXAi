@@ -65,15 +65,16 @@ struct ProjectBoundaryTests {
 @Suite("ToolPermissionPolicy")
 struct ToolPermissionPolicyTests {
     private let policy = ToolPermissionPolicy()
+    private let root = URL(fileURLWithPath: "/tmp/Demo")
 
     @Test("reads are allowed, writes and commands need approval")
     func effects() {
-        #expect(policy.permission(for: EchoTool(), arguments: ToolArguments(["text": "x"])) == .allowed)
-        #expect(policy.permission(for: RecordingWriteTool(), arguments: ToolArguments())
+        #expect(policy.permission(for: EchoTool(), arguments: ToolArguments(["text": "x"]), projectRoot: root) == .allowed)
+        #expect(policy.permission(for: RecordingWriteTool(), arguments: ToolArguments(), projectRoot: root)
                 == .requiresApproval(reason: "This changes files in your project."))
         var command = EchoTool()
         command.effect = .executesCommands
-        guard case .requiresApproval = policy.permission(for: command, arguments: ToolArguments()) else {
+        guard case .requiresApproval = policy.permission(for: command, arguments: ToolArguments(), projectRoot: root) else {
             Issue.record("Commands must require approval")
             return
         }
@@ -86,7 +87,8 @@ struct ToolPermissionPolicyTests {
     func sensitiveReads(path: String) {
         var reader = EchoTool()
         reader.parameters = ToolParameterSchema(properties: ["path": .init(.string, "p")])
-        guard case .requiresApproval = policy.permission(for: reader, arguments: ToolArguments(["path": .string(path)])) else {
+        let arguments = ToolArguments(["path": .string(path)])
+        guard case .requiresApproval = policy.permission(for: reader, arguments: arguments, projectRoot: root) else {
             Issue.record("\(path) should require approval")
             return
         }

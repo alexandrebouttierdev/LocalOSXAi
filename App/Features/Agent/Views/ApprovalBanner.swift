@@ -8,7 +8,36 @@ struct ApprovalBanner: View {
     let request: ToolApprovalRequest
     let onDecision: (ToolApprovalDecision) -> Void
 
+    @State private var showsChanges = true
+
     var body: some View {
+        VStack(alignment: .leading, spacing: AppSpacing.sm) {
+            header
+            if let preview = request.preview {
+                DisclosureGroup(isExpanded: $showsChanges) {
+                    ScrollView([.vertical, .horizontal]) {
+                        DiffView(diff: preview.diff)
+                            .padding(.vertical, AppSpacing.xs)
+                    }
+                    .frame(maxHeight: 240)
+                    .background(AppColors.codeBackground, in: RoundedRectangle(cornerRadius: AppRadius.large, style: .continuous))
+                } label: {
+                    HStack(spacing: AppSpacing.sm) {
+                        Text(preview.isNewFile ? "New file" : "Changes")
+                            .font(AppTypography.callout)
+                            .foregroundStyle(AppColors.textSecondary)
+                        DiffStatView(added: preview.diff.addedLines, removed: preview.diff.removedLines)
+                    }
+                }
+            }
+        }
+        .padding(AppSpacing.md)
+        .appGlass(.tinted(AppColors.warning), in: RoundedRectangle(cornerRadius: AppRadius.composer, style: .continuous))
+        .accessibilityElement(children: .contain)
+        .accessibilityLabel("Approval needed: \(request.summary). \(request.reason)")
+    }
+
+    private var header: some View {
         HStack(alignment: .center, spacing: AppSpacing.md) {
             Image(systemName: "hand.raised.fill")
                 .font(.system(size: 15, weight: .semibold))
@@ -44,9 +73,5 @@ struct ApprovalBanner: View {
             }
             .controlSize(.regular)
         }
-        .padding(AppSpacing.md)
-        .appGlass(.tinted(AppColors.warning), in: RoundedRectangle(cornerRadius: AppRadius.composer, style: .continuous))
-        .accessibilityElement(children: .contain)
-        .accessibilityLabel("Approval needed: \(request.summary). \(request.reason)")
     }
 }

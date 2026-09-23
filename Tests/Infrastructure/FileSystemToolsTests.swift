@@ -226,7 +226,9 @@ struct FileSystemToolsTests {
     @Test("the built-in registry is valid and complete")
     @MainActor
     func builtInTools() {
-        #expect(AppEnvironment.builtInTools().names
-                == ["read_file", "list_directory", "search_files", "search_text", "edit_file", "write_file"])
+        let runner = PosixCommandRunner()
+        #expect(AppEnvironment.builtInTools(runner: runner, git: CLIGitService(runner: runner)).names
+                == ["read_file", "list_directory", "search_files", "search_text", "edit_file", "write_file",
+                    "run_command", "git_status", "git_diff", "git_log"])
     }
 }

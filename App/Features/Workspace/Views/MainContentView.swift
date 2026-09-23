@@ -11,7 +11,8 @@ struct MainContentView: View {
                 VStack(spacing: 0) {
                     ContentHeaderView(
                         projectName: project.name,
-                        sessionTitle: viewModel.selectedSession?.title,
+                        sessionTitle: viewModel.selectedTab == .agent ? viewModel.selectedSession?.title : nil,
+                        changesCount: viewModel.activePanels?.changes.changes.count ?? 0,
                         selectedTab: $viewModel.selectedTab
                     )
                     Divider().overlay(AppColors.border)
@@ -43,11 +44,12 @@ struct MainContentView: View {
                         .controlSize(.large)
                 }
             }
-        case .files, .changes, .terminal:
-            let tab = viewModel.selectedTab
-            EmptyStateView(systemImage: tab.systemImage, title: tab.title, message: tab.placeholderMessage) {
-                StatusBadge(title: "Coming in Phase \(tab.plannedPhase ?? 0)", systemImage: "clock", tone: .accent)
-            }
+        case .files:
+            if let files = viewModel.activePanels?.files { FilesView(viewModel: files).id(files.projectRoot) }
+        case .changes:
+            if let changes = viewModel.activePanels?.changes { ChangesView(viewModel: changes).id(changes.projectRoot) }
+        case .terminal:
+            if let terminal = viewModel.activePanels?.terminal { TerminalView(viewModel: terminal).id(terminal.projectRoot) }
         }
     }
 
@@ -61,6 +63,7 @@ struct MainContentView: View {
 private struct ContentHeaderView: View {
     let projectName: String
     let sessionTitle: String?
+    let changesCount: Int
     @Binding var selectedTab: MainTab
 
     var body: some View {
@@ -85,7 +88,7 @@ private struct ContentHeaderView: View {
 
             Spacer(minLength: AppSpacing.md)
 
-            TabSwitcher(selectedTab: $selectedTab)
+            TabSwitcher(selectedTab: $selectedTab, changesCount: changesCount)
         }
         .padding(.horizontal, AppSpacing.lg)
         .frame(height: 52)
@@ -96,13 +99,14 @@ private struct ContentHeaderView: View {
 /// macOS 26, morphs) from one tab to the next.
 private struct TabSwitcher: View {
     @Binding var selectedTab: MainTab
+    let changesCount: Int
     @Namespace private var namespace
 
     var body: some View {
         AppGlassContainer(spacing: 0) {
             HStack(spacing: AppSpacing.xxs) {
                 ForEach(MainTab.allCases) { tab in
-                    TabButton(tab: tab, isSelected: tab == selectedTab, namespace: namespace) {
+                    TabButton(tab: tab, isSelected: tab == selectedTab, badge: tab == .changes ? changesCount : 0, namespace: namespace) {
                         selectedTab = tab
                     }
                 }
@@ -119,14 +123,26 @@ private struct TabSwitcher: View {
 private struct TabButton: View {
     let tab: MainTab
     let isSelected: Bool
+    let badge: Int
     let namespace: Namespace.ID
     let action: () -> Void
     @State private var isHovered = false
 
     var body: some View {
         Button(action: action) {
-            Label(tab.title, systemImage: tab.systemImage)
-                .labelStyle(.titleAndIcon)
+            HStack(spacing: AppSpacing.xs) {
+                Label(tab.title, systemImage: tab.systemImage)
+                    .labelStyle(.titleAndIcon)
+                if badge > 0 {
+                    Text("\(badge)")
+                        .font(AppTypography.caption.monospacedDigit().weight(.semibold))
+                        .foregroundStyle(.white)
+                        .padding(.horizontal, AppSpacing.xs + 1)
+                        .frame(minWidth: 16, minHeight: 16)
+                        .background(AppColors.accent, in: Capsule())
+                        .accessibilityLabel("\(badge) pending")
+                }
+            }
                 .font(AppTypography.callout.weight(isSelected ? .semibold : .regular))
                 .foregroundStyle(isSelected ? AppColors.textPrimary : (isHovered ? AppColors.textPrimary : AppColors.textSecondary))
                 .padding(.horizontal, AppSpacing.md)

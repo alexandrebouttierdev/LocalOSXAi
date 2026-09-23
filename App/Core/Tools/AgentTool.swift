@@ -27,6 +27,14 @@ protocol AgentTool: Sendable {
 
     /// Human description of a call, used in approval prompts. Has a default.
     func describe(arguments: ToolArguments) -> String
+
+    /// Execution time limit for this tool, when it needs more (or less) than
+    /// the executor's default. `nil` uses the default.
+    var timeout: Duration? { get }
+
+    /// For tools that write files: the change a call would make, computed
+    /// without writing, so the user can see the diff before approving.
+    func proposedChange(arguments: ToolArguments, context: ToolContext) async throws -> ProposedFileChange?
 }
 
 extension AgentTool {
@@ -40,6 +48,10 @@ extension AgentTool {
     func describe(arguments: ToolArguments) -> String {
         "\(name) \(JSONValue.object(arguments.values).serialized())"
     }
+
+    var timeout: Duration? { nil }
+
+    func proposedChange(arguments: ToolArguments, context: ToolContext) async throws -> ProposedFileChange? { nil }
 }
 
 /// The side effects a tool may have, from least to most dangerous.
@@ -61,6 +73,32 @@ enum ToolEffect: Int, Sendable, Hashable, Comparable, CaseIterable {
 struct ToolContext: Sendable {
     /// Absolute, symlink-resolved project root. Tools must not escape it.
     let projectRoot: URL
+    /// Records files the agent changes, so the user can review and revert them.
+    var changeRecorder: (any FileChangeRecording)?
+
+    init(projectRoot: URL, changeRecorder: (any FileChangeRecording)? = nil) {
+        self.projectRoot = projectRoot
+        self.changeRecorder = changeRecorder
+    }
+}
+
+/// Keeps the original content of files before the agent modifies them.
+///
+/// The executor calls it around every `writesFiles` tool, so tools stay
+/// unaware of change tracking (docs/ai/tools.md).
+protocol FileChangeRecording: Sendable {
+    func willModify(_ file: URL, in projectRoot: URL) async
+    func didModify(_ file: URL, in projectRoot: URL) async
+}
+
+/// What a file-writing tool is about to do, for review before approval.
+struct ProposedFileChange: Hashable, Sendable {
+    let file: URL
+    /// Path relative to the project root.
+    let path: String
+    /// `nil` when the file does not exist yet.
+    let currentContent: String?
+    let proposedContent: String
 }
 
 /// The provider-facing description of a tool.

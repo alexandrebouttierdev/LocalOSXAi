@@ -35,3 +35,5 @@ Accepted ADRs are not edited to change their decision. Write a new ADR that supe
 | [0014](0014-trust-loaded-context-size.md) | Trust the runtime's loaded context size (amends 0008) | Accepted |
 | [0015](0015-sequential-tools-with-in-loop-approval.md) | Sequential tool execution with in-loop approval | Accepted |
 | [0016](0016-liquid-glass-with-fallback.md) | Liquid Glass for floating layers, with a material fallback | Accepted |
+| [0017](0017-posix-spawn-process-groups.md) | Run commands with posix_spawn in their own process group | Accepted |
+| [0018](0018-change-review-before-and-after.md) | Review file changes before approval and after writing | Accepted |

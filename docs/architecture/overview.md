@@ -33,8 +33,10 @@
 | Agent | Conversation UI, agent runtime (loop, context, tool execution, approvals) | 1–3 |
 | Models | Model discovery (`ProviderRegistry`), selection, resolution for the agent | 1–2 |
 | Settings | Appearance, provider settings (endpoints, context, timeout) with live status | 1–2 |
-
-Planned features: Files, Changes, Terminal and Git (Phase 4). Their folders are created
+| Terminal | Integrated terminal: `CommandRunner` port, history, streamed output, stop | 4 |
+| Git | `GitService` port, porcelain parsing, inspector summary | 4 |
+| Changes | `ChangeTracker`, review of the agent's edits: diff, accept, revert | 4 |
+| Files | File browser with fuzzy search (⌘P) and preview | 4 | Their folders are created
 when their implementation starts; the UI already shows labelled placeholders for them.
 
 ## Single module, enforced boundaries

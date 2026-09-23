@@ -8,8 +8,8 @@
 | `ToolError` | Core / tools | duplicate/invalid/unknown tool, malformed/missing/invalid/unexpected argument, permission denied, outside project, execution failed, timed out | ✅ |
 | `ProjectError` | Projects | folder not found, not a folder | ✅ |
 | `AgentError` | Agent | no model selected, model unavailable, context overflow, too many invalid tool calls | ✅ |
-| `TerminalError` | Terminal | launch failed, timed out, blocked by policy | Phase 4 |
-| `GitError` | Git | not a repository, command failed, conflict | Phase 4 |
+| `TerminalError` | Terminal | launch failed (timeouts are reported in `CommandExit`) | ✅ |
+| `GitError` | Git | not a repository, command failed | ✅ |
 | `PersistenceError` | Persistence | open failed, migration failed, corrupt data | Phase 5 |
 
 Typed errors exist where the caller can *act differently* on the case. Where it cannot, a

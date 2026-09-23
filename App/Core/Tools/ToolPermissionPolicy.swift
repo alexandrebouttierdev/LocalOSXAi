@@ -10,12 +10,15 @@ enum ToolPermission: Hashable, Sendable {
 /// Decides whether a tool call may run, from the tool's declared effect and
 /// its arguments. Tools never decide their own permission.
 ///
-/// Phase 3 rules (docs/security/permissions.md):
+/// Rules (docs/security/permissions.md):
 /// - reading inside the project is allowed, except files that commonly hold
 ///   secrets, which require approval;
 /// - writing files requires approval;
-/// - running commands requires approval (refined by the command policy in Phase 4).
+/// - commands are classified by `CommandPolicy`: read-only and test commands
+///   run, others require approval, dangerous ones are blocked.
 struct ToolPermissionPolicy: Sendable {
+    var commands = CommandPolicy()
+
     /// File name patterns treated as secrets. Matched case-insensitively on
     /// the last path component.
     static let sensitiveFilePatterns = [
@@ -23,7 +26,7 @@ struct ToolPermissionPolicy: Sendable {
         ".npmrc", ".netrc", ".pypirc", "*.keystore", "credentials*", "secrets.*"
     ]
 
-    func permission(for tool: any AgentTool, arguments: ToolArguments) -> ToolPermission {
+    func permission(for tool: any AgentTool, arguments: ToolArguments, projectRoot: URL) -> ToolPermission {
         switch tool.effect {
         case .readOnly:
             if let path = arguments.values["path"]?.stringValue, Self.isSensitive(path: path) {
@@ -33,7 +36,14 @@ struct ToolPermissionPolicy: Sendable {
         case .writesFiles:
             return .requiresApproval(reason: "This changes files in your project.")
         case .executesCommands:
-            return .requiresApproval(reason: "This runs a command on your Mac.")
+            guard let command = arguments.values["command"]?.stringValue else {
+                return .requiresApproval(reason: "This runs a command on your Mac.")
+            }
+            switch commands.decision(for: command, projectRoot: projectRoot) {
+            case .allowed: return .allowed
+            case .requiresApproval(let reason): return .requiresApproval(reason: reason)
+            case .blocked(let reason): return .blocked(reason: reason)
+            }
         }
     }
 

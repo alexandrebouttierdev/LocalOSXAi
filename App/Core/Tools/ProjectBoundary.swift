@@ -32,7 +32,7 @@ enum ProjectBoundary {
     /// and for tool output.
     static func relativePath(of url: URL, in root: URL) -> String {
         let rootPath = resolveExisting(root.standardizedFileURL).path
-        let path = url.path
+        let path = resolveExisting(url.standardizedFileURL).path
         guard path.hasPrefix(rootPath) else { return path }
         let relative = path.dropFirst(rootPath.count).drop { $0 == "/" }
         return relative.isEmpty ? "." : String(relative)

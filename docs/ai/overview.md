@@ -27,9 +27,9 @@ AgentViewModel ──▶ AgentService (protocol)            ◀── AgentRunti
 | Model resolution | `ModelResolving` → `ProviderRegistry` (discovery, per-provider isolation) | ✅ |
 | Model | `AIModel` + `ModelCapabilities` + `ContextWindow` | ✅ |
 | Agent service | `AgentService.run(_:approver:)` | ✅ `AgentRuntime` (tool loop), simulated ✅ |
-| Tools | `AgentTool`, `ToolRegistry`, `ToolParameterSchema`, `ToolArguments`, `ToolResult` | ✅ 6 filesystem tools; terminal and Git in Phase 4 |
+| Tools | `AgentTool`, `ToolRegistry`, `ToolParameterSchema`, `ToolArguments`, `ToolResult` | ✅ 10 tools: filesystem, `run_command`, Git |
 | Context | `ContextUsage`, `TokenEstimator`, `AgentPrompt`, `RunContext` | ✅ (summarization planned) |
-| Tool executor, permissions, approvals | `ToolExecutor`, `ToolPermissionPolicy`, `ToolApprover` | ✅ (`CommandPolicy`: Phase 4) |
+| Tool executor, permissions, approvals | `ToolExecutor`, `ToolPermissionPolicy`, `CommandPolicy`, `ToolApprover`, `FileChangeRecording` | ✅ |
 
 ## Documents
 

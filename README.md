@@ -12,7 +12,7 @@ prototype, and it is not meant to be a clone of Cline or OpenCode.
 
 ## Features
 
-Status as of **Phase 3 (agent runtime)**:
+Status as of **Phase 4 (execution & review)**:
 
 | Area | Status |
 |---|---|
@@ -29,12 +29,16 @@ Status as of **Phase 3 (agent runtime)**:
 | Ollama and LM Studio providers, model discovery, provider settings | ✅ |
 | Model selection grouped by provider (inspector, ⌘L) | ✅ |
 | Core contracts: `LLMProvider`, `AgentTool`, `ToolRegistry`, schema validation | ✅ |
-| Terminal, Git, diff/changes review, command permissions, Files tab | Phase 4 |
+| Terminal tab (streamed output, stop, history) and agent `run_command` with a command policy | ✅ |
+| Git status, diff and log (inspector and agent tools) | ✅ |
+| Change review: diff before approval, then accept / revert / accept all / reject all | ✅ |
+| Files tab with fuzzy search (⌘P) and preview; `.gitignore` respected | ✅ |
 | SQLite persistence, history, settings | Phase 5 |
 | Polish, animations, accessibility audit, performance | Phase 6 |
 
-The agent works inside the opened project folder only. It reads freely, but every file change
-needs your approval. It cannot run commands yet (Phase 4). To work on the UI without any
+The agent works inside the opened project folder only. It reads freely. File changes need your
+approval, and you see the diff first. Commands are classified: read-only and test commands run,
+others need approval, dangerous ones are refused. To work on the UI without any
 model server, run with `LOCALOSXAI_SIMULATED=1`. A **Simulated** badge then appears in the
 sidebar.
 
@@ -124,6 +128,6 @@ first.
 2. **Providers** ✅: Ollama and LM Studio providers, model discovery, streaming chat, provider settings.
 3. **Agent runtime** ✅: agent loop, context manager (AGENTS.md loading, budgeting, compaction),
    tool executor with approvals, filesystem tools.
-4. **Execution**: terminal, Git service, changes/diff review, command permission policy.
+4. **Execution** ✅: terminal, Git service, changes/diff review, command permission policy, Files tab.
 5. **Persistence**: SQLite store with migrations, session history, settings.
 6. **Polish**: animations, accessibility audit, performance, error recovery.
