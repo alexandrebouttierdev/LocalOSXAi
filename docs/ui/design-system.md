@@ -13,17 +13,41 @@ interface should disappear behind the work.
 - **Density.** 13 pt body, 28 pt rows, 4 pt grid.
 - **Quiet motion.** 120–220 ms, ease-out, disabled under Reduce Motion.
 
-Avoided: gradients, large cards, large colored buttons, heavy shadows, glassy “AI startup”
+Avoided: gradients, large cards, large colored buttons, heavy shadows, decorative “AI startup”
 aesthetics, dashboards of widgets.
+
+## Glass
+
+Glass is Apple's material for layers that **float** above content. It is used for exactly that,
+and nothing else ([ADR 0016](../decisions/0016-liquid-glass-with-fallback.md)).
+
+| Surface | Glass |
+|---|---|
+| Sidebar, inspector | Native system material (Liquid Glass on macOS 26): no custom background |
+| Command palette, composer, approval banner (warning tint), suggestion chips, recent-projects card | `appGlass(in:)` |
+| Selected tab | A glass capsule that slides between tabs and morphs on macOS 26 (`appGlassID`) |
+| Send/Stop, Allow/Deny, primary actions | `appGlassButton(prominent:)` → `.glassProminent` / `.glass` |
+| Transcript, messages, code blocks, tool rows, lists | **Opaque**: content must stay legible |
+
+`AppGlass.swift` is the only place that calls `glassEffect`. It falls back to `.regularMaterial`
+plus a hairline border before macOS 26. Glass automatically honors Reduce Transparency and
+Increase Contrast.
+
+## Motion
+
+- Messages fade in and rise 8 pt as they arrive. The command palette scales from 97% with a fade.
+- The agent avatar's sparkles animate while the agent works (`symbolEffect(.variableColor)`),
+  and a pending approval pulses.
+- Everything uses `AppAnimation` tokens and is disabled or reduced under Reduce Motion.
 
 ## Tokens (`App/Shared/DesignSystem/`)
 
 | Token | Values |
 |---|---|
-| `AppColors` | `background`, `sidebar`, `surface`, `surfaceRaised`, `hover`, `selection`, `scrim`, `border`, `borderStrong`, `textPrimary/Secondary/Tertiary`, `accent`, `accentSubtle`, `success`, `warning`, `danger` |
-| `AppTypography` | `title` (15 semibold), `headline` (13 medium), `body` (13), `callout` (12), `caption` (11), `sectionHeader`, `code` (mono 12), `shortcut` |
+| `AppColors` | `background`, `surface`, `surfaceRaised`, `hover`, `selection`, `scrim`, `border`, `borderStrong`, `textPrimary/Secondary/Tertiary`, `accent`, `accentSubtle`, `success`, `warning`, `danger`, `projectPalette`, `codeBackground` |
+| `AppTypography` | `display` (22 semibold), `title` (15 semibold), `headline` (13 medium), `body` (13), `callout` (12), `caption` (11), `sectionHeader`, `code` (mono 12), `shortcut` |
 | `AppSpacing` | `xxs 2`, `xs 4`, `sm 8`, `md 12`, `lg 16`, `xl 24`, `xxl 32` |
-| `AppRadius` | `small 4`, `medium 6`, `large 8`, `overlay 12` |
+| `AppRadius` | `small 4`, `medium 6`, `large 8`, `overlay 14`, `bubble 16`, `composer 20` |
 | `AppBorders` | `hairline 1` |
 | `AppShadow` | `overlay` (floating layers only) |
 | `AppAnimation` | `quick`, `standard`, `overlay`, and `.appAnimation(_:value:)`, which respects Reduce Motion |

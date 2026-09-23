@@ -20,7 +20,11 @@ enum AppRadius {
     /// Panels and cards.
     static let large: CGFloat = 8
     /// Floating overlays such as the command palette.
-    static let overlay: CGFloat = 12
+    static let overlay: CGFloat = 14
+    /// User message bubbles.
+    static let bubble: CGFloat = 16
+    /// The floating composer and the approval banner.
+    static let composer: CGFloat = 20
 }
 
 /// Border widths.

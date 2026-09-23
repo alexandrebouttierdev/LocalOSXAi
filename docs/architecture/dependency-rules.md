@@ -31,12 +31,13 @@ AgentViewModel ─▶ AgentService ─▶ ToolExecutor ─▶ AgentTool ◀─ F
 | 8 | Cross-feature dependencies: one direction, models only | Avoid cycles between features | Review |
 | 9 | No singletons or global mutable state | Testability, explicit dependencies | Review, SwiftLint |
 
-Comments are excluded from the checks: documentation may name providers or implementations.
+Rules 1–6 skip comments, because documentation may name providers or implementations. Rule 7 checks comments only.
 
 ## Allowed exceptions
 
 - Views may call platform UI services that are purely presentational, such as
-  `NSWorkspace.activateFileViewerSelecting` for “Reveal in Finder”.
+  `NSWorkspace.activateFileViewerSelecting` for “Reveal in Finder” and `NSPasteboard` for
+  “Copy” on code blocks.
 - `SettingsView` uses `@AppStorage` for appearance, a UI preference with no business meaning.
 
 Any other exception needs an ADR.

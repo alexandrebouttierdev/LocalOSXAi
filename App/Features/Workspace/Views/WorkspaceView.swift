@@ -34,6 +34,7 @@ struct WorkspaceView: View {
                 }
         }
         .overlay { commandPalette }
+        .appAnimation(AppAnimation.overlay, value: viewModel.isCommandPalettePresented)
         .fileImporter(isPresented: $viewModel.isProjectImporterPresented, allowedContentTypes: [.folder]) { result in
             if case .success(let url) = result {
                 Task { await viewModel.openProject(at: url) }
@@ -71,7 +72,8 @@ struct WorkspaceView: View {
                     onActivate: { item in apply(viewModel.activatePaletteItem(item)) },
                     onDismiss: { viewModel.dismissCommandPalette() }
                 )
-                .padding(.top, 96)
+                .padding(.top, 88)
+                .transition(.scale(scale: 0.97, anchor: .top).combined(with: .opacity))
             }
             .transition(.opacity)
         }

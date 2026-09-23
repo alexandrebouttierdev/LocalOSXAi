@@ -11,12 +11,11 @@ import SwiftUI
 enum AppColors {
     // MARK: Surfaces
     static let background = dynamic(light: 0xF7F7F8, dark: 0x0F1012)
-    static let sidebar = dynamic(light: 0xF2F2F4, dark: 0x0C0D0E)
     static let surface = dynamic(light: 0xFFFFFF, dark: 0x151619)
     static let surfaceRaised = dynamic(light: 0xFFFFFF, dark: 0x1C1D21)
     static let hover = dynamic(light: 0x000000, lightAlpha: 0.04, dark: 0xFFFFFF, darkAlpha: 0.045)
     static let selection = dynamic(light: 0x000000, lightAlpha: 0.07, dark: 0xFFFFFF, darkAlpha: 0.08)
-    static let scrim = dynamic(light: 0x000000, lightAlpha: 0.18, dark: 0x000000, darkAlpha: 0.45)
+    static let scrim = dynamic(light: 0x000000, lightAlpha: 0.12, dark: 0x000000, darkAlpha: 0.32)
 
     // MARK: Borders
     static let border = dynamic(light: 0x000000, lightAlpha: 0.08, dark: 0xFFFFFF, darkAlpha: 0.08,
@@ -36,6 +35,18 @@ enum AppColors {
     static let success = dynamic(light: 0x2E8A5B, dark: 0x4CB782)
     static let warning = dynamic(light: 0xA26A12, dark: 0xE0A43B)
     static let danger = dynamic(light: 0xC62F35, dark: 0xEB5A5F)
+
+    /// Stable hues identifying projects (badge fill). Muted so badges never
+    /// compete with the accent or status colors.
+    static let projectPalette: [Color] = [
+        dynamic(light: 0x5E67D1, dark: 0x7C84E6), dynamic(light: 0x2E8A5B, dark: 0x4CB782),
+        dynamic(light: 0xB35C1E, dark: 0xE08A4A), dynamic(light: 0x9C4DB8, dark: 0xB97FD6),
+        dynamic(light: 0x1F7FA8, dark: 0x4BA9D6), dynamic(light: 0xB8434F, dark: 0xE06C78),
+        dynamic(light: 0x8A7A1E, dark: 0xC9B24A), dynamic(light: 0x3D6E8F, dark: 0x6F9FC2)
+    ]
+
+    /// Code blocks: slightly recessed from the surface they sit on.
+    static let codeBackground = dynamic(light: 0x000000, lightAlpha: 0.035, dark: 0x000000, darkAlpha: 0.28)
 
     // MARK: Factory
 

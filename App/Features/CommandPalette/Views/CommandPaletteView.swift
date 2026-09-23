@@ -1,6 +1,7 @@
 import SwiftUI
 
-/// The ⌘K overlay: a search field above a ranked, keyboard-navigable list.
+/// The ⌘K overlay: a glass panel with a search field, a ranked,
+/// keyboard-navigable list and a footer of keyboard hints.
 ///
 /// Keyboard: ↑/↓ move, ↩ activates, ⎋ closes. The view reports activation and
 /// dismissal to its owner and performs no action itself.
@@ -10,19 +11,18 @@ struct CommandPaletteView: View {
     let onDismiss: () -> Void
 
     @FocusState private var isSearchFocused: Bool
+    @Namespace private var selection
 
     var body: some View {
         VStack(spacing: 0) {
             searchField
             Divider().overlay(AppColors.border)
             resultsList
+            Divider().overlay(AppColors.border)
+            footer
         }
         .frame(width: AppLayout.commandPaletteWidth)
-        .background(AppColors.surfaceRaised, in: RoundedRectangle(cornerRadius: AppRadius.overlay, style: .continuous))
-        .overlay(
-            RoundedRectangle(cornerRadius: AppRadius.overlay, style: .continuous)
-                .strokeBorder(AppColors.borderStrong, lineWidth: AppBorders.hairline)
-        )
+        .appGlass(in: RoundedRectangle(cornerRadius: AppRadius.overlay, style: .continuous))
         .appShadow(.overlay)
         .onAppear { isSearchFocused = true }
         .onKeyPress(.downArrow) { viewModel.moveSelection(by: 1); return .handled }
@@ -34,48 +34,58 @@ struct CommandPaletteView: View {
     }
 
     private var searchField: some View {
-        HStack(spacing: AppSpacing.sm) {
+        HStack(spacing: AppSpacing.md) {
             Image(systemName: "magnifyingglass")
+                .font(.system(size: 15, weight: .medium))
                 .foregroundStyle(AppColors.textTertiary)
                 .accessibilityHidden(true)
             TextField(viewModel.placeholder, text: $viewModel.query)
                 .textFieldStyle(.plain)
-                .font(.title3)
+                .font(.system(size: 17))
                 .foregroundStyle(AppColors.textPrimary)
                 .focused($isSearchFocused)
                 .onSubmit(activate)
                 .accessibilityLabel("Search commands")
         }
         .padding(.horizontal, AppSpacing.lg)
-        .frame(height: 48)
+        .frame(height: 54)
     }
 
     @ViewBuilder
     private var resultsList: some View {
         if viewModel.results.isEmpty {
-            Text("No results")
-                .font(AppTypography.body)
-                .foregroundStyle(AppColors.textTertiary)
-                .frame(maxWidth: .infinity, minHeight: 80)
+            VStack(spacing: AppSpacing.xs) {
+                Image(systemName: "questionmark.circle")
+                    .font(.system(size: 20, weight: .light))
+                    .foregroundStyle(AppColors.textTertiary)
+                Text("No results for “\(viewModel.query)”")
+                    .font(AppTypography.callout)
+                    .foregroundStyle(AppColors.textTertiary)
+            }
+            .frame(maxWidth: .infinity, minHeight: 96)
         } else {
             ScrollViewReader { proxy in
                 ScrollView {
-                    LazyVStack(alignment: .leading, spacing: 0) {
+                    LazyVStack(alignment: .leading, spacing: 1) {
                         ForEach(Array(viewModel.results.enumerated()), id: \.element.id) { index, item in
                             if viewModel.showsSections, index == 0 || viewModel.results[index - 1].section != item.section {
                                 sectionTitle(item.section)
                             }
-                            PaletteRow(item: item, isSelected: index == viewModel.selectedIndex)
+                            PaletteRow(item: item, isSelected: index == viewModel.selectedIndex, selection: selection)
                                 .id(item.id)
                                 .onTapGesture {
                                     viewModel.select(item)
                                     activate()
                                 }
+                                .onHover { hovering in
+                                    if hovering { viewModel.select(item) }
+                                }
                         }
                     }
-                    .padding(AppSpacing.xs + AppSpacing.xxs)
+                    .padding(AppSpacing.sm)
+                    .appAnimation(AppAnimation.quick, value: viewModel.selectedIndex)
                 }
-                .frame(maxHeight: 360)
+                .frame(maxHeight: 380)
                 .fixedSize(horizontal: false, vertical: true)
                 .onChange(of: viewModel.selectedIndex) {
                     if let id = viewModel.selectedItem?.id { proxy.scrollTo(id) }
@@ -84,9 +94,30 @@ struct CommandPaletteView: View {
         }
     }
 
+    private var footer: some View {
+        HStack(spacing: AppSpacing.lg) {
+            hint("↑↓", "Navigate")
+            hint("↩", "Open")
+            hint("esc", "Close")
+            Spacer()
+        }
+        .padding(.horizontal, AppSpacing.lg)
+        .frame(height: 34)
+        .accessibilityHidden(true)
+    }
+
+    private func hint(_ keys: String, _ label: String) -> some View {
+        HStack(spacing: AppSpacing.xs + AppSpacing.xxs) {
+            ShortcutBadge(shortcut: keys)
+            Text(label)
+                .font(AppTypography.caption)
+                .foregroundStyle(AppColors.textTertiary)
+        }
+    }
+
     private func sectionTitle(_ title: String) -> some View {
         Text(title)
-            .font(AppTypography.caption)
+            .font(AppTypography.caption.weight(.medium))
             .foregroundStyle(AppColors.textTertiary)
             .padding(.horizontal, AppSpacing.sm + AppSpacing.xxs)
             .padding(.top, AppSpacing.sm)
@@ -102,12 +133,16 @@ struct CommandPaletteView: View {
 private struct PaletteRow: View {
     let item: PaletteItem
     let isSelected: Bool
+    let selection: Namespace.ID
 
     var body: some View {
-        HStack(spacing: AppSpacing.sm + AppSpacing.xxs) {
+        HStack(spacing: AppSpacing.md) {
             Image(systemName: item.systemImage)
-                .frame(width: 16)
-                .foregroundStyle(isSelected ? AppColors.textPrimary : AppColors.textSecondary)
+                .font(.system(size: 12, weight: .medium))
+                .foregroundStyle(isSelected ? AppColors.accent : AppColors.textSecondary)
+                .frame(width: 24, height: 24)
+                .background(isSelected ? AppColors.accentSubtle : AppColors.hover,
+                            in: RoundedRectangle(cornerRadius: AppRadius.medium, style: .continuous))
                 .accessibilityHidden(true)
             Text(item.title)
                 .font(AppTypography.body)
@@ -124,11 +159,14 @@ private struct PaletteRow: View {
             }
         }
         .padding(.horizontal, AppSpacing.sm + AppSpacing.xxs)
-        .frame(height: 34)
-        .background(
-            RoundedRectangle(cornerRadius: AppRadius.medium, style: .continuous)
-                .fill(isSelected ? AppColors.selection : .clear)
-        )
+        .frame(height: 40)
+        .background {
+            if isSelected {
+                RoundedRectangle(cornerRadius: AppRadius.large, style: .continuous)
+                    .fill(AppColors.selection)
+                    .matchedGeometryEffect(id: "selection", in: selection)
+            }
+        }
         .contentShape(Rectangle())
         .accessibilityElement(children: .combine)
         .accessibilityAddTraits(isSelected ? [.isButton, .isSelected] : .isButton)

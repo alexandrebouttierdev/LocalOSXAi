@@ -46,8 +46,15 @@ check 'App/Core/.*\.swift' '[Oo]llama|LMStudio|LM Studio|OpenAI' \
 # 5. Logging goes through os.Logger, never print.
 check 'App/.*\.swift' '(^|[^A-Za-z])print\(' 'Use Logger(category:) instead of print().'
 
-# 6. TODO/FIXME must carry a reason or reference: TODO(reason).
-check 'App/.*\.swift' '(TODO|FIXME)([^(]|$)' 'TODO/FIXME must be written as TODO(reason or link).'
+# 6. TODO/FIXME in comments must carry a reason or reference: TODO(reason).
+#    Checked separately because the rules above deliberately skip comments.
+todos=$(find App -type f -name '*.swift' -not -path '*/Tests/*' -print0 \
+  | xargs -0 grep -nE '//.*\b(TODO|FIXME)\b([^(]|$)' 2>/dev/null || true)
+if [[ -n "$todos" ]]; then
+  echo "✘ TODO/FIXME must be written as TODO(reason or link)."
+  echo "$todos" | sed 's/^/    /'
+  status=1
+fi
 
 if [[ $status -eq 0 ]]; then
   echo "✔ Architecture rules satisfied."

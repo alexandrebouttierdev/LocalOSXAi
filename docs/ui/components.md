@@ -11,14 +11,18 @@ in that feature's `Components/` or `Views/` folder.
 | `EmptyStateView` | Empty or not-yet-available content | One icon, a title, a sentence, and at most a couple of actions |
 | `ContextMeterView` | “38.4K / 100K context” with a gauge | Spoken value for VoiceOver; “Over budget” in text |
 | `SubtleButtonStyle` (`.subtle`) | Default low-emphasis button | Hover background |
-| `PrimaryButtonStyle` (`.primary`) | The single primary action of an area | Accent fill; dimmed when disabled |
+| `PrimaryButtonStyle` (`.primary`) | Fallback for prominent glass buttons before macOS 26 | Accent fill; dimmed when disabled |
+| `appGlass(in:)`, `appGlassButton(prominent:)`, `AppGlassContainer`, `appGlassID` | Glass surfaces and buttons | Liquid Glass on macOS 26, material fallback |
+| `ProjectBadge` | Colored initial identifying a project | Stable hue from the name |
+| `AgentAvatar` | The agent's mark | Sparkles animate while working |
+| `MarkdownText`, `CodeBlockView` | Model answers | Paragraphs, headings, lists, fenced code with a Copy button. Parsed only once a message is complete |
 
 Feature views worth knowing:
 
 | View | Feature | Notes |
 |---|---|---|
 | `CommandPaletteView` | CommandPalette | Overlay with keyboard handling. Performs no actions |
-| `AgentMessageView`, `ToolCallView`, `ComposerView` | Agent | Plain selectable text (Markdown is Phase 6); expandable tool calls |
+| `AgentMessageView`, `ToolCallView`, `ComposerView`, `ApprovalBanner` | Agent | User bubbles, Markdown answers, human-readable tool rows (`ToolCallPresentation`), floating glass composer |
 | `ModelPickerView` | Models | Menu grouped by provider, plus capability badges |
 | `SidebarView`, `MainContentView`, `InspectorView`, `WelcomeView` | Workspace | Window shell |
 

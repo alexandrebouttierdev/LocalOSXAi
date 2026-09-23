@@ -1,9 +1,13 @@
 import SwiftUI
 
-/// A compact, expandable row describing one tool call and its result.
+/// A compact, expandable row describing one tool call in human terms
+/// (“Read Makefile”), with its arguments and output available on demand.
 struct ToolCallView: View {
     let call: ToolCallRecord
     @State private var isExpanded = false
+    @State private var isHovered = false
+
+    private var presentation: ToolCallPresentation { ToolCallPresentation(call) }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
@@ -13,54 +17,71 @@ struct ToolCallView: View {
                 header
             }
             .buttonStyle(.plain)
-            .accessibilityLabel("Tool \(call.name), \(statusText)")
-            .accessibilityHint(isExpanded ? "Collapses the output" : "Shows the output")
+            .onHover { isHovered = $0 }
+            .accessibilityLabel("\(presentation.title), \(statusText)")
+            .accessibilityHint(isExpanded ? "Collapses the details" : "Shows the details")
 
             if isExpanded {
                 Divider().overlay(AppColors.border)
                 detail
+                    .transition(.opacity)
             }
         }
-        .background(AppColors.surface, in: RoundedRectangle(cornerRadius: AppRadius.medium, style: .continuous))
+        .background(isHovered || isExpanded ? AppColors.hover : .clear,
+                    in: RoundedRectangle(cornerRadius: AppRadius.medium, style: .continuous))
         .overlay(
             RoundedRectangle(cornerRadius: AppRadius.medium, style: .continuous)
                 .strokeBorder(AppColors.border, lineWidth: AppBorders.hairline)
         )
+        .appAnimation(AppAnimation.quick, value: isHovered)
         .appAnimation(AppAnimation.standard, value: isExpanded)
     }
 
     private var header: some View {
         HStack(spacing: AppSpacing.sm) {
-            statusIcon
-                .frame(width: 14)
-            Text(call.name)
-                .font(AppTypography.code)
+            Image(systemName: presentation.systemImage)
+                .font(AppTypography.callout)
+                .foregroundStyle(AppColors.textSecondary)
+                .frame(width: 16)
+                .accessibilityHidden(true)
+            Text(presentation.title)
+                .font(AppTypography.callout.weight(.medium))
                 .foregroundStyle(AppColors.textPrimary)
-            Text(call.argumentsJSON)
-                .font(AppTypography.code)
-                .foregroundStyle(AppColors.textTertiary)
                 .lineLimit(1)
-                .truncationMode(.tail)
+                .truncationMode(.middle)
+            if let detail = presentation.detail {
+                Text(detail)
+                    .font(AppTypography.caption)
+                    .foregroundStyle(AppColors.textTertiary)
+                    .lineLimit(1)
+            }
             Spacer(minLength: AppSpacing.sm)
-            if let summary = call.summary {
+            if call.status.isFinished, let summary = call.summary, call.status != .succeeded {
                 Text(summary)
                     .font(AppTypography.caption)
                     .foregroundStyle(AppColors.textSecondary)
                     .lineLimit(1)
             }
+            statusIcon
+                .frame(width: 16)
             Image(systemName: "chevron.right")
-                .font(AppTypography.caption)
+                .font(AppTypography.caption.weight(.semibold))
                 .foregroundStyle(AppColors.textTertiary)
                 .rotationEffect(.degrees(isExpanded ? 90 : 0))
                 .accessibilityHidden(true)
         }
         .padding(.horizontal, AppSpacing.sm + AppSpacing.xxs)
-        .frame(minHeight: AppLayout.rowHeight)
+        .frame(minHeight: 32)
         .contentShape(Rectangle())
     }
 
     private var detail: some View {
         VStack(alignment: .leading, spacing: AppSpacing.sm) {
+            if let summary = call.summary {
+                Text(summary)
+                    .font(AppTypography.caption)
+                    .foregroundStyle(AppColors.textSecondary)
+            }
             labeled("Arguments", call.argumentsJSON)
             if let output = call.output {
                 labeled("Output", output)
@@ -80,9 +101,11 @@ struct ToolCallView: View {
                     .foregroundStyle(AppColors.textSecondary)
                     .textSelection(.enabled)
                     .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(AppSpacing.sm)
             }
-            .frame(maxHeight: 200)
+            .frame(maxHeight: 220)
             .fixedSize(horizontal: false, vertical: true)
+            .background(AppColors.codeBackground, in: RoundedRectangle(cornerRadius: AppRadius.small, style: .continuous))
         }
     }
 
@@ -93,12 +116,14 @@ struct ToolCallView: View {
             ProgressView().controlSize(.mini)
         case .succeeded:
             Image(systemName: "checkmark.circle.fill").foregroundStyle(AppColors.success)
+                .transition(.symbolEffect(.appear))
         case .failed:
-            Image(systemName: "xmark.octagon.fill").foregroundStyle(AppColors.danger)
+            Image(systemName: "xmark.circle.fill").foregroundStyle(AppColors.danger)
         case .denied:
             Image(systemName: "hand.raised.fill").foregroundStyle(AppColors.warning)
         case .awaitingApproval:
-            Image(systemName: "questionmark.circle.fill").foregroundStyle(AppColors.warning)
+            Image(systemName: "hand.raised.circle").foregroundStyle(AppColors.warning)
+                .symbolEffect(.pulse, options: .repeating)
         case .cancelled:
             Image(systemName: "stop.circle").foregroundStyle(AppColors.textTertiary)
         }

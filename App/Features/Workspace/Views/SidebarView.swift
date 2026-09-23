@@ -19,9 +19,8 @@ struct SidebarView: View {
                 recentSection
             }
         }
+        // Native sidebar material: Liquid Glass on macOS 26, vibrancy before.
         .listStyle(.sidebar)
-        .scrollContentBackground(.hidden)
-        .background(AppColors.sidebar)
         .safeAreaInset(edge: .top, spacing: 0) { searchButton }
         .safeAreaInset(edge: .bottom, spacing: 0) { footer }
     }
@@ -44,8 +43,13 @@ struct SidebarView: View {
                     .selectionDisabled()
             }
             ForEach(viewModel.projects.projects) { project in
-                Label(project.name, systemImage: project.id == viewModel.selectedProjectID ? "folder.fill" : "folder")
-                    .help(project.rootURL.path)
+                Label {
+                    Text(project.name)
+                        .fontWeight(project.id == viewModel.selectedProjectID ? .semibold : .regular)
+                } icon: {
+                    ProjectBadge(name: project.name, size: 16)
+                }
+                .help(project.rootURL.path)
                     .tag(WorkspaceViewModel.SidebarItem.project(project.id))
                     .contextMenu {
                         Button("Reveal in Finder") { NSWorkspace.shared.activateFileViewerSelecting([project.rootURL]) }
@@ -112,15 +116,13 @@ struct SidebarView: View {
             }
             .font(AppTypography.callout)
             .foregroundStyle(AppColors.textTertiary)
-            .padding(.horizontal, AppSpacing.sm)
-            .frame(height: 28)
-            .background(
-                RoundedRectangle(cornerRadius: AppRadius.medium, style: .continuous)
-                    .strokeBorder(AppColors.border, lineWidth: AppBorders.hairline)
-            )
-            .contentShape(Rectangle())
+            .padding(.leading, AppSpacing.md)
+            .padding(.trailing, AppSpacing.xs + AppSpacing.xxs)
+            .frame(height: 30)
+            .contentShape(Capsule())
         }
         .buttonStyle(.plain)
+        .appGlass(in: Capsule(), interactive: true)
         .padding(.horizontal, AppSpacing.md)
         .padding(.vertical, AppSpacing.sm)
         .accessibilityLabel("Command palette")

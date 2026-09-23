@@ -34,3 +34,4 @@ Accepted ADRs are not edited to change their decision. Write a new ADR that supe
 | [0013](0013-direct-chat-before-agent-runtime.md) | Ship a direct streaming chat in Phase 2, before the tool runtime | Accepted |
 | [0014](0014-trust-loaded-context-size.md) | Trust the runtime's loaded context size (amends 0008) | Accepted |
 | [0015](0015-sequential-tools-with-in-loop-approval.md) | Sequential tool execution with in-loop approval | Accepted |
+| [0016](0016-liquid-glass-with-fallback.md) | Liquid Glass for floating layers, with a material fallback | Accepted |

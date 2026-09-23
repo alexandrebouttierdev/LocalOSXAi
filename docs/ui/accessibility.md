@@ -11,7 +11,8 @@ Accessibility is a requirement from the first phase, not a polish item.
 | State not by color alone | `StatusBadge` pairs icon and text; tool call status has distinct icons and a spoken status; “Over budget” in text; failed and stopped messages have text badges |
 | Contrast | Text tokens meet 4.5:1 on backgrounds in light and dark (tertiary text was tuned for this: `#7C7F89` on `#0F1012`, `#6E717A` on `#F7F7F8`) |
 | Increase Contrast | Border tokens switch to much stronger alpha under the high-contrast appearances |
-| Reduce Motion | `.appAnimation(_:value:)` disables animations when Reduce Motion is on |
+| Reduce Motion | `.appAnimation(_:value:)` disables animations when Reduce Motion is on. Message transitions fall back to a plain fade. Symbol effects honor the setting natively |
+| Reduce Transparency | Liquid Glass and the fallback materials become opaque automatically |
 | Text size | Typography tokens use system text styles instead of fixed sizes |
 
 ## Rules for new UI

@@ -6,6 +6,8 @@ import SwiftUI
 /// follows the platform's size settings. On macOS `.body` is 13 pt, which is
 /// the density target of the interface.
 enum AppTypography {
+    /// Hero titles of empty states and the welcome screen (22 pt semibold).
+    static let display = Font.title.weight(.semibold)
     /// Screen and panel titles (15 pt semibold).
     static let title = Font.title3.weight(.semibold)
     /// Emphasized body text: row titles, message authors.

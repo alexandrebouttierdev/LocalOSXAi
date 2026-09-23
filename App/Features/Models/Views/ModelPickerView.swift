@@ -71,12 +71,10 @@ struct ModelPickerView: View {
                 .foregroundStyle(AppColors.textTertiary)
                 .accessibilityHidden(true)
         }
-        .padding(AppSpacing.sm)
-        .background(
-            RoundedRectangle(cornerRadius: AppRadius.medium, style: .continuous)
-                .strokeBorder(AppColors.border, lineWidth: AppBorders.hairline)
-        )
-        .contentShape(Rectangle())
+        .padding(.horizontal, AppSpacing.md)
+        .padding(.vertical, AppSpacing.sm)
+        .contentShape(RoundedRectangle(cornerRadius: AppRadius.overlay, style: .continuous))
+        .appGlass(in: RoundedRectangle(cornerRadius: AppRadius.overlay, style: .continuous), interactive: true)
     }
 
     private func capabilities(of model: AIModel) -> some View {

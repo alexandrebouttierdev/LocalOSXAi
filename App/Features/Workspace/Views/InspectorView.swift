@@ -47,7 +47,7 @@ struct InspectorView: View {
             .padding(AppSpacing.lg)
             .frame(maxWidth: .infinity, alignment: .leading)
         }
-        .background(AppColors.background)
+        // No background: the inspector uses the native (glass) material.
     }
 
     private func placeholder(_ text: String) -> some View {

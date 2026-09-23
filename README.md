@@ -17,7 +17,8 @@ Status as of **Phase 3 (agent runtime)**:
 | Area | Status |
 |---|---|
 | Native window, sidebar / content / inspector layout | ✅ |
-| Linear-like design system (tokens, components, light/dark, Increase Contrast) | ✅ |
+| Linear-like design system with Liquid Glass on macOS 26 (tokens, components, light/dark, Increase Contrast) | ✅ |
+| Markdown answers with copyable code blocks, human-readable tool activity | ✅ |
 | Command palette (⌘K), menu commands and shortcuts | ✅ |
 | Project selection (open folder, recent projects) | ✅ (in memory until Phase 5) |
 | Sessions (create, resume, auto-title) | ✅ (in memory until Phase 5) |
@@ -125,4 +126,4 @@ first.
    tool executor with approvals, filesystem tools.
 4. **Execution**: terminal, Git service, changes/diff review, command permission policy.
 5. **Persistence**: SQLite store with migrations, session history, settings.
-6. **Polish**: Markdown rendering, animations, accessibility audit, performance, error recovery.
+6. **Polish**: animations, accessibility audit, performance, error recovery.

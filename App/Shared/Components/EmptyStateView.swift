@@ -11,14 +11,16 @@ struct EmptyStateView<Actions: View>: View {
     @ViewBuilder var actions: Actions
 
     var body: some View {
-        VStack(spacing: AppSpacing.md) {
+        VStack(spacing: AppSpacing.lg) {
             Image(systemName: systemImage)
-                .font(.system(size: 28, weight: .light))
-                .foregroundStyle(AppColors.textTertiary)
+                .font(.system(size: 22, weight: .regular))
+                .foregroundStyle(AppColors.textSecondary)
+                .frame(width: 56, height: 56)
+                .appGlass(in: Circle())
                 .accessibilityHidden(true)
             VStack(spacing: AppSpacing.xs) {
                 Text(title)
-                    .font(AppTypography.title)
+                    .font(AppTypography.display)
                     .foregroundStyle(AppColors.textPrimary)
                 Text(message)
                     .font(AppTypography.body)

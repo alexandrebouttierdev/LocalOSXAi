@@ -39,16 +39,15 @@ struct MainContentView: View {
                     message: "Start a session to ask the agent about this project."
                 ) {
                     Button("New Session") { onCommand(.newSession) }
-                        .buttonStyle(.primary)
+                        .appGlassButton(prominent: true)
+                        .controlSize(.large)
                 }
             }
         case .files, .changes, .terminal:
             let tab = viewModel.selectedTab
-            EmptyStateView(
-                systemImage: tab.systemImage,
-                title: "\(tab.title) — coming in Phase \(tab.plannedPhase ?? 0)",
-                message: tab.placeholderMessage
-            )
+            EmptyStateView(systemImage: tab.systemImage, title: tab.title, message: tab.placeholderMessage) {
+                StatusBadge(title: "Coming in Phase \(tab.plannedPhase ?? 0)", systemImage: "clock", tone: .accent)
+            }
         }
     }
 
@@ -66,16 +65,18 @@ private struct ContentHeaderView: View {
 
     var body: some View {
         HStack(spacing: AppSpacing.md) {
-            HStack(spacing: AppSpacing.xs + AppSpacing.xxs) {
+            HStack(spacing: AppSpacing.sm) {
+                ProjectBadge(name: projectName)
                 Text(projectName)
                     .foregroundStyle(sessionTitle == nil ? AppColors.textPrimary : AppColors.textSecondary)
                 if let sessionTitle {
                     Image(systemName: "chevron.right")
-                        .font(AppTypography.caption)
+                        .font(AppTypography.caption.weight(.semibold))
                         .foregroundStyle(AppColors.textTertiary)
                         .accessibilityHidden(true)
                     Text(sessionTitle)
                         .foregroundStyle(AppColors.textPrimary)
+                        .contentTransition(.opacity)
                 }
             }
             .font(AppTypography.headline)
@@ -84,20 +85,41 @@ private struct ContentHeaderView: View {
 
             Spacer(minLength: AppSpacing.md)
 
-            HStack(spacing: AppSpacing.xxs) {
-                ForEach(MainTab.allCases) { tab in
-                    TabButton(tab: tab, isSelected: tab == selectedTab) { selectedTab = tab }
-                }
-            }
+            TabSwitcher(selectedTab: $selectedTab)
         }
         .padding(.horizontal, AppSpacing.lg)
-        .frame(height: 44)
+        .frame(height: 52)
+    }
+}
+
+/// Segmented tabs whose selection is a glass capsule that slides (and, on
+/// macOS 26, morphs) from one tab to the next.
+private struct TabSwitcher: View {
+    @Binding var selectedTab: MainTab
+    @Namespace private var namespace
+
+    var body: some View {
+        AppGlassContainer(spacing: 0) {
+            HStack(spacing: AppSpacing.xxs) {
+                ForEach(MainTab.allCases) { tab in
+                    TabButton(tab: tab, isSelected: tab == selectedTab, namespace: namespace) {
+                        selectedTab = tab
+                    }
+                }
+            }
+            .padding(AppSpacing.xxs + 1)
+            .background(AppColors.hover, in: Capsule())
+        }
+        .appAnimation(AppAnimation.overlay, value: selectedTab)
+        .accessibilityElement(children: .contain)
+        .accessibilityLabel("Views")
     }
 }
 
 private struct TabButton: View {
     let tab: MainTab
     let isSelected: Bool
+    let namespace: Namespace.ID
     let action: () -> Void
     @State private var isHovered = false
 
@@ -105,15 +127,20 @@ private struct TabButton: View {
         Button(action: action) {
             Label(tab.title, systemImage: tab.systemImage)
                 .labelStyle(.titleAndIcon)
-                .font(AppTypography.callout.weight(isSelected ? .medium : .regular))
-                .foregroundStyle(isSelected ? AppColors.textPrimary : AppColors.textSecondary)
-                .padding(.horizontal, AppSpacing.sm)
+                .font(AppTypography.callout.weight(isSelected ? .semibold : .regular))
+                .foregroundStyle(isSelected ? AppColors.textPrimary : (isHovered ? AppColors.textPrimary : AppColors.textSecondary))
+                .padding(.horizontal, AppSpacing.md)
                 .frame(height: 26)
-                .background(
-                    RoundedRectangle(cornerRadius: AppRadius.medium, style: .continuous)
-                        .fill(isSelected ? AppColors.selection : (isHovered ? AppColors.hover : .clear))
-                )
-                .contentShape(Rectangle())
+                .contentShape(Capsule())
+                .background {
+                    if isSelected {
+                        Capsule()
+                            .fill(AppColors.surfaceRaised.opacity(0.9))
+                            .appGlass(in: Capsule())
+                            .matchedGeometryEffect(id: "selectedTab", in: namespace)
+                            .appGlassID("selectedTab", in: namespace)
+                    }
+                }
         }
         .buttonStyle(.plain)
         .onHover { isHovered = $0 }
