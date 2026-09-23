@@ -1,7 +1,10 @@
 # Context management
 
-**Status:** `ContextUsage`, `TokenEstimator` and the inspector meter (“38.4K / 100K context”)
-are implemented. `ContextManager` is Phase 3. This is its design.
+**Status:** `ContextUsage`, `TokenEstimator`, the inspector meter (“38.4K / 100K context”) and
+`ConversationWindow` are implemented. `ConversationWindow` keeps the system prompt and the new
+message, reserves 25% (at least 1K) of the context for the answer, and drops the oldest turns.
+Reported usage replaces the estimate after each answer. `ContextManager` (Phase 3) replaces it
+with the full design below.
 
 ## Inputs, in priority order
 

@@ -24,9 +24,12 @@ Run with `make test`. The full gate is `make check`.
 | `TemporaryDirectory` | Filesystem tests | Real, isolated folder, removed in `defer` |
 | `TestClock` | Anything with timestamps | Manually advanced `now` |
 | `Recorder` | Capturing values from `@Sendable` callbacks | Thread-safe append-only log |
+| `StubURLProtocol` | Testing providers over real `URLSession` requests | Per-test host routing, chunked/delayed/hanging responses, `URLError`s, captured requests, `stopLoading` count |
+| `OllamaFixtures`, `OpenAIFixtures` | Decoder and provider tests | Recorded (Ollama text stream) and documented wire payloads |
 
-**Unit tests never contact Ollama or LM Studio.** Tests against a real server (Phase 2) will be
-a separate, opt-in suite gated by an environment variable.
+**Unit tests never contact Ollama or LM Studio.** The opt-in live suite
+(`Tests/Integration/LiveProviderTests.swift`) runs with `make test-live`, which sets
+`LOCALOSXAI_LIVE_TESTS=1` for the test runner. Run it after upgrading Ollama or LM Studio.
 
 ## What to test
 

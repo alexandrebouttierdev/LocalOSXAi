@@ -10,23 +10,48 @@ import Foundation
 struct AppEnvironment {
     let projectRepository: any ProjectRepository
     let sessionRepository: any SessionRepository
-    let providers: [any LLMProvider]
+    let settingsStore: any ProviderSettingsStore
+    let registry: ProviderRegistry
     let agentService: any AgentService
     let toolRegistry: ToolRegistry
-    /// True while providers and the agent are simulated.
+    /// Builds providers from settings; called again whenever settings change.
+    let makeProviders: @Sendable (ProviderSettings) -> [any LLMProvider]
+    /// True when the agent and providers are simulated.
     let isSimulated: Bool
 
-    /// Phase 1 environment: in-memory storage, simulated provider and agent.
-    ///
-    /// Phase 2 replaces `providers` with Ollama and LM Studio, Phase 3 replaces
-    /// `agentService` and `toolRegistry`, Phase 5 replaces the repositories.
+    /// Set `LOCALOSXAI_SIMULATED=1` to run the UI without any model server.
+    static func current() -> AppEnvironment {
+        ProcessInfo.processInfo.environment["LOCALOSXAI_SIMULATED"] == "1" ? simulated() : live()
+    }
+
+    /// Real providers from the saved settings, streaming chat without tools
+    /// (Phase 2). Phase 3 replaces `agentService` and `toolRegistry`,
+    /// Phase 5 the repositories.
+    static func live() -> AppEnvironment {
+        let store = UserDefaultsProviderSettingsStore()
+        let registry = ProviderRegistry(providers: ProviderFactory.providers(for: store.load()))
+        return AppEnvironment(
+            projectRepository: InMemoryProjectRepository(),
+            sessionRepository: InMemorySessionRepository(),
+            settingsStore: store,
+            registry: registry,
+            agentService: DirectChatAgentService(resolver: registry),
+            toolRegistry: .empty,
+            makeProviders: ProviderFactory.providers(for:),
+            isSimulated: false
+        )
+    }
+
+    /// Scripted agent and a fixed simulated model: for UI work and demos.
     static func simulated() -> AppEnvironment {
         AppEnvironment(
             projectRepository: InMemoryProjectRepository(),
             sessionRepository: InMemorySessionRepository(),
-            providers: [SimulatedLLMProvider()],
+            settingsStore: InMemoryProviderSettingsStore(),
+            registry: ProviderRegistry(providers: [SimulatedLLMProvider()]),
             agentService: SimulatedAgentService(),
             toolRegistry: .empty,
+            makeProviders: { _ in [SimulatedLLMProvider()] },
             isSimulated: true
         )
     }
@@ -35,10 +60,17 @@ struct AppEnvironment {
         WorkspaceViewModel(
             projects: ProjectsViewModel(service: ProjectService(repository: projectRepository)),
             sessions: SessionsViewModel(service: SessionService(repository: sessionRepository)),
-            models: ModelsViewModel(catalog: ModelCatalog(providers: providers)),
+            models: ModelsViewModel(registry: registry),
             agentService: agentService,
             toolDefinitions: toolRegistry.definitions,
             isSimulated: isSimulated
         )
+    }
+
+    func makeProviderSettingsViewModel(models: ModelsViewModel) -> ProviderSettingsViewModel {
+        let makeProviders = makeProviders
+        return ProviderSettingsViewModel(store: settingsStore) { settings in
+            await models.reconfigure(providers: makeProviders(settings))
+        }
     }
 }

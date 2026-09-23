@@ -2,16 +2,20 @@ import SwiftUI
 
 /// The Settings window (⌘,).
 ///
-/// Only appearance is configurable in Phase 1. Provider endpoints, agent
-/// limits and permission policy settings arrive with the phases that
-/// implement them (see README roadmap); their absence is stated explicitly.
+/// Agent limits and the permission policy arrive with Phases 3 and 4; their
+/// absence is stated in the General tab rather than hidden.
 struct SettingsView: View {
+    let providers: ProviderSettingsViewModel
+    let models: ModelsViewModel
+
     var body: some View {
         TabView {
             GeneralSettingsView()
                 .tabItem { Label("General", systemImage: "gearshape") }
+            ProvidersSettingsView(viewModel: providers, models: models)
+                .tabItem { Label("Providers", systemImage: "cpu") }
         }
-        .frame(width: 480)
+        .frame(width: 560)
     }
 }
 
@@ -27,10 +31,6 @@ private struct GeneralSettingsView: View {
             }
             .pickerStyle(.segmented)
 
-            LabeledContent("Providers") {
-                Text("Ollama and LM Studio configuration arrives in Phase 2.")
-                    .foregroundStyle(.secondary)
-            }
             LabeledContent("Agent") {
                 Text("Iteration limits, timeouts and permissions arrive in Phases 3 and 4.")
                     .foregroundStyle(.secondary)

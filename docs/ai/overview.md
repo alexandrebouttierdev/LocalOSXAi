@@ -6,8 +6,8 @@ abstract capabilities, never providers.**
 ```
 User request
     │
-AgentViewModel ──▶ AgentService (protocol)            ◀── SimulatedAgentService (Phase 1)
-                        │                                  AgentRuntime (Phase 3)
+AgentViewModel ──▶ AgentService (protocol)            ◀── DirectChatAgentService (Phase 2, no tools)
+                        │                                  AgentRuntime (Phase 3) · SimulatedAgentService (demo)
                         ▼
                  ┌─ Agent loop ─────────────────────────────────────────┐
                  │ ContextManager ─▶ LLMProvider.stream ─▶ LLMEvent…     │
@@ -23,11 +23,12 @@ AgentViewModel ──▶ AgentService (protocol)            ◀── SimulatedA
 
 | Component | Contract | Status |
 |---|---|---|
-| Provider | `LLMProvider`: `listModels()`, `stream(request:)` | Contract ✅, Ollama/LM Studio Phase 2 |
+| Provider | `LLMProvider`: `listModels()`, `stream(request:)` | ✅ Ollama, LM Studio, generic OpenAI-compatible |
+| Model resolution | `ModelResolving` → `ProviderRegistry` (discovery, per-provider isolation) | ✅ |
 | Model | `AIModel` + `ModelCapabilities` + `ContextWindow` | ✅ |
-| Agent service | `AgentService.run(_:) -> AsyncThrowingStream<AgentEvent, Error>` | Contract ✅, simulated ✅, runtime Phase 3 |
+| Agent service | `AgentService.run(_:) -> AsyncThrowingStream<AgentEvent, Error>` | ✅ `DirectChatAgentService` (streaming chat, no tools), simulated ✅, tool runtime Phase 3 |
 | Tools | `AgentTool`, `ToolRegistry`, `ToolParameterSchema`, `ToolArguments`, `ToolResult` | Contract ✅, tools Phase 3–4 |
-| Context | `ContextUsage`, `TokenEstimator` | ✅, `ContextManager` Phase 3 |
+| Context | `ContextUsage`, `TokenEstimator`, `ConversationWindow` (drop oldest) | ✅, `ContextManager` Phase 3 |
 | Tool executor, permission policy | `ToolExecutor`, `CommandPolicy` | Phase 3–4 |
 
 ## Documents

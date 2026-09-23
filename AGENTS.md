@@ -37,6 +37,7 @@ make test          # unit + integration tests (Swift Testing)
 make lint          # SwiftLint, strict
 make architecture  # dependency-rule checks (scripts/check-architecture.sh)
 make docs          # required docs exist, links and docs/ references resolve
+make test-live     # opt-in: provider tests against the local Ollama / LM Studio
 make check         # everything above — the gate before calling work finished
 ```
 

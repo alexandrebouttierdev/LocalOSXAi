@@ -136,7 +136,7 @@ struct SidebarView: View {
             Spacer()
             if viewModel.isSimulated {
                 StatusBadge(title: "Simulated", systemImage: "theatermasks", tone: .warning)
-                    .help("Providers and the agent runtime are simulated until Phases 2 and 3 are implemented.")
+                    .help("Simulated mode (LOCALOSXAI_SIMULATED=1): no model server is called and no file is read.")
             }
         }
         .padding(.horizontal, AppSpacing.sm)

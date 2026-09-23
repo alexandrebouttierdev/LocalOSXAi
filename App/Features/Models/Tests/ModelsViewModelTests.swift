@@ -6,7 +6,7 @@ import Testing
 @Suite("ModelsViewModel")
 struct ModelsViewModelTests {
     private func makeViewModel(_ models: [AIModel]) -> ModelsViewModel {
-        ModelsViewModel(catalog: ModelCatalog(providers: [
+        ModelsViewModel(registry: ProviderRegistry(providers: [
             MockLLMProvider(id: "fake", displayName: "Fake", models: .success(models))
         ]))
     }
@@ -48,6 +48,26 @@ struct ModelsViewModelTests {
         await viewModel.refresh()
         #expect(viewModel.providerName(for: "fake") == "Fake")
         #expect(viewModel.providerName(for: "unknown") == "unknown")
+    }
+
+    @Test("reconfiguring replaces providers and rediscovers models")
+    func reconfigure() async {
+        let viewModel = makeViewModel([Fixtures.model("a")])
+        await viewModel.refresh()
+        await viewModel.reconfigure(providers: [
+            MockLLMProvider(id: "other", displayName: "Other", models: .success([Fixtures.model("b", provider: "other")]))
+        ])
+        #expect(viewModel.allModels.map(\.name) == ["b"])
+        #expect(viewModel.selectedModel?.name == "b")
+    }
+
+    @Test("reports when no configured provider is reachable")
+    func noReachableProvider() async {
+        let viewModel = ModelsViewModel(registry: ProviderRegistry(providers: [
+            MockLLMProvider(models: .failure(.unreachable(endpoint: "http://localhost:11434")))
+        ]))
+        await viewModel.refresh()
+        #expect(viewModel.hasNoReachableProvider)
     }
 
     @Test("no models means no selection")

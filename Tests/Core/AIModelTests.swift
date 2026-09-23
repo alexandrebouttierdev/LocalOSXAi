@@ -15,6 +15,16 @@ struct AIModelTests {
         #expect(ContextWindow(advertisedTokens: 32_768, configuredTokens: 16_384).effectiveTokens == 16_384)
     }
 
+    @Test("the loaded size is trusted when nothing is configured")
+    func loadedSize() {
+        #expect(ContextWindow(advertisedTokens: 262_144, loadedTokens: 65_536).effectiveTokens == 65_536)
+    }
+
+    @Test("a configured size wins over the loaded size")
+    func configuredOverLoaded() {
+        #expect(ContextWindow(advertisedTokens: 262_144, loadedTokens: 65_536, configuredTokens: 16_384).effectiveTokens == 16_384)
+    }
+
     @Test("configured size is used when nothing is advertised")
     func configuredWithoutAdvertised() {
         #expect(ContextWindow(configuredTokens: 20_000).effectiveTokens == 20_000)

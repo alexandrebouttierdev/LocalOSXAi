@@ -27,7 +27,7 @@ final class WorkspaceViewModel {
     let models: ModelsViewModel
     let palette = CommandPaletteViewModel()
     let toolDefinitions: [ToolDefinition]
-    /// True while the app runs on simulated services (before Phase 2/3 land).
+    /// True in simulated mode (`LOCALOSXAI_SIMULATED=1`): no model is called.
     let isSimulated: Bool
 
     private(set) var selectedProjectID: Project.ID?

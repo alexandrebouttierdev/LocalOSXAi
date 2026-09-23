@@ -1,8 +1,9 @@
 import Foundation
 
-/// A provider that lists a fixed simulated model so model selection can be
-/// used before real providers exist (Phase 2). Its `stream` answers with a
-/// single fixed message; the simulated agent does not call it.
+/// A provider that lists a fixed simulated model, used by the simulated
+/// environment (`LOCALOSXAI_SIMULATED=1`) to work on the UI without any model
+/// server. Its `stream` answers with a single fixed message; the simulated
+/// agent does not call it.
 struct SimulatedLLMProvider: LLMProvider {
     let descriptor = ProviderDescriptor(id: "simulated", displayName: "Simulated", endpoint: nil)
 

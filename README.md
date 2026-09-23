@@ -12,7 +12,7 @@ prototype, and it is not meant to be a clone of Cline or OpenCode.
 
 ## Features
 
-Status as of **Phase 1 (foundation)**:
+Status as of **Phase 2 (providers)**:
 
 | Area | Status |
 |---|---|
@@ -21,17 +21,18 @@ Status as of **Phase 1 (foundation)**:
 | Command palette (⌘K), menu commands and shortcuts | ✅ |
 | Project selection (open folder, recent projects) | ✅ (in memory until Phase 5) |
 | Sessions (create, resume, auto-title) | ✅ (in memory until Phase 5) |
-| Agent conversation UI (streaming, reasoning, tool calls, stop) | ✅ on a **simulated** agent |
-| Model selection grouped by provider | ✅ on a **simulated** provider |
+| Streaming chat with local models (reasoning, stop, context meter) | ✅ no tools yet |
+| Ollama and LM Studio providers, model discovery, provider settings | ✅ |
+| Model selection grouped by provider (inspector, ⌘L) | ✅ |
 | Core contracts: `LLMProvider`, `AgentTool`, `ToolRegistry`, schema validation | ✅ |
-| Ollama / LM Studio providers, model discovery, streaming | Phase 2 |
 | Agent runtime, context manager, filesystem tools | Phase 3 |
 | Terminal, Git, diff/changes review, command permissions | Phase 4 |
 | SQLite persistence, history, settings | Phase 5 |
 | Polish, animations, accessibility audit, performance | Phase 6 |
 
-While providers and the agent are simulated, the app shows a **Simulated** badge in the
-sidebar. No model is called and no file is modified.
+The agent can chat but cannot read or modify files yet (tools arrive in Phase 3). To work on
+the UI without any model server, run with `LOCALOSXAI_SIMULATED=1`. A **Simulated** badge
+then appears in the sidebar.
 
 ## Architecture
 
@@ -51,7 +52,7 @@ Read [docs/architecture.md](docs/architecture.md).
 - Xcode 26 or later (Swift 6.2 toolchain)
 - [XcodeGen](https://github.com/yonaskolb/XcodeGen) and [SwiftLint](https://github.com/realm/SwiftLint)
   (`brew install xcodegen swiftlint`)
-- For real models (from Phase 2): [Ollama](https://ollama.com) and/or [LM Studio](https://lmstudio.ai)
+- [Ollama](https://ollama.com) and/or [LM Studio](https://lmstudio.ai) running locally (configurable in Settings → Providers)
 
 ## Development
 
@@ -69,6 +70,7 @@ after adding, moving or removing files.
 ```bash
 make test     # all tests, no model server needed
 make check    # lint + architecture rules + docs check + build + tests: the validation gate
+make test-live  # opt-in: checks the providers against your running Ollama / LM Studio
 ```
 
 Tests use Swift Testing and never contact a real model. `FakeLLMProvider` simulates
@@ -82,7 +84,7 @@ App/
 ├── Application/      entry point, composition root, menu commands
 ├── Core/             provider-agnostic contracts: AI, tools, context, logging, errors
 ├── Features/         Workspace, CommandPalette, Projects, Sessions, Agent, Models, Settings
-├── Infrastructure/   storage and simulated services (providers from Phase 2)
+├── Infrastructure/   providers (Ollama, OpenAI-compatible), storage, settings, simulations
 ├── Shared/           design system, reusable components, formatting
 └── Resources/        assets, Info.plist
 Tests/                Core/Shared/Infrastructure tests and test doubles
@@ -94,9 +96,9 @@ scripts/              validation scripts
 
 | Provider | Default endpoint | Status |
 |---|---|---|
-| Ollama | `http://localhost:11434` | Phase 2 |
-| LM Studio | `http://localhost:1234/v1` | Phase 2 |
-| OpenAI-compatible | configurable | after Phase 2 |
+| Ollama | `http://localhost:11434` (native API) | ✅ |
+| LM Studio | `http://localhost:1234` (OpenAI-compatible + `/api/v0`) | ✅ |
+| Other OpenAI-compatible servers | configurable | provider ready, settings after Phase 2 |
 
 ## Security
 
@@ -115,7 +117,7 @@ first.
 
 1. **Foundation** ✅: app shell, design system, navigation, command palette, projects,
    core protocols, test doubles, docs.
-2. **Providers**: Ollama and LM Studio providers, model discovery, streaming, provider settings.
+2. **Providers** ✅: Ollama and LM Studio providers, model discovery, streaming chat, provider settings.
 3. **Agent runtime**: agent loop, context manager (AGENTS.md loading, budgeting, compaction),
    tool executor, filesystem tools.
 4. **Execution**: terminal, Git service, changes/diff review, command permission policy.

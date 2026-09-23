@@ -1,8 +1,9 @@
 # Agent runtime
 
 **Status:** the contract (`AgentService`, `AgentEvent`, `AgentRunRequest`) and the UI are
-implemented. The UI runs on `SimulatedAgentService`, and the real runtime is Phase 3. This
-document is the design the Phase 3 implementation must follow.
+implemented. Since Phase 2 the live app runs `DirectChatAgentService`: a real streaming chat
+with the selected model, **without tools** ([ADR 0013](../decisions/0013-direct-chat-before-agent-runtime.md)).
+The tool-using runtime described below is Phase 3.
 
 ## Contract with the UI
 

@@ -35,12 +35,17 @@ struct LLMMessage: Sendable, Hashable {
     var toolCalls: [LLMToolCall]
     /// For `.tool` messages: the identifier of the call this result answers.
     var toolCallID: String?
+    /// For `.tool` messages: the name of the tool that produced the result.
+    /// Some wire formats match results by id, others by name; carrying both
+    /// keeps every provider able to encode the message.
+    var toolName: String?
 
-    init(role: Role, content: String, toolCalls: [LLMToolCall] = [], toolCallID: String? = nil) {
+    init(role: Role, content: String, toolCalls: [LLMToolCall] = [], toolCallID: String? = nil, toolName: String? = nil) {
         self.role = role
         self.content = content
         self.toolCalls = toolCalls
         self.toolCallID = toolCallID
+        self.toolName = toolName
     }
 
     static func system(_ content: String) -> LLMMessage { LLMMessage(role: .system, content: content) }
@@ -48,8 +53,8 @@ struct LLMMessage: Sendable, Hashable {
     static func assistant(_ content: String, toolCalls: [LLMToolCall] = []) -> LLMMessage {
         LLMMessage(role: .assistant, content: content, toolCalls: toolCalls)
     }
-    static func tool(_ content: String, callID: String) -> LLMMessage {
-        LLMMessage(role: .tool, content: content, toolCallID: callID)
+    static func tool(_ content: String, callID: String, toolName: String) -> LLMMessage {
+        LLMMessage(role: .tool, content: content, toolCallID: callID, toolName: toolName)
     }
 }
 

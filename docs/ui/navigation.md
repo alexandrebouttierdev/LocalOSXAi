@@ -54,7 +54,7 @@ never disagree.
 | ⌘1 – ⌘4 | Agent / Files / Changes / Terminal |
 | ⌃⌘S | Toggle sidebar |
 | ⌥⌘I | Toggle inspector |
-| ⌘, | Settings |
+| ⌘, | Settings (General, Providers) |
 | ↩ / ⌥↩ | Send / new line in the composer |
 | ⌘. | Stop the running agent |
 

@@ -7,11 +7,14 @@ import SwiftUI
 /// windows are a later decision (docs/ui/navigation.md).
 struct LocalOSXAiApp: App {
     @State private var workspace: WorkspaceViewModel
+    @State private var providerSettings: ProviderSettingsViewModel
     @AppStorage(AppearancePreference.storageKey) private var appearance: AppearancePreference = .system
 
     init() {
-        let environment = AppEnvironment.simulated()
-        _workspace = State(initialValue: environment.makeWorkspaceViewModel())
+        let environment = AppEnvironment.current()
+        let workspace = environment.makeWorkspaceViewModel()
+        _workspace = State(initialValue: workspace)
+        _providerSettings = State(initialValue: environment.makeProviderSettingsViewModel(models: workspace.models))
     }
 
     var body: some Scene {
@@ -29,7 +32,7 @@ struct LocalOSXAiApp: App {
         }
 
         Settings {
-            SettingsView()
+            SettingsView(providers: providerSettings, models: workspace.models)
         }
     }
 }

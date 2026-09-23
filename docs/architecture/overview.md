@@ -7,7 +7,7 @@
 | `App/Application` | Entry point, composition root (`AppEnvironment`), menu commands, scenes | everything |
 | `App/Core` | Provider-agnostic contracts and primitives: `LLMProvider`, `LLMRequest/LLMEvent`, `AIModel`, `AgentTool`, `ToolRegistry`, `ToolParameterSchema`, `ContextUsage`, `TokenEstimator`, logging, `UserFacingError`, `JSONValue` | Foundation, OSLog |
 | `App/Features` | User-facing capabilities, each self-contained (models, views, view models, services, tests) | Core, Shared, other features' **models** (one direction only) |
-| `App/Infrastructure` | Implementations of protocols: storage, providers, processes, simulations | Core, feature protocols and models |
+| `App/Infrastructure` | Implementations of protocols: providers (Ollama, OpenAI-compatible), storage, settings store, simulations | Core, feature protocols and models |
 | `App/Shared` | Design system, reusable view components, formatting helpers | Core (value types only) |
 | `App/Resources` | Assets, Info.plist | — |
 
@@ -31,8 +31,8 @@
 | Projects | Opening folders, recent projects | 1 (storage in 5) |
 | Sessions | Conversations per project, resume, auto-title | 1 (storage in 5) |
 | Agent | Conversation UI, run lifecycle, transcript model, `AgentService` contract | 1 (runtime in 3) |
-| Models | Model discovery across providers, selection | 1 (providers in 2) |
-| Settings | Settings window (appearance) | 1 (more in 2–5) |
+| Models | Model discovery (`ProviderRegistry`), selection, resolution for the agent | 1–2 |
+| Settings | Appearance, provider settings (endpoints, context, timeout) with live status | 1–2 |
 
 Planned features: Files (3), Changes (4), Terminal (4), Git (4). Their folders are created
 when their implementation starts; the UI already shows labelled placeholders for them.

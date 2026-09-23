@@ -19,7 +19,7 @@
 | Projects, sessions, messages, agent runs, tool calls | In memory → SQLite | 1 → 5 |
 | Model configuration per model (context size, temperature) | SQLite | 5 |
 | UI preferences (appearance, panel visibility) | `UserDefaults` | 1 |
-| Provider endpoints | `UserDefaults` (not secret) | 2 |
+| Provider settings (endpoints, enablement, Ollama context, idle timeout) | `UserDefaults` key `providers.v1`, JSON | 2 ✅ |
 | API keys for remote OpenAI-compatible servers | Keychain | 2+ |
 
 See [models.md](models.md), [persistence.md](persistence.md) and [migrations.md](migrations.md).

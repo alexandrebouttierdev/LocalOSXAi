@@ -47,24 +47,32 @@ struct ModelCapabilities: OptionSet, Hashable, Sendable, Codable {
 /// never taken from the advertised value alone. Providers report a model's
 /// theoretical maximum, not what the runtime was loaded with (Ollama silently
 /// truncates to its `num_ctx`), so the application only relies on a size the
-/// user explicitly configured or on a conservative fallback.
+/// user configured, on the size the runtime reports as actually allocated,
+/// or on a conservative fallback — in that order.
 struct ContextWindow: Hashable, Sendable, Codable {
-    /// Conservative size assumed when the user did not configure one.
+    /// Conservative size assumed when nothing more reliable is known.
     static let fallbackTokens = 8_192
 
-    /// Maximum announced by the provider, if any. Informational only.
+    /// Maximum announced by the provider, if any. Only ever used as a cap.
     var advertisedTokens: Int?
+    /// Size the runtime currently has allocated for the loaded model
+    /// (LM Studio `loaded_context_length`, Ollama `/api/ps`). Reliable, but
+    /// only known while the model is loaded.
+    var loadedTokens: Int?
     /// Size explicitly configured by the user for this model.
     var configuredTokens: Int?
 
-    init(advertisedTokens: Int? = nil, configuredTokens: Int? = nil) {
+    init(advertisedTokens: Int? = nil, loadedTokens: Int? = nil, configuredTokens: Int? = nil) {
         self.advertisedTokens = advertisedTokens
+        self.loadedTokens = loadedTokens
         self.configuredTokens = configuredTokens
     }
 
-    /// The token budget the context manager must respect.
+    /// The token budget the context manager must respect, and the context
+    /// length requested from runtimes that allocate on demand (Ollama).
+    /// Reusing the loaded size avoids a costly model reload.
     var effectiveTokens: Int {
-        let requested = configuredTokens ?? Self.fallbackTokens
+        let requested = configuredTokens ?? loadedTokens ?? Self.fallbackTokens
         guard let advertisedTokens, advertisedTokens > 0 else { return requested }
         return min(requested, advertisedTokens)
     }

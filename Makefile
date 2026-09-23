@@ -7,7 +7,7 @@ DESTINATION  := platform=macOS,arch=$(shell uname -m)
 DERIVED_DATA := .build/DerivedData
 XCODEBUILD   := xcodebuild -project $(PROJECT) -scheme $(SCHEME) -destination '$(DESTINATION)' -derivedDataPath $(DERIVED_DATA)
 
-.PHONY: generate build test lint architecture docs check open clean
+.PHONY: generate build test test-live lint architecture docs check open clean
 
 generate:
 	xcodegen generate --quiet
@@ -17,6 +17,10 @@ build: generate
 
 test: generate
 	$(XCODEBUILD) test -quiet
+
+# Opt-in tests against the local Ollama / LM Studio servers (see docs/code/testing.md).
+test-live: generate
+	TEST_RUNNER_LOCALOSXAI_LIVE_TESTS=1 $(XCODEBUILD) test -quiet -only-testing:LocalOSXAiTests/LiveProviderTests
 
 lint:
 	swiftlint lint --strict --quiet

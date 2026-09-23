@@ -14,7 +14,7 @@ struct WorkspaceViewModelTests {
         WorkspaceViewModel(
             projects: ProjectsViewModel(service: ProjectService(repository: InMemoryProjectRepository(projects: projects))),
             sessions: SessionsViewModel(service: SessionService(repository: InMemorySessionRepository(sessions: sessions))),
-            models: ModelsViewModel(catalog: ModelCatalog(providers: [
+            models: ModelsViewModel(registry: ProviderRegistry(providers: [
                 MockLLMProvider(id: "fake", displayName: "Fake", models: .success(models))
             ])),
             agentService: agent,

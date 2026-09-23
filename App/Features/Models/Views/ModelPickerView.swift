@@ -40,6 +40,11 @@ struct ModelPickerView: View {
 
             if let model = viewModel.selectedModel {
                 capabilities(of: model)
+            } else if viewModel.hasNoReachableProvider {
+                Text("No model server is reachable. Start Ollama or LM Studio, then choose Refresh Models.")
+                    .font(AppTypography.caption)
+                    .foregroundStyle(AppColors.textTertiary)
+                    .fixedSize(horizontal: false, vertical: true)
             }
         }
     }

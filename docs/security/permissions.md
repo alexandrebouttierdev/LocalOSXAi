@@ -47,8 +47,9 @@ silently**: every action appears in the transcript with its arguments and result
 - API keys (for remote OpenAI-compatible servers) are stored **only in the Keychain**
   (`kSecClassGenericPassword`, service `dev.localosxai.app.provider.<id>`), never in SQLite,
   `UserDefaults`, logs, crash reports or the prompt.
-- Provider URLs are not secrets and live in `UserDefaults`. Non-local URLs are shown with a
-  warning, because prompts, including file contents, would leave the machine.
+- Provider URLs are not secrets and live in `UserDefaults` (`providers.v1`). Only `http`/`https`
+  URLs with a host are accepted. A warning for non-local URLs (prompts, including file
+  contents, would leave the machine) is planned with remote-server support.
 - Environment variables that look like secrets (`*_KEY`, `*_TOKEN`, `*_SECRET`, `PASSWORD`)
   are stripped from the command environment unless the user allowlists them (Phase 4).
 

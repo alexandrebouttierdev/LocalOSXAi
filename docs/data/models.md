@@ -1,6 +1,6 @@
 # Data models
 
-## Implemented (Phase 1)
+## Implemented (Phases 1–2)
 
 | Model | Feature / layer | Key fields | Notes |
 |---|---|---|---|
@@ -9,17 +9,17 @@
 | `AgentMessage` | Agent | `id`, `role` (user/assistant/error), `text`, `reasoning`, `toolCalls`, `state`, `createdAt` | UI and persistence model |
 | `ToolCallRecord` | Agent | `id`, `name`, `argumentsJSON`, `status`, `summary`, `output` | Status: awaitingApproval, running, succeeded, failed, denied, cancelled |
 | `AIModel` | Core | `provider`, `name`, `displayName`, `contextWindow`, `capabilities` | Identity = provider + name |
-| `ContextWindow` | Core | `advertisedTokens`, `configuredTokens`, `effectiveTokens` | See [model capabilities](../ai/model-capabilities.md) |
+| `ContextWindow` | Core | `advertisedTokens`, `loadedTokens`, `configuredTokens`, `effectiveTokens` | See [model capabilities](../ai/model-capabilities.md) |
 | `LLMRequest`, `LLMMessage`, `LLMEvent`, `LLMToolCall` | Core | | Wire-independent provider contract |
 | `ToolDefinition`, `ToolParameterSchema`, `ToolArguments`, `ToolResult` | Core | | Tool contract |
+| `ProviderSettings` | Settings | Ollama and LM Studio endpoints (enabled, base URL), Ollama context tokens, idle timeout | Stored as versioned JSON in `UserDefaults` |
 
 ## Planned
 
 | Model | Phase | Purpose |
 |---|---|---|
 | `AgentRun` | 3 | One execution: start/end dates, outcome, iterations, token usage, model used. Makes history auditable |
-| `ModelConfiguration` | 2/5 | Per-model user settings: configured context, temperature, reasoning effort |
-| `ProviderConfiguration` | 2 | Endpoint URL, enabled flag, Keychain reference for a credential |
+| `ModelConfiguration` | 5 | Per-model user settings: configured context, temperature, reasoning effort |
 | `FileChange` | 4 | Proposed/applied edit: path, diff hunks, added/removed counts, status (pending/accepted/rejected/reverted) |
 | `CommandExecution` | 4 | Command, working directory, policy decision, exit code, duration, truncated output |
 | `Settings` | 5 | Agent limits, permission policy overrides, terminal and Git preferences |
