@@ -9,7 +9,7 @@ Project-specific conventions:
 | ViewModels | `…ViewModel` | `AgentViewModel`, `WorkspaceViewModel` |
 | Use cases | `…Service` (a struct of related use cases) | `ProjectService`, `SessionService` |
 | Storage ports | `…Repository` | `ProjectRepository`, `SessionRepository` |
-| Storage implementations | technology prefix | `InMemoryProjectRepository`, `SQLiteSessionRepository` (Phase 5) |
+| Storage implementations | technology prefix | `InMemoryProjectRepository`, `SQLiteSessionRepository` |
 | Providers | `…Provider` | `LLMProvider`, `OllamaProvider` (Phase 2) |
 | Tools | `…Tool`; model-facing names in `snake_case` | `ReadFileTool` → `read_file` |
 | Errors | `…Error` enums | `ProviderError`, `ToolError`, `ProjectError` |

@@ -61,7 +61,9 @@ header per turn.
 | Tool output sent to the model | 16,000 characters (head + tail) | Truncated with a marker |
 | Model silence | Provider idle timeout, 300 s by default (Settings) | `ProviderError.timedOut` |
 
-The limits are constants in Phase 3. They become settings in Phase 5.
+Steps per run (5–100) and the tool timeout (15 s–5 min) are set in Settings › General › Agent
+(`AgentSettings`). The runtime reads them at the start of each run, so a change applies to the
+next run. The other limits are constants.
 
 ## Error recovery
 

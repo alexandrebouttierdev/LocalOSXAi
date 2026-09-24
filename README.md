@@ -12,7 +12,7 @@ prototype, and it is not meant to be a clone of Cline or OpenCode.
 
 ## Features
 
-Status as of **Phase 4 (execution & review)**:
+Status as of **Phase 5 (persistence, history, settings)**:
 
 | Area | Status |
 |---|---|
@@ -20,8 +20,8 @@ Status as of **Phase 4 (execution & review)**:
 | Linear-like design system with Liquid Glass on macOS 26 (tokens, components, light/dark, Increase Contrast) | ✅ |
 | Markdown answers with copyable code blocks, human-readable tool activity | ✅ |
 | Command palette (⌘K), menu commands and shortcuts | ✅ |
-| Project selection (open folder, recent projects) | ✅ (in memory until Phase 5) |
-| Sessions (create, resume, auto-title) | ✅ (in memory until Phase 5) |
+| Project selection (open folder, recent projects, remove with confirmation) | ✅ |
+| Sessions (create, resume, auto-title), saved across relaunches | ✅ |
 | Agent with tools: read, list, search files and text, edit and write files | ✅ |
 | Approval of file changes (allow once / for the session / deny), stop anytime | ✅ |
 | Context management: budget, compaction, `AGENTS.md` loading | ✅ |
@@ -33,7 +33,9 @@ Status as of **Phase 4 (execution & review)**:
 | Git status, diff and log (inspector and agent tools) | ✅ |
 | Change review: diff before approval, then accept / revert / accept all / reject all | ✅ |
 | Files tab with fuzzy search (⌘P) and preview; `.gitignore` respected | ✅ |
-| SQLite persistence, history, settings | Phase 5 |
+| SQLite history (projects, sessions, transcripts) with migrations and backups | ✅ |
+| Agent settings (steps per run, tool timeout), per-project `CLAUDE.md` opt-in | ✅ |
+| Per-model settings, per-project command policy, persisted change originals | Not yet |
 | Polish, animations, accessibility audit, performance | Phase 6 |
 
 The agent works inside the opened project folder only. It reads freely. File changes need your

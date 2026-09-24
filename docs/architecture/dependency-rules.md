@@ -30,6 +30,7 @@ AgentViewModel ─▶ AgentService ─▶ ToolExecutor ─▶ AgentTool ◀─ F
 | 7 | `TODO(reason)` only | No anonymous debt | `check-architecture.sh` |
 | 8 | Cross-feature dependencies: one direction, models only | Avoid cycles between features | Review |
 | 9 | No singletons or global mutable state | Testability, explicit dependencies | Review, SwiftLint |
+| 10 | GRDB and SQL only in `App/Infrastructure/Persistence` | Storage can change without touching features (ADR 0006) | `check-architecture.sh` |
 
 Rules 1–6 skip comments, because documentation may name providers or implementations. Rule 7 checks comments only.
 

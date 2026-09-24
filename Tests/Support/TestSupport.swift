@@ -61,6 +61,20 @@ final class Recorder<Value: Sendable>: Sendable {
     }
 }
 
+/// A thread-safe mutable value, for settings read from `@Sendable` closures.
+final class LockedValue<Value: Sendable>: Sendable {
+    private let storage: Mutex<Value>
+
+    init(_ value: Value) {
+        storage = Mutex(value)
+    }
+
+    var value: Value {
+        get { storage.withLock { $0 } }
+        set { storage.withLock { $0 = newValue } }
+    }
+}
+
 /// A minimal tool used to exercise the registry and schema validation.
 struct EchoTool: AgentTool {
     var name = "echo"

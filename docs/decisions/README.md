@@ -24,7 +24,7 @@ Accepted ADRs are not edited to change their decision. Write a new ADR that supe
 | [0003](0003-feature-first.md) | Feature-first organization | Accepted |
 | [0004](0004-provider-abstraction.md) | `LLMProvider` abstraction, provider-agnostic agent | Accepted |
 | [0005](0005-agent-runtime.md) | Event-stream agent runtime behind `AgentService` | Accepted |
-| [0006](0006-persistence.md) | SQLite via GRDB behind repositories (Phase 5) | Accepted |
+| [0006](0006-persistence.md) | SQLite via GRDB behind repositories | Accepted (implemented in Phase 5) |
 | [0007](0007-terminal-execution.md) | Parsed-command policy for terminal execution | Accepted |
 | [0008](0008-context-management.md) | Conservative context budgeting with explicit instructions | Accepted |
 | [0009](0009-no-app-sandbox.md) | No App Sandbox; Hardened Runtime plus application-level boundaries | Accepted |
@@ -37,3 +37,4 @@ Accepted ADRs are not edited to change their decision. Write a new ADR that supe
 | [0016](0016-liquid-glass-with-fallback.md) | Liquid Glass for floating layers, with a material fallback | Accepted |
 | [0017](0017-posix-spawn-process-groups.md) | Run commands with posix_spawn in their own process group | Accepted |
 | [0018](0018-change-review-before-and-after.md) | Review file changes before approval and after writing | Accepted |
+| [0019](0019-session-storage-shape.md) | Session storage shape: summaries for lists, tool calls as JSON | Accepted |

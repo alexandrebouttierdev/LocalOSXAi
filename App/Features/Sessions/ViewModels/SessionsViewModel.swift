@@ -37,6 +37,16 @@ final class SessionsViewModel {
         }
     }
 
+    /// The full session, transcript included (lists hold summaries only).
+    func fullSession(id: Session.ID) async -> Session? {
+        do {
+            return try await service.session(id: id)
+        } catch {
+            self.error = UserFacingError(error, title: "Could not open session", category: .persistence)
+            return nil
+        }
+    }
+
     func createSession(model: AIModel.ID?) async -> Session? {
         guard let projectID else { return nil }
         do {
@@ -55,6 +65,18 @@ final class SessionsViewModel {
             await load(projectID: projectID)
         } catch {
             self.error = UserFacingError(error, title: "Could not save session", category: .persistence)
+        }
+    }
+
+    /// Deletes every session of a project, before the project itself is removed.
+    /// Returns `false` (with an error to show) when they could not be deleted.
+    func deleteAll(inProject projectID: Project.ID) async -> Bool {
+        do {
+            try await service.deleteSessions(inProject: projectID)
+            return true
+        } catch {
+            self.error = UserFacingError(error, title: "Could not delete the project's sessions", category: .persistence)
+            return false
         }
     }
 

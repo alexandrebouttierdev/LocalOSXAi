@@ -39,6 +39,10 @@ check 'App/Features/.*\.swift' 'InMemory[A-Za-z]*Repository|Simulated[A-Za-z]+(S
 check 'App/Core/.*\.swift' 'InMemory[A-Za-z]*Repository|Simulated[A-Za-z]+(Service|Provider)|ViewModel' \
   'Core must not depend on infrastructure or features.'
 
+# 3b. SQL stays in the persistence infrastructure (docs/data/persistence.md).
+check 'App/(Features|Core|Shared|Application)/.*\.swift' '^import GRDB|DatabaseWriter|DatabaseQueue|DatabasePool' \
+  'GRDB and SQL belong in App/Infrastructure/Persistence only.'
+
 # 4. The agent-facing core stays provider-agnostic.
 check 'App/Core/.*\.swift' '[Oo]llama|LMStudio|LM Studio|OpenAI' \
   'Core AI and tool contracts must not mention specific providers.'

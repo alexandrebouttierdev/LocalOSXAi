@@ -16,8 +16,9 @@
 
 | Data | Store | Phase |
 |---|---|---|
-| Projects, sessions, messages, agent runs, tool calls | In memory → SQLite | 1 → 5 |
-| Model configuration per model (context size, temperature) | SQLite | 5 |
+| Projects, sessions, messages, tool calls | SQLite (`AppDatabase`) | 5 ✅ |
+| Agent limits (steps per run, tool timeout) | `UserDefaults` key `agent.v1`, JSON | 5 ✅ |
+| Model configuration per model (context size, temperature) | SQLite | Not implemented yet |
 | UI preferences (appearance, panel visibility) | `UserDefaults` | 1 |
 | Provider settings (endpoints, enablement, Ollama context, idle timeout) | `UserDefaults` key `providers.v1`, JSON | 2 ✅ |
 | API keys for remote OpenAI-compatible servers | Keychain | 2+ |

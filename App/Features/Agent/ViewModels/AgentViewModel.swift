@@ -16,6 +16,7 @@ final class AgentViewModel: ToolApprover {
     }
 
     let sessionID: UUID
+    let projectID: UUID?
     private(set) var messages: [AgentMessage]
     private(set) var runState: RunState = .idle
     private(set) var contextUsage: ContextUsage?
@@ -33,6 +34,7 @@ final class AgentViewModel: ToolApprover {
     private let projectRoot: URL
     private let agentService: any AgentService
     private let currentModel: @MainActor () -> AIModel.ID?
+    private let includesClaudeInstructions: @MainActor () -> Bool
     private let persist: @Sendable (UUID, [AgentMessage]) async -> Void
     private let now: @Sendable () -> Date
     private var runTask: Task<Void, Never>?
@@ -40,21 +42,26 @@ final class AgentViewModel: ToolApprover {
 
     /// - Parameters:
     ///   - currentModel: read at send time so a model change applies to the next run.
+    ///   - includesClaudeInstructions: the project's opt-in, also read at send time.
     ///   - persist: called with the full transcript after each run ends.
     init(
         sessionID: UUID,
+        projectID: UUID? = nil,
         projectRoot: URL,
         messages: [AgentMessage],
         agentService: any AgentService,
         currentModel: @escaping @MainActor () -> AIModel.ID?,
+        includesClaudeInstructions: @escaping @MainActor () -> Bool = { false },
         persist: @escaping @Sendable (UUID, [AgentMessage]) async -> Void,
         now: @escaping @Sendable () -> Date = { Date() }
     ) {
         self.sessionID = sessionID
+        self.projectID = projectID
         self.projectRoot = projectRoot
         self.messages = messages
         self.agentService = agentService
         self.currentModel = currentModel
+        self.includesClaudeInstructions = includesClaudeInstructions
         self.persist = persist
         self.now = now
     }
@@ -70,7 +77,8 @@ final class AgentViewModel: ToolApprover {
             projectRoot: projectRoot,
             prompt: prompt,
             history: messages,
-            model: currentModel()
+            model: currentModel(),
+            includesClaudeInstructions: includesClaudeInstructions()
         )
         draft = ""
         messages.append(AgentMessage(role: .user, text: prompt, createdAt: now()))

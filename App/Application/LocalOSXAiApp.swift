@@ -8,6 +8,7 @@ import SwiftUI
 struct LocalOSXAiApp: App {
     @State private var workspace: WorkspaceViewModel
     @State private var providerSettings: ProviderSettingsViewModel
+    @State private var agentSettings: AgentSettingsViewModel
     @AppStorage(AppearancePreference.storageKey) private var appearance: AppearancePreference = .system
 
     init() {
@@ -15,6 +16,7 @@ struct LocalOSXAiApp: App {
         let workspace = environment.makeWorkspaceViewModel()
         _workspace = State(initialValue: workspace)
         _providerSettings = State(initialValue: environment.makeProviderSettingsViewModel(models: workspace.models))
+        _agentSettings = State(initialValue: environment.makeAgentSettingsViewModel())
     }
 
     var body: some Scene {
@@ -32,7 +34,7 @@ struct LocalOSXAiApp: App {
         }
 
         Settings {
-            SettingsView(providers: providerSettings, models: workspace.models)
+            SettingsView(agent: agentSettings, providers: providerSettings, models: workspace.models)
         }
     }
 }

@@ -34,11 +34,14 @@ struct StubResolver: ModelResolving {
     func resolve(_ id: AIModel.ID) async -> ResolvedModel? { resolved }
 }
 
-/// Returns fixed instructions.
+/// Returns fixed instructions, plus `claudeInstructions` when the run opted in.
 struct StubInstructionsLoader: ProjectInstructionsLoading {
     var instructions: [ProjectInstruction] = []
+    var claudeInstructions: [ProjectInstruction] = []
 
-    func instructions(for projectRoot: URL) async -> [ProjectInstruction] { instructions }
+    func instructions(for projectRoot: URL, includingClaudeInstructions: Bool) async -> [ProjectInstruction] {
+        includingClaudeInstructions ? instructions + claudeInstructions : instructions
+    }
 }
 
 /// A tool that sleeps (cooperatively) before succeeding, for timeouts and cancellation.

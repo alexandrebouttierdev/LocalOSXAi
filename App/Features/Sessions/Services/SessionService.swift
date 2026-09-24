@@ -47,6 +47,7 @@ struct SessionService: Sendable {
     func updateMessages(_ messages: [AgentMessage], model: AIModel.ID?, in sessionID: Session.ID) async throws -> Session? {
         guard var session = try await repository.session(id: sessionID) else { return nil }
         session.messages = messages
+        session.toolCallCount = Session.toolCallCount(in: messages)
         session.model = model ?? session.model
         session.updatedAt = now()
         if session.title == Session.defaultTitle, let title = Self.derivedTitle(from: messages) {
@@ -58,6 +59,10 @@ struct SessionService: Sendable {
 
     func deleteSession(id: Session.ID) async throws {
         try await repository.deleteSession(id: id)
+    }
+
+    func deleteSessions(inProject projectID: Project.ID) async throws {
+        try await repository.deleteSessions(forProject: projectID)
     }
 
     /// First line of the first user message, truncated on a word boundary.

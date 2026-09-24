@@ -213,14 +213,28 @@ struct FileSystemToolsTests {
     func instructions() async throws {
         let temp = try project()
         defer { temp.remove() }
-        #expect(await FileProjectInstructionsLoader().instructions(for: temp.url).isEmpty)
+        let loader = FileProjectInstructionsLoader()
+        #expect(await loader.instructions(for: temp.url, includingClaudeInstructions: false).isEmpty)
 
         try temp.makeFile("AGENTS.md", contents: "Always write tests.")
-        #expect(await FileProjectInstructionsLoader().instructions(for: temp.url)
+        #expect(await loader.instructions(for: temp.url, includingClaudeInstructions: false)
                 == [ProjectInstruction(source: "AGENTS.md", content: "Always write tests.", isTruncated: false)])
 
         try temp.makeFile("AGENTS.md", contents: String(repeating: "x", count: FileProjectInstructionsLoader.maxCharacters + 10))
-        #expect(await FileProjectInstructionsLoader().instructions(for: temp.url).first?.isTruncated == true)
+        #expect(await loader.instructions(for: temp.url, includingClaudeInstructions: false).first?.isTruncated == true)
+    }
+
+    @Test("CLAUDE.md is loaded only when the project opted in, after AGENTS.md")
+    func claudeInstructions() async throws {
+        let temp = try project()
+        defer { temp.remove() }
+        let loader = FileProjectInstructionsLoader()
+        try temp.makeFile("CLAUDE.md", contents: "Use tabs.")
+        #expect(await loader.instructions(for: temp.url, includingClaudeInstructions: false).isEmpty)
+
+        try temp.makeFile("AGENTS.md", contents: "Write tests.")
+        let sources = await loader.instructions(for: temp.url, includingClaudeInstructions: true).map(\.source)
+        #expect(sources == ["AGENTS.md", "CLAUDE.md"])
     }
 
     @Test("the built-in registry is valid and complete")

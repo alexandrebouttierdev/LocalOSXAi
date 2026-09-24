@@ -10,6 +10,10 @@ struct Project: Identifiable, Hashable, Sendable, Codable {
     var rootURL: URL
     let createdAt: Date
     var lastOpenedAt: Date
+    /// Also give the agent `CLAUDE.md`, after `AGENTS.md`. Off by default so
+    /// rule systems are never mixed without the user choosing it
+    /// (docs/ai/context.md).
+    var includesClaudeInstructions = false
 }
 
 /// Errors raised while opening or managing projects.

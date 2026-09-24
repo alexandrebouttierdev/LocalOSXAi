@@ -23,11 +23,12 @@ struct AgentRuntime: AgentService {
     private let tools: ToolRegistry
     private let instructionsLoader: any ProjectInstructionsLoading
     private let policy: ToolPermissionPolicy
-    private let limits: AgentLimits
+    /// Read at the start of each run, so a Settings change applies to the next run.
+    private let limits: @Sendable () -> AgentLimits
     private let changeRecorder: (any FileChangeRecording)?
 
     init(resolver: any ModelResolving, tools: ToolRegistry, instructionsLoader: any ProjectInstructionsLoading,
-         policy: ToolPermissionPolicy = ToolPermissionPolicy(), limits: AgentLimits = AgentLimits(),
+         policy: ToolPermissionPolicy = ToolPermissionPolicy(), limits: @escaping @Sendable () -> AgentLimits,
          changeRecorder: (any FileChangeRecording)? = nil) {
         self.resolver = resolver
         self.tools = tools
@@ -35,6 +36,13 @@ struct AgentRuntime: AgentService {
         self.policy = policy
         self.limits = limits
         self.changeRecorder = changeRecorder
+    }
+
+    init(resolver: any ModelResolving, tools: ToolRegistry, instructionsLoader: any ProjectInstructionsLoading,
+         policy: ToolPermissionPolicy = ToolPermissionPolicy(), limits: AgentLimits = AgentLimits(),
+         changeRecorder: (any FileChangeRecording)? = nil) {
+        self.init(resolver: resolver, tools: tools, instructionsLoader: instructionsLoader, policy: policy,
+                  limits: { limits }, changeRecorder: changeRecorder)
     }
 
     func run(_ request: AgentRunRequest, approver: any ToolApprover) -> AsyncThrowingStream<AgentEvent, Error> {
@@ -56,8 +64,11 @@ struct AgentRuntime: AgentService {
         guard let modelID = request.model else { throw AgentError.noModelSelected }
         guard let resolved = await resolver.resolve(modelID) else { throw AgentError.modelUnavailable(name: modelID.name) }
 
+        let limits = limits()
         let toolsEnabled = resolved.model.supportsTools && !tools.isEmpty
-        let instructions = await instructionsLoader.instructions(for: request.projectRoot)
+        let instructions = await instructionsLoader.instructions(
+            for: request.projectRoot, includingClaudeInstructions: request.includesClaudeInstructions
+        )
         if !instructions.isEmpty { emit(.instructionsLoaded(instructions.map(\.source))) }
 
         let contextTokens = resolved.model.contextWindow.effectiveTokens

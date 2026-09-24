@@ -77,16 +77,34 @@ struct SessionServiceTests {
         #expect(SessionService.derivedTitle(from: [AgentMessage(role: .user, text: "   ", createdAt: Date())]) == nil)
     }
 
-    @Test("the tool call count spans every message")
-    func toolCallCount() {
+    @Test("saving a transcript stores its tool call count, which summaries keep")
+    func toolCallCount() async throws {
         let call = ToolCallRecord(id: "1", name: "read_file", argumentsJSON: "{}", status: .succeeded)
-        var session = Fixtures.session(projectID: projectID, title: "T", updatedAt: Date())
-        #expect(session.toolCallCount == 0)
-        session.messages = [
-            AgentMessage(role: .assistant, text: "", toolCalls: [call, call], createdAt: Date()),
+        let repository = InMemorySessionRepository()
+        let service = SessionService(repository: repository)
+        let session = try await service.createSession(in: projectID, model: nil)
+        let messages = [
             AgentMessage(role: .user, text: "go", createdAt: Date()),
-            AgentMessage(role: .assistant, text: "", toolCalls: [call], createdAt: Date())
+            AgentMessage(role: .assistant, text: "", toolCalls: [call, call], createdAt: Date()),
+            AgentMessage(role: .assistant, text: "done", toolCalls: [call], createdAt: Date())
         ]
-        #expect(session.toolCallCount == 3)
+
+        try await service.updateMessages(messages, model: nil, in: session.id)
+
+        let summary = try #require(try await service.sessions(in: projectID).first)
+        #expect(summary.toolCallCount == 3)
+        #expect(summary.messages.isEmpty)
+        #expect(try await service.session(id: session.id)?.messages.count == 3)
+    }
+
+    @Test("deleting a project's sessions leaves other projects alone")
+    func deleteSessionsInProject() async throws {
+        let other = UUID()
+        let service = SessionService(repository: InMemorySessionRepository(sessions: [
+            Fixtures.session(projectID: projectID), Fixtures.session(projectID: other)
+        ]))
+        try await service.deleteSessions(inProject: projectID)
+        #expect(try await service.sessions(in: projectID).isEmpty)
+        #expect(try await service.sessions(in: other).count == 1)
     }
 }

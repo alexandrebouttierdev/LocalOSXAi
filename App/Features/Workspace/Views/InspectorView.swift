@@ -22,6 +22,16 @@ struct InspectorView: View {
                             .font(AppTypography.caption)
                             .foregroundStyle(AppColors.textSecondary)
                     }
+                    if let project = viewModel.selectedProject {
+                        Toggle("Also read CLAUDE.md", isOn: Binding(
+                            get: { project.includesClaudeInstructions },
+                            set: { value in Task { await viewModel.projects.setIncludesClaudeInstructions(value, for: project.id) } }
+                        ))
+                        .toggleStyle(.checkbox)
+                        .font(AppTypography.caption)
+                        .foregroundStyle(AppColors.textSecondary)
+                        .help("Give the agent this project's CLAUDE.md after AGENTS.md. Applies to the next run.")
+                    }
                 }
                 InspectorSection(title: "Tools") {
                     if viewModel.toolDefinitions.isEmpty {

@@ -13,6 +13,8 @@ struct WorkspaceServices {
     let toolDefinitions: [ToolDefinition]
     /// True in simulated mode (`LOCALOSXAI_SIMULATED=1`): no model is called.
     let isSimulated: Bool
+    /// Why history could not be opened, when the app fell back to memory.
+    var storageError: (any Error)?
 }
 
 /// The per-project view models behind the Files, Changes and Terminal tabs

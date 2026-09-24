@@ -1,7 +1,6 @@
 # Migrations
 
-Persistence ships in Phase 5, but the migration strategy is decided now so the first schema
-is migratable.
+Implemented in `AppDatabase` (Phase 5). The shipped migrations are: `v1_initial`.
 
 ## Strategy
 

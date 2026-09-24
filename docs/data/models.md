@@ -1,11 +1,11 @@
 # Data models
 
-## Implemented (Phases 1–4)
+## Implemented (Phases 1–5)
 
 | Model | Feature / layer | Key fields | Notes |
 |---|---|---|---|
-| `Project` | Projects | `id`, `name`, `rootURL`, `createdAt`, `lastOpenedAt` | `rootURL` is standardized and symlink-resolved. It is the tool boundary |
-| `Session` | Sessions | `id`, `projectID`, `title`, `createdAt`, `updatedAt`, `model`, `messages` | Title derived from the first prompt while still “New session” |
+| `Project` | Projects | `id`, `name`, `rootURL`, `createdAt`, `lastOpenedAt`, `includesClaudeInstructions` | `rootURL` is standardized and symlink-resolved. It is the tool boundary |
+| `Session` | Sessions | `id`, `projectID`, `title`, `createdAt`, `updatedAt`, `model`, `messages`, `toolCallCount` | Title derived from the first prompt while still “New session”. Lists carry summaries (`messages` empty) |
 | `AgentMessage` | Agent | `id`, `role` (user/assistant/error), `text`, `reasoning`, `toolCalls`, `state`, `createdAt` | UI and persistence model |
 | `ToolCallRecord` | Agent | `id`, `name`, `argumentsJSON`, `status`, `summary`, `output` | Status: awaitingApproval, running, succeeded, failed, denied, cancelled |
 | `AIModel` | Core | `provider`, `name`, `displayName`, `contextWindow`, `capabilities` | Identity = provider + name |
@@ -17,21 +17,20 @@
 | `FileChange`, `FileDiff` | Changes, Core | file, relative path, status (created/modified/deleted), diff hunks with line numbers and +/− counts | Original contents live in `ChangeTracker` (memory) until accepted or reverted |
 | `GitStatus`, `GitFileChange`, `GitCommit` | Git | branch, upstream, ahead/behind, changes (staged/unstaged), commits | Read from Git on demand |
 | `TerminalEntry` | Terminal | command, output chunks per stream, state (running/finished/cancelled/failed) | Per project, in memory |
-| `ProviderSettings` | Settings | Ollama and LM Studio endpoints (enabled, base URL), Ollama context tokens, idle timeout | Stored as versioned JSON in `UserDefaults` |
+| `ProviderSettings` | Settings | Ollama and LM Studio endpoints (enabled, base URL), Ollama context tokens, idle timeout | Stored as versioned JSON in `UserDefaults` (`providers.v1`) |
+| `AgentSettings` | Settings | `maxIterations` (5–100), `toolTimeoutSeconds` (15 s–5 min) | `UserDefaults` (`agent.v1`); read at the start of each run |
 
 ## Planned
 
 | Model | Phase | Purpose |
 |---|---|---|
 | `AgentRun` | 3 | One execution: start/end dates, outcome, iterations, token usage, model used. Makes history auditable |
-| `ModelConfiguration` | 5 | Per-model user settings: configured context, temperature, reasoning effort |
-| `CommandExecution` | 5 | Persisted audit of commands run by the agent: policy decision, exit code, duration |
-| `Settings` | 5 | Agent limits, permission policy overrides, terminal and Git preferences |
+| `ModelConfiguration` | Not implemented yet | Per-model user settings: configured context, temperature, reasoning effort |
+| `CommandExecution` | Not implemented yet | Persisted audit of commands run by the agent: policy decision, exit code, duration |
+| Policy overrides | Not implemented yet | Per-project command policy, environment allowlist |
 
-## Why `Session` embeds messages today
+## Sessions in storage
 
-With in-memory storage, embedding keeps Phase 1 simple. In SQLite (Phase 5), messages and tool
-calls become their own tables keyed by session. The repository protocol will gain paging
-(`messages(in:before:limit:)`) so long sessions are not loaded whole. `Session.messages` will
-then be dropped from the persisted row. That change is planned and will be covered by a
-migration.
+Messages are rows of their own table; tool calls are a JSON column of their message. Lists
+return summaries and only an opened session loads its transcript. Paging long transcripts is
+not needed yet. See [ADR 0019](../decisions/0019-session-storage-shape.md).

@@ -1,18 +1,22 @@
 # Persistence
 
-## Current state (Phase 1)
+## Current state (Phase 5)
 
-`InMemoryProjectRepository` and `InMemorySessionRepository` are actors that hold data for the
-lifetime of the process. **Nothing survives a relaunch yet.** This is deliberate: persistence is
-Phase 5, and the in-memory implementations let every feature be built and tested against the
-final repository protocols now.
+Projects, sessions and transcripts are stored in SQLite through GRDB:
+`SQLiteProjectRepository` and `SQLiteSessionRepository` over `AppDatabase` (a `DatabasePool` in
+WAL mode). `InMemoryProjectRepository` and `InMemorySessionRepository` remain for simulated
+mode and tests, with the same contract.
+
+If the database cannot be opened or migrated at launch, the app runs on the in-memory
+repositories and says so in an alert (“History is not being saved”). The file is left untouched
+so the next launch can try again.
 
 ## Design
 
 ```
 ViewModel ─▶ ProjectService ─▶ ProjectRepository (protocol, owned by the feature)
                                       ▲
-               InMemoryProjectRepository (now) · SQLiteProjectRepository (Phase 5)
+               SQLiteProjectRepository (app) · InMemoryProjectRepository (simulated mode, tests)
 ```
 
 - Repository protocols live in the feature (`Features/<Name>/Services/`) and describe what the
@@ -21,7 +25,19 @@ ViewModel ─▶ ProjectService ─▶ ProjectRepository (protocol, owned by the
   will, and callers must already handle it.
 - Repositories return domain values, never database rows or managed objects.
 
-## Decision: SQLite via GRDB (Phase 5)
+## Schema (`v1_initial`)
+
+| Table | Columns | Notes |
+|---|---|---|
+| `project` | `id`, `name`, `rootPath` (unique), `createdAt`, `lastOpenedAt`, `includesClaudeInstructions` | |
+| `session` | `id`, `projectID` → `project` (cascade), `title`, `createdAt`, `updatedAt`, `modelProvider`, `modelName`, `toolCallCount` | Index on (`projectID`, `updatedAt`) |
+| `message` | `id`, `sessionID` → `session` (cascade), `position`, `role`, `text`, `reasoning`, `state`, `createdAt`, `toolCalls` (JSON) | Unique (`sessionID`, `position`) |
+
+Dates are stored as seconds since the reference date (`Double`), so they round-trip exactly.
+Session lists read only the `session` table; a transcript is read when a session is opened
+([ADR 0019](../decisions/0019-session-storage-shape.md)).
+
+## Decision: SQLite via GRDB
 
 See [ADR 0006](../decisions/0006-persistence.md). In short:
 
@@ -32,11 +48,11 @@ See [ADR 0006](../decisions/0006-persistence.md). In short:
 - SwiftData was rejected: its model objects are not `Sendable`, it ties the domain model to
   persistence macros, and its migrations are opaque.
 
-The database file will live in `~/Library/Application Support/LocalOSXAi/LocalOSXAi.sqlite`.
+The database file lives in `~/Library/Application Support/LocalOSXAi/LocalOSXAi.sqlite`.
 
 ## Rules
 
-- Never put SQL or GRDB types in ViewModels or Views (checked by `make architecture`).
+- GRDB and SQL stay in `App/Infrastructure/Persistence` (checked by `make architecture`).
 - Never store secrets in the database.
 - Writes that must be atomic (e.g. finishing a run: messages + tool calls + run record) go
   through one repository method that uses one transaction.

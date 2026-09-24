@@ -10,7 +10,7 @@
 | `AgentError` | Agent | no model selected, model unavailable, context overflow, too many invalid tool calls, empty response, output limit reached | ✅ |
 | `TerminalError` | Terminal | launch failed (timeouts are reported in `CommandExit`) | ✅ |
 | `GitError` | Git | not a repository, command failed | ✅ |
-| `PersistenceError` | Persistence | open failed, migration failed, corrupt data | Phase 5 |
+| `PersistenceError` | Persistence | open failed, migration failed, corrupt data | ✅ |
 
 Typed errors exist where the caller can *act differently* on the case. Where it cannot, a
 descriptive error is enough. We do not create error types for the sake of it.

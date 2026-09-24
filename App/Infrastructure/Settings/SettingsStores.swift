@@ -54,3 +54,50 @@ final class InMemoryProviderSettingsStore: ProviderSettingsStore {
         settings.withLock { $0 = newValue }
     }
 }
+
+/// Agent settings persisted as JSON in `UserDefaults` (a preference, not
+/// history: see docs/data/overview.md).
+struct UserDefaultsAgentSettingsStore: AgentSettingsStore {
+    static let key = "agent.v1"
+
+    private let suiteName: String?
+
+    init(suiteName: String? = nil) {
+        self.suiteName = suiteName
+    }
+
+    private var defaults: UserDefaults {
+        suiteName.flatMap(UserDefaults.init(suiteName:)) ?? .standard
+    }
+
+    func load() -> AgentSettings {
+        guard let data = defaults.data(forKey: Self.key) else { return .defaults }
+        do {
+            return try JSONDecoder().decode(AgentSettings.self, from: data).clamped
+        } catch {
+            Logger(category: .persistence).error("Unreadable agent settings, using defaults: \(error)")
+            return .defaults
+        }
+    }
+
+    func save(_ settings: AgentSettings) throws {
+        defaults.set(try JSONEncoder().encode(settings), forKey: Self.key)
+    }
+}
+
+/// Process-lifetime agent settings, for the simulated environment and tests.
+final class InMemoryAgentSettingsStore: AgentSettingsStore {
+    private let settings: Mutex<AgentSettings>
+
+    init(_ settings: AgentSettings = .defaults) {
+        self.settings = Mutex(settings)
+    }
+
+    func load() -> AgentSettings {
+        settings.withLock { $0 }
+    }
+
+    func save(_ newValue: AgentSettings) {
+        settings.withLock { $0 = newValue }
+    }
+}

@@ -40,4 +40,6 @@ struct AgentRunRequest: Sendable, Hashable {
     /// Transcript before `prompt`, oldest first.
     let history: [AgentMessage]
     let model: AIModel.ID?
+    /// The project opted in to `CLAUDE.md` (per-project setting).
+    var includesClaudeInstructions = false
 }

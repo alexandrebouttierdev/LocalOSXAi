@@ -43,7 +43,7 @@ Run with `make test`. The full gate is `make check`.
 | Filesystem tools ✅ | read existing, read missing, write, edit, invalid path, path outside project, permission error |
 | Terminal ✅ | success, failure exit code, timeout, cancellation (children killed), policy refusal and confirmation |
 | Providers (Phase 2) | request encoding, stream decoding (fixtures), malformed chunks, HTTP errors, unreachable server |
-| Repositories | CRUD, ordering, migrations (Phase 5) |
+| Repositories ✅ | CRUD, ordering, summaries vs full sessions, cascade deletes, migrations and backups (`SQLiteRepositoryTests`, `AppDatabaseTests`) |
 | ViewModels | every action, loading/error/success states, cancellation |
 
 ## Style

@@ -8,6 +8,7 @@ import SwiftUI
 struct SidebarView: View {
     @Bindable var viewModel: WorkspaceViewModel
     let onCommand: (WorkspaceCommand) -> Void
+    @State private var projectPendingRemoval: Project?
 
     var body: some View {
         List(selection: selection) {
@@ -28,6 +29,17 @@ struct SidebarView: View {
             }
         }
         .safeAreaInset(edge: .bottom, spacing: 0) { footer }
+        .confirmationDialog(
+            "Remove “\(projectPendingRemoval?.name ?? "")” from the list?",
+            isPresented: Binding(get: { projectPendingRemoval != nil }, set: { if !$0 { projectPendingRemoval = nil } }),
+            presenting: projectPendingRemoval
+        ) { project in
+            Button("Remove Project and Sessions", role: .destructive) {
+                Task { await viewModel.removeProject(project.id) }
+            }
+        } message: { _ in
+            Text("Its sessions are deleted from LocalOSXAi. The folder and its files on disk are not touched.")
+        }
     }
 
     private var selection: Binding<WorkspaceViewModel.SidebarItem?> {
@@ -59,8 +71,8 @@ struct SidebarView: View {
                     .contextMenu {
                         Button("Reveal in Finder") { NSWorkspace.shared.activateFileViewerSelecting([project.rootURL]) }
                         Divider()
-                        Button("Remove from List", role: .destructive) {
-                            Task { await viewModel.projects.remove(project.id) }
+                        Button("Remove from List…", role: .destructive) {
+                            projectPendingRemoval = project
                         }
                     }
             }

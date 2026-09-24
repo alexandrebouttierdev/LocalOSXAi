@@ -26,7 +26,7 @@ backticks, `{a,b}`, subshells and here-documents. Unbalanced quotes also require
 | Blocked | `sudo`/`su`/`doas`; recursive `rm`/`chmod`/`chown` on `/`, `~`, `..`, `.`, `*` or an absolute path outside the project; `curl`/`wget` piped into a shell or interpreter; `git push --force` to `main`/`master`; `dd of=/dev/…`; `mkfs`, `diskutil`, `shutdown`, `reboot`, `launchctl`, `csrutil`, `nvram`; fork bombs; an empty command |
 
 The rules are data (program sets in `CommandPolicy`). Making them configurable per project is
-Phase 5 (project settings).
+planned, not implemented yet.
 
 ## Who decides
 

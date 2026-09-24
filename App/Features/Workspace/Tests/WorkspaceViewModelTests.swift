@@ -155,13 +155,78 @@ struct WorkspaceViewModelTests {
         agent.send()
         await agent.waitUntilIdle()
 
-        #expect(workspace.selectedSession?.messages.count == 2)
+        let sessionID = try #require(workspace.selectedSessionID)
+        // Lists hold summaries; the saved transcript is read back in full.
+        #expect(workspace.selectedSession?.messages.isEmpty == true)
+        #expect(await workspace.sessions.fullSession(id: sessionID)?.messages.count == 2)
         #expect(workspace.selectedSession?.title == "Summarize the README")
 
-        let sessionID = try #require(workspace.selectedSessionID)
         await workspace.createSession()
         await workspace.selectSession(sessionID)
         #expect(workspace.activeAgent === agent)
+    }
+
+    @Test("opening a session loads its full transcript, which lists do not carry")
+    func opensFullTranscript() async throws {
+        let project = Fixtures.project()
+        let message = AgentMessage(role: .user, text: "Hello", createdAt: Date(timeIntervalSinceReferenceDate: 0))
+        let session = Fixtures.session(projectID: project.id, messages: [message])
+        let workspace = makeWorkspace(projects: [project], sessions: [session])
+
+        await workspace.load()
+
+        #expect(workspace.sessions.sessions.first?.messages.isEmpty == true)
+        #expect(workspace.activeAgent?.messages == [message])
+    }
+
+    @Test("removing a project deletes its sessions and selects the next project")
+    func removeProject() async throws {
+        let first = Fixtures.project(name: "First", openedAt: Date(timeIntervalSinceReferenceDate: 2))
+        let second = Fixtures.project(name: "Second", openedAt: Date(timeIntervalSinceReferenceDate: 1))
+        let session = Fixtures.session(projectID: first.id)
+        let workspace = makeWorkspace(projects: [first, second], sessions: [session])
+        await workspace.load()
+        #expect(workspace.selectedSessionID == session.id)
+
+        await workspace.removeProject(first.id)
+
+        #expect(workspace.projects.projects.map(\.id) == [second.id])
+        #expect(workspace.selectedProjectID == second.id)
+        #expect(workspace.selectedSessionID == nil)
+        #expect(await workspace.sessions.fullSession(id: session.id) == nil)
+        #expect(workspace.sessions.recentSessions.isEmpty)
+    }
+
+    @Test("a storage failure at launch is reported once")
+    func storageError() {
+        var services = WorkspaceServices.stub(agent: StubAgentService(.events([])))
+        services.storageError = PersistenceError.openFailed("disk full")
+        let workspace = WorkspaceViewModel(
+            projects: ProjectsViewModel(service: ProjectService(repository: InMemoryProjectRepository())),
+            sessions: SessionsViewModel(service: SessionService(repository: InMemorySessionRepository())),
+            models: ModelsViewModel(registry: ProviderRegistry(providers: [])),
+            services: services
+        )
+        #expect(workspace.currentError?.title == "History is not being saved")
+        workspace.dismissError()
+        #expect(workspace.currentError == nil)
+    }
+
+    @Test("the project's CLAUDE.md opt-in reaches the run request")
+    func claudeOptInReachesRun() async throws {
+        let agentService = StubAgentService(.events([.finished(.completed)]))
+        let project = Fixtures.project()
+        let workspace = makeWorkspace(projects: [project], agent: agentService)
+        await workspace.load()
+        await workspace.createSession()
+        await workspace.projects.setIncludesClaudeInstructions(true, for: project.id)
+        let agent = try #require(workspace.activeAgent)
+
+        agent.draft = "Go"
+        agent.send()
+        await agent.waitUntilIdle()
+
+        #expect(agentService.requests.last?.includesClaudeInstructions == true)
     }
 
     @Test("the command palette lists every command with its shortcut and state")

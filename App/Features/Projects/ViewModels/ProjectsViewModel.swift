@@ -46,6 +46,17 @@ final class ProjectsViewModel {
         }
     }
 
+    func setIncludesClaudeInstructions(_ isIncluded: Bool, for id: Project.ID) async {
+        guard var project = project(id: id), project.includesClaudeInstructions != isIncluded else { return }
+        project.includesClaudeInstructions = isIncluded
+        do {
+            try await service.update(project)
+            if let index = projects.firstIndex(where: { $0.id == id }) { projects[index] = project }
+        } catch {
+            self.error = UserFacingError(error, title: "Could not save the project setting", category: .persistence)
+        }
+    }
+
     func remove(_ id: Project.ID) async {
         do {
             try await service.removeProject(id: id)

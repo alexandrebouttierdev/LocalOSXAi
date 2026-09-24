@@ -16,5 +16,6 @@ protocol AgentService: Sendable {
 
 /// Loads a project's agent instructions. Implemented in `Infrastructure`.
 protocol ProjectInstructionsLoading: Sendable {
-    func instructions(for projectRoot: URL) async -> [ProjectInstruction]
+    /// `AGENTS.md` always; `CLAUDE.md` after it only when the project opted in.
+    func instructions(for projectRoot: URL, includingClaudeInstructions: Bool) async -> [ProjectInstruction]
 }

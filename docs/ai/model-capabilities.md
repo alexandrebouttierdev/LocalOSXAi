@@ -47,5 +47,5 @@ effective = min(configured ?? loaded ?? 8_192, advertised ?? ∞)
 
 - Phase 2: provider endpoints and enablement, Ollama context length (Automatic or 8K–128K),
   and the network idle timeout. Model selection is in the inspector or with ⌘L.
-- Phase 5: per-model settings (context, temperature, reasoning effort: off/low/medium/high,
-  shown only for models with `.reasoning`).
+- Not implemented yet: per-model settings (context, temperature, reasoning effort:
+  off/low/medium/high, shown only for models with `.reasoning`).

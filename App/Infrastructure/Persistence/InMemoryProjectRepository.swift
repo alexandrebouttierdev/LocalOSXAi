@@ -1,8 +1,6 @@
 import Foundation
 
-/// Process-lifetime project storage.
-///
-/// Used until the SQLite store lands in Phase 5, and by tests. An actor
+/// Process-lifetime project storage, for simulated mode and tests. An actor
 /// serializes access, so concurrent callers never observe partial updates.
 actor InMemoryProjectRepository: ProjectRepository {
     private var projects: [Project.ID: Project]

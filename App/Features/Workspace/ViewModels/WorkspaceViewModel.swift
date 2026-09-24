@@ -41,6 +41,9 @@ final class WorkspaceViewModel {
     var isCommandPalettePresented = false
     var isProjectImporterPresented = false
 
+    /// Set when history could not be opened and the app runs on memory only.
+    private(set) var storageError: UserFacingError?
+
     private var agents: [Session.ID: AgentViewModel] = [:]
     private var panels: [Project.ID: ProjectPanels] = [:]
     private var paletteModelIDs: [String: AIModel.ID] = [:]
@@ -50,6 +53,9 @@ final class WorkspaceViewModel {
         self.sessions = sessions
         self.models = models
         self.services = services
+        storageError = services.storageError.map {
+            UserFacingError($0, title: "History is not being saved", category: .persistence)
+        }
     }
 
     // MARK: Derived state
@@ -63,10 +69,16 @@ final class WorkspaceViewModel {
     }
 
     /// First pending error across child view models, for a single alert.
-    var currentError: UserFacingError? { projects.error ?? sessions.error }
+    var currentError: UserFacingError? { storageError ?? projects.error ?? sessions.error }
 
     func dismissError() {
-        if projects.error != nil { projects.error = nil } else { sessions.error = nil }
+        if storageError != nil {
+            storageError = nil
+        } else if projects.error != nil {
+            projects.error = nil
+        } else {
+            sessions.error = nil
+        }
     }
 
     // MARK: Lifecycle and navigation
@@ -93,7 +105,7 @@ final class WorkspaceViewModel {
         selectedProjectID = id
         activatePanels(for: project)
         await sessions.load(projectID: id)
-        activateSession(sessions.sessions.first?.id)
+        await activateSession(sessions.sessions.first?.id)
     }
 
     private func activatePanels(for project: Project) {
@@ -111,8 +123,28 @@ final class WorkspaceViewModel {
             if let project = projects.project(id: session.projectID) { activatePanels(for: project) }
             await sessions.load(projectID: session.projectID)
         }
-        activateSession(id)
+        await activateSession(id)
         selectedTab = .agent
+    }
+
+    /// Forgets a project and its sessions (the folder on disk is untouched).
+    func removeProject(_ id: Project.ID) async {
+        for agent in agents.values where agent.projectID == id { agent.cancel() }
+        guard await sessions.deleteAll(inProject: id) else { return }
+        await projects.remove(id)
+        guard projects.project(id: id) == nil else { return }
+        agents = agents.filter { $0.value.projectID != id }
+        panels[id] = nil
+        if selectedProjectID == id {
+            selectedProjectID = nil
+            activePanels = nil
+            await activateSession(nil)
+            if let next = projects.projects.first {
+                await selectProject(next.id)
+                return
+            }
+        }
+        await sessions.load(projectID: selectedProjectID)
     }
 
     func openProject(at url: URL) async {
@@ -122,28 +154,40 @@ final class WorkspaceViewModel {
 
     func createSession() async {
         guard selectedProjectID != nil, let session = await sessions.createSession(model: models.selectedModelID) else { return }
-        activateSession(session.id)
+        await activateSession(session.id)
         selectedTab = .agent
     }
 
-    private func activateSession(_ id: Session.ID?) {
+    private func activateSession(_ id: Session.ID?) async {
         selectedSessionID = id
-        activeAgent = id.flatMap(agent(for:))
+        guard let id else {
+            activeAgent = nil
+            return
+        }
+        let agent = await agent(for: id)
+        // Another selection may have happened while the transcript loaded.
+        if selectedSessionID == id { activeAgent = agent }
     }
 
-    /// Returns the cached conversation for a session, creating it on first use.
-    /// Cached view models keep running when the user switches sessions.
-    private func agent(for sessionID: Session.ID) -> AgentViewModel? {
+    /// Returns the cached conversation for a session, loading its transcript
+    /// on first use. Cached view models keep running when the user switches sessions.
+    private func agent(for sessionID: Session.ID) async -> AgentViewModel? {
         if let existing = agents[sessionID] { return existing }
-        guard let session = sessions.session(id: sessionID),
+        guard let session = await sessions.fullSession(id: sessionID),
               let project = projects.project(id: session.projectID) else { return nil }
+        if let existing = agents[sessionID] { return existing }
 
+        let projectID = project.id
         let agent = AgentViewModel(
             sessionID: session.id,
+            projectID: projectID,
             projectRoot: project.rootURL,
             messages: session.messages,
             agentService: services.agentService,
             currentModel: { [weak models] in models?.selectedModelID },
+            includesClaudeInstructions: { [weak projects] in
+                projects?.project(id: projectID)?.includesClaudeInstructions ?? false
+            },
             persist: { [weak self] sessionID, messages in
                 await self?.persist(messages, in: sessionID)
             }

@@ -40,10 +40,10 @@ When a project opens, the manager loads instruction files, in this documented pr
    (`FileProjectInstructionsLoader`, capped at 16,000 characters with a reported truncation).
 2. `AGENTS.md` in subdirectories: planned. It will be loaded when the agent works on files under
    them, and the nearest file will win on conflicts.
-3. `CLAUDE.md` and `.cursor/rules/*.mdc`: planned as **opt-in per project** (project settings,
-   Phase 5), off by default. Mixing rule systems silently would make behavior unpredictable, so
-   the user will explicitly choose to include them. They will be appended *after* AGENTS.md,
-   labelled with their source.
+3. `CLAUDE.md`: ✅ **opt-in per project** (“Also read CLAUDE.md” in the inspector, saved with the
+   project), off by default. Mixing rule systems silently would make behavior unpredictable, so
+   the user chooses. It is appended *after* AGENTS.md, labelled with its source, and applies
+   from the next run. `.cursor/rules/*.mdc`: not supported yet.
 
 Every loaded file is listed in the inspector so the user knows what the model was told.
 

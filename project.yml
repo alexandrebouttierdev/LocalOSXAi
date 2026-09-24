@@ -24,10 +24,18 @@ settings:
     CODE_SIGN_STYLE: Manual
     DEVELOPMENT_TEAM: ""
 
+# The only third-party dependency: SQLite access (docs/decisions/0006-persistence.md).
+packages:
+  GRDB:
+    url: https://github.com/groue/GRDB.swift
+    exactVersion: 7.9.0
+
 targets:
   LocalOSXAi:
     type: application
     platform: macOS
+    dependencies:
+      - package: GRDB
     sources:
       - path: App
         excludes:

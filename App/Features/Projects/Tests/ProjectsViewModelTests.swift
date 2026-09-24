@@ -42,4 +42,17 @@ struct ProjectsViewModelTests {
         await viewModel.remove(project.id)
         #expect(viewModel.projects.isEmpty)
     }
+
+    @Test("the CLAUDE.md opt-in is saved per project")
+    func claudeOptIn() async throws {
+        let project = Fixtures.project()
+        let repository = InMemoryProjectRepository(projects: [project])
+        let viewModel = ProjectsViewModel(service: ProjectService(repository: repository))
+        await viewModel.load()
+
+        await viewModel.setIncludesClaudeInstructions(true, for: project.id)
+
+        #expect(viewModel.project(id: project.id)?.includesClaudeInstructions == true)
+        #expect(await repository.allProjects().first?.includesClaudeInstructions == true)
+    }
 }

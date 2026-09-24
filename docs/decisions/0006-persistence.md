@@ -1,6 +1,6 @@
 # 0006: SQLite via GRDB behind repositories
 
-**Status:** Accepted (implementation in Phase 5; in-memory repositories until then)
+**Status:** Accepted, implemented in Phase 5 (GRDB 7.9). Storage shape: [ADR 0019](0019-session-storage-shape.md)
 
 ## Context
 Projects, sessions, messages, agent runs, tool calls and model configurations must persist.

@@ -48,7 +48,12 @@ struct ProjectService: Sendable {
         try await repository.allProjects().sorted { $0.lastOpenedAt > $1.lastOpenedAt }
     }
 
-    /// Forgets a project. The folder on disk is never touched.
+    /// Saves a project's settings.
+    func update(_ project: Project) async throws {
+        try await repository.save(project)
+    }
+
+    /// Forgets a project and its sessions. The folder on disk is never touched.
     func removeProject(id: Project.ID) async throws {
         try await repository.deleteProject(id: id)
     }

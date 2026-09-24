@@ -48,7 +48,7 @@ the run denies a pending request. Listing and searching never include hidden fil
 `search_text` never reads secret-looking files, so their contents cannot reach the model
 without an explicit, approved `read_file`.
 
-The policy becomes configurable per project in Phase 5. **Nothing is ever executed silently**:
+The policy is not configurable per project yet (planned). **Nothing is ever executed silently**:
 every action appears in the transcript with its arguments and result.
 
 ## Secrets and credentials
@@ -60,8 +60,8 @@ every action appears in the transcript with its arguments and result.
   URLs with a host are accepted. A warning for non-local URLs (prompts, including file
   contents, would leave the machine) is planned with remote-server support.
 - Environment variables whose names contain `KEY`, `TOKEN`, `SECRET`, `PASSWORD`, `PASSWD` or
-  `CREDENTIAL` are removed from the environment of every command. An allowlist is planned with
-  project settings (Phase 5).
+  `CREDENTIAL` are removed from the environment of every command. An allowlist is planned
+  (not implemented yet).
 
 ## Logging and privacy
 
