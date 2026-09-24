@@ -9,6 +9,8 @@ struct AgentMessageView: View {
     let message: AgentMessage
     /// False for follow-up messages of the same agent turn.
     var showsHeader = true
+    /// Set on the last message of a turn: its duration and tokens.
+    var turnStats: TurnStats?
 
     var body: some View {
         switch message.role {
@@ -70,6 +72,9 @@ struct AgentMessageView: View {
                     } else {
                         MarkdownText(message.text)
                     }
+                }
+                if let turnStats {
+                    TurnStatsView(stats: turnStats)
                 }
             }
         }
@@ -236,4 +241,33 @@ private struct ReasoningView: View {
                 .foregroundStyle(AppColors.textTertiary)
         }
      }
+}
+
+/// “12.4 s · 356 tokens” under an agent turn; ticks every second while the
+/// turn streams, with an estimated (“~”) count until the server reports one.
+private struct TurnStatsView: View {
+    let stats: TurnStats
+
+    var body: some View {
+        Group {
+            if stats.end == nil {
+                TimelineView(.periodic(from: .now, by: 1)) { context in
+                    label(stats.summary(now: context.date))
+                }
+            } else {
+                label(stats.summary(now: .now))
+            }
+        }
+        .font(AppTypography.caption.monospacedDigit())
+        .foregroundStyle(AppColors.textTertiary)
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(stats.end == nil ? "Running" : "Took \(stats.accessibilityDescription)")
+        .help(stats.isEstimated ? "~ marks an estimate: the server did not report its token count."
+                                : "Output tokens as counted by the server.")
+    }
+
+    private func label(_ text: String) -> some View {
+        Label(text, systemImage: "clock")
+            .labelStyle(.titleAndIcon)
+    }
 }

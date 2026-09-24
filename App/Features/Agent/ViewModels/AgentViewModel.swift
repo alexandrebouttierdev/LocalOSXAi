@@ -32,6 +32,9 @@ final class AgentViewModel: ToolApprover {
     var draft = ""
 
     var isRunning: Bool { runState == .running }
+
+    /// Duration and tokens of each agent turn, keyed by the index of its last message.
+    var turnStats: [Int: TurnStats] { TurnStats.turns(in: messages) }
     var canSend: Bool { !isRunning && !draft.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }
 
     /// A run can be retried when the last one failed, was stopped, or never
@@ -198,11 +201,11 @@ final class AgentViewModel: ToolApprover {
             }
             // A cancelled consumer ends iteration without throwing.
             if Task.isCancelled {
-                TranscriptReducer.cancel(&messages)
+                TranscriptReducer.cancel(&messages, now: now())
                 spoken = "The agent was stopped."
             }
         } catch is CancellationError {
-            TranscriptReducer.cancel(&messages)
+            TranscriptReducer.cancel(&messages, now: now())
             spoken = "The agent was stopped."
         } catch {
             let presented = UserFacingError(error, title: "The agent run failed", category: .agent)

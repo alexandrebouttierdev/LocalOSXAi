@@ -94,4 +94,12 @@ struct AgentRuntimeOptionsTests {
         let second = await collect(runtime.run(Fixtures.runRequest(), approver: StubApprover()))
         #expect(finished(second.elements) == [.finished(.completed)])
     }
+
+    @Test("the server's token counts reach the transcript")
+    func usageForwarded() async throws {
+        let provider = FakeLLMProvider(turns: [.events([.textDelta("Hi"), .usage(TokenUsage(promptTokens: 50, completionTokens: 3)),
+                                                        .finished(.stop)])])
+        let result = await collect(try runtime(provider).run(Fixtures.runRequest(), approver: StubApprover()))
+        #expect(result.elements.contains(.usage(TokenUsage(promptTokens: 50, completionTokens: 3))))
+    }
 }

@@ -176,6 +176,7 @@ struct AgentRuntime: AgentService {
             case .usage(let usage):
                 // Replace the estimate with what the server actually counted.
                 emit(.contextUsageUpdated(ContextUsage(usedTokens: usage.totalTokens, budgetTokens: contextTokens)))
+                emit(.usage(usage))
             case .finished(let reason):
                 response.finishReason = reason
             }

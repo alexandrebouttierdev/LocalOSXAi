@@ -6,7 +6,7 @@
 |---|---|---|---|
 | `Project` | Projects | `id`, `name`, `rootURL`, `createdAt`, `lastOpenedAt`, `includesClaudeInstructions`, `commandRules` | `rootURL` is standardized and symlink-resolved. It is the tool boundary |
 | `Session` | Sessions | `id`, `projectID`, `title`, `createdAt`, `updatedAt`, `model`, `messages`, `toolCallCount` | Title derived from the first prompt while still “New session”. Lists carry summaries (`messages` empty) |
-| `AgentMessage` | Agent | `id`, `role` (user/assistant/error), `text`, `reasoning`, `toolCalls`, `state`, `createdAt` | UI and persistence model |
+| `AgentMessage` | Agent | `id`, `role` (user/assistant/error), `text`, `reasoning`, `toolCalls`, `state`, `createdAt`, `finishedAt`, `outputTokens` | UI and persistence model. `outputTokens` is the server's count, when reported |
 | `ToolCallRecord` | Agent | `id`, `name`, `argumentsJSON`, `status`, `summary`, `output` | Status: awaitingApproval, running, succeeded, failed, denied, cancelled |
 | `AIModel` | Core | `provider`, `name`, `displayName`, `contextWindow`, `capabilities` | Identity = provider + name |
 | `ContextWindow` | Core | `advertisedTokens`, `loadedTokens`, `configuredTokens`, `effectiveTokens` | See [model capabilities](../ai/model-capabilities.md) |

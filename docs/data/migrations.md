@@ -2,7 +2,8 @@
 
 Implemented in `AppDatabase` (Phase 5). The shipped migrations are: `v1_initial`, and
 `v2_model_settings_command_rules_change_originals` (adds `project.commandRules`, the
-`modelSettings` and `changeOriginal` tables). `AppDatabaseTests` and
+`modelSettings` and `changeOriginal` tables), and `v3_message_timing` (adds `message.finishedAt`
+and `message.outputTokens`). `AppDatabaseTests` and
 `SQLiteSettingsTests.migrationFromV1` cover them, the latter with v1 fixture data.
 
 ## Strategy

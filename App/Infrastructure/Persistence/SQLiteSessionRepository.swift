@@ -121,6 +121,8 @@ struct MessageRecord: Codable, FetchableRecord, PersistableRecord {
     var state: String
     var createdAt: Double
     var toolCalls: String
+    var finishedAt: Double?
+    var outputTokens: Int?
 
     init(_ message: AgentMessage, sessionID: Session.ID, position: Int) throws {
         id = message.id.uuidString
@@ -131,6 +133,8 @@ struct MessageRecord: Codable, FetchableRecord, PersistableRecord {
         reasoning = message.reasoning
         state = message.state.rawValue
         createdAt = message.createdAt.timeIntervalSinceReferenceDate
+        finishedAt = message.finishedAt?.timeIntervalSinceReferenceDate
+        outputTokens = message.outputTokens
         guard let json = String(bytes: try JSONEncoder().encode(message.toolCalls), encoding: .utf8) else {
             throw PersistenceError.corruptData("tool calls of message \(id)")
         }
@@ -149,7 +153,10 @@ struct MessageRecord: Codable, FetchableRecord, PersistableRecord {
         } catch {
             throw PersistenceError.corruptData("tool calls of message \(id)")
         }
-        return AgentMessage(id: uuid, role: role, text: text, reasoning: reasoning, toolCalls: calls,
-                            state: state, createdAt: Date(timeIntervalSinceReferenceDate: createdAt))
+        var message = AgentMessage(id: uuid, role: role, text: text, reasoning: reasoning, toolCalls: calls,
+                                   state: state, createdAt: Date(timeIntervalSinceReferenceDate: createdAt))
+        message.finishedAt = finishedAt.map(Date.init(timeIntervalSinceReferenceDate:))
+        message.outputTokens = outputTokens
+        return message
     }
 }

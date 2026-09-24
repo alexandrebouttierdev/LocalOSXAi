@@ -53,10 +53,11 @@ struct AgentView: View {
     private var transcript: some View {
         ScrollView {
             LazyVStack(alignment: .leading, spacing: AppSpacing.lg) {
+                let turnStats = viewModel.turnStats
                 ForEach(Array(viewModel.messages.enumerated()), id: \.element.id) { index, message in
                     // Consecutive agent messages (one per tool iteration) share one header.
                     let continuesAgentTurn = index > 0 && viewModel.messages[index - 1].role == .assistant
-                    AgentMessageView(message: message, showsHeader: !continuesAgentTurn)
+                    AgentMessageView(message: message, showsHeader: !continuesAgentTurn, turnStats: turnStats[index])
                         .padding(.top, message.role == .user && index > 0 ? AppSpacing.md : 0)
                         .transition(reduceMotion ? .opacity : .opacity.combined(with: .offset(y: 8)))
                 }

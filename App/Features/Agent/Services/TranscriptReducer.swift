@@ -11,7 +11,7 @@ enum TranscriptReducer {
     static func apply(_ event: AgentEvent, to messages: inout [AgentMessage], now: Date) {
         switch event {
         case .assistantMessageStarted(let id):
-            finishStreaming(&messages, as: .complete)
+            finishStreaming(&messages, as: .complete, now: now)
             messages.append(AgentMessage(id: id, role: .assistant, text: "", state: .streaming, createdAt: now))
         case .textDelta(let delta):
             updateStreaming(&messages, now: now) { $0.text += delta }
@@ -32,21 +32,23 @@ enum TranscriptReducer {
                 record.summary = summary
                 record.output = output
             }
+        case .usage(let usage):
+            updateStreaming(&messages, now: now) { $0.outputTokens = usage.completionTokens }
         case .contextUsageUpdated, .instructionsLoaded:
             break
         case .finished:
-            finishStreaming(&messages, as: .complete)
+            finishStreaming(&messages, as: .complete, now: now)
         }
     }
 
     /// Marks in-flight content as cancelled after the user stopped the run.
-    static func cancel(_ messages: inout [AgentMessage]) {
-        finishStreaming(&messages, as: .cancelled)
+    static func cancel(_ messages: inout [AgentMessage], now: Date = Date()) {
+        finishStreaming(&messages, as: .cancelled, now: now)
     }
 
     /// Marks in-flight content as failed and appends a visible error entry.
     static func fail(_ messages: inout [AgentMessage], error: UserFacingError, now: Date) {
-        finishStreaming(&messages, as: .failed)
+        finishStreaming(&messages, as: .failed, now: now)
         // The suggestion says what to do next (start the server, pick another model…).
         let text = [error.message, error.recoverySuggestion].compactMap { $0 }.joined(separator: "\n")
         messages.append(AgentMessage(role: .error, text: text, state: .complete, createdAt: now))
@@ -76,9 +78,10 @@ enum TranscriptReducer {
         }
     }
 
-    private static func finishStreaming(_ messages: inout [AgentMessage], as state: AgentMessage.State) {
+    private static func finishStreaming(_ messages: inout [AgentMessage], as state: AgentMessage.State, now: Date) {
         for index in messages.indices where messages[index].state == .streaming {
             messages[index].state = state
+            messages[index].finishedAt = now
             messages[index].preparingToolCall = nil
             for callIndex in messages[index].toolCalls.indices where !messages[index].toolCalls[callIndex].status.isFinished {
                 messages[index].toolCalls[callIndex].status = state == .complete ? .failed : .cancelled

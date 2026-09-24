@@ -31,6 +31,11 @@ struct AgentMessage: Identifiable, Hashable, Sendable, Codable {
     var preparingToolCall: ToolCallDraft?
     var state: State
     let createdAt: Date
+    /// When the message stopped streaming (completed, stopped or failed).
+    var finishedAt: Date?
+    /// Output tokens the server counted for this message's model call;
+    /// `nil` when it did not say (the UI then shows an estimate).
+    var outputTokens: Int?
 
     init(id: UUID = UUID(), role: Role, text: String, reasoning: String = "", toolCalls: [ToolCallRecord] = [],
          state: State = .complete, createdAt: Date) {

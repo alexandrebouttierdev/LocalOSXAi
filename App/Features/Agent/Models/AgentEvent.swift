@@ -17,6 +17,8 @@ enum AgentEvent: Sendable, Hashable {
     case toolCallStatusChanged(id: String, status: ToolCallRecord.Status)
     case toolCallFinished(id: String, status: ToolCallRecord.Status, summary: String, output: String)
     case contextUsageUpdated(ContextUsage)
+    /// Tokens the server counted for the current message's model call.
+    case usage(TokenUsage)
     /// Instruction files loaded into the context, by relative path.
     case instructionsLoaded([String])
     /// Last event of a run that was not cancelled and did not throw.

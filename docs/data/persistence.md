@@ -25,7 +25,7 @@ ViewModel ─▶ ProjectService ─▶ ProjectRepository (protocol, owned by the
   will, and callers must already handle it.
 - Repositories return domain values, never database rows or managed objects.
 
-## Schema (`v1_initial`, `v2_…`)
+## Schema (`v1_initial`, `v2_…`, `v3_message_timing`)
 
 | Table | Columns | Notes |
 |---|---|---|
@@ -34,6 +34,7 @@ ViewModel ─▶ ProjectService ─▶ ProjectRepository (protocol, owned by the
 | `message` | `id`, `sessionID` → `session` (cascade), `position`, `role`, `text`, `reasoning`, `state`, `createdAt`, `toolCalls` (JSON) | Unique (`sessionID`, `position`) |
 | `project.commandRules` (v2) | JSON of `CommandRules`, empty for the defaults | |
 | `modelSettings` (v2) | `provider`, `name` (primary key), `temperature`, `reasoning`, `contextTokens` | Defaults are not stored |
+| `message.finishedAt`, `message.outputTokens` (v3) | When the message stopped streaming; the server's output token count | Turn duration and tokens in the transcript |
 | `changeOriginal` (v2) | `path` (primary key), `projectRoot`, `existed`, `content` (blob) | Removed when a change is accepted or reverted |
 
 Dates are stored as seconds since the reference date (`Double`), so they round-trip exactly.

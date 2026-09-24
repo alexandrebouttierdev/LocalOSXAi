@@ -168,6 +168,13 @@ struct AppDatabase: Sendable {
                 table.column("content", .blob)
             }
         }
+        migrator.registerMigration("v3_message_timing") { db in
+            // Turn duration and token counts shown under each agent answer.
+            try db.alter(table: "message") { table in
+                table.add(column: "finishedAt", .double)
+                table.add(column: "outputTokens", .integer)
+            }
+        }
         return migrator
     }
 }

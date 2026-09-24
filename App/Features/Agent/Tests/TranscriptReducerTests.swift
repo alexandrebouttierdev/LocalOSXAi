@@ -58,6 +58,22 @@ struct TranscriptReducerTests {
         #expect(messages[0].preparingToolCall == nil)
     }
 
+    @Test("server token counts and finish times are recorded on the message")
+    func timingAndUsage() {
+        let later = now.addingTimeInterval(4)
+        var messages = reduce([.assistantMessageStarted(id: UUID()), .textDelta("Hi"),
+                               .usage(TokenUsage(promptTokens: 900, completionTokens: 12))])
+        #expect(messages[0].outputTokens == 12)
+        #expect(messages[0].finishedAt == nil)
+
+        TranscriptReducer.apply(.finished(.completed), to: &messages, now: later)
+        #expect(messages[0].finishedAt == later)
+
+        var stopped = reduce([.assistantMessageStarted(id: UUID())])
+        TranscriptReducer.cancel(&stopped, now: later)
+        #expect(stopped[0].finishedAt == later)
+    }
+
     @Test("a finish event for an unknown tool call is ignored")
     func unknownToolCallFinish() {
         let messages = reduce([

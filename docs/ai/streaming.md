@@ -24,6 +24,12 @@
    readable from the partial arguments, characters so far). The draft is cleared when the call
    starts or the message ends.
 
+Under each agent turn, a line shows how long it took and how many tokens the model wrote
+(“12.4 s · 356 tokens”). While the turn streams it ticks every second and counts an estimate
+(“~210 tokens”, about 4 characters per token, including reasoning and tool arguments); each
+model call's estimate is replaced by the server's count when `AgentEvent.usage` arrives. The
+duration runs from the user's message, so model loading and tool time count (`TurnStats`).
+
 The transcript shows a live status while a message has no content yet: “Waiting for the
 model… 12 s (it may be loading)”, “Thinking… 40 s” during reasoning, or “Writing index.html…
 12.3K characters” while a tool call is prepared. A local runtime that loads a model on demand

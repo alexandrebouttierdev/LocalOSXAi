@@ -24,8 +24,13 @@ struct SQLiteRepositoryTests {
                                   summary: "Read 3 lines", output: "a\nb\nc")
         return [
             AgentMessage(role: .user, text: "Read a.swift", createdAt: Date(timeIntervalSinceReferenceDate: 10.123_456)),
-            AgentMessage(role: .assistant, text: "It has 3 lines.", reasoning: "Let me look.", toolCalls: [call],
-                         createdAt: Date(timeIntervalSinceReferenceDate: 11)),
+            {
+                var answer = AgentMessage(role: .assistant, text: "It has 3 lines.", reasoning: "Let me look.", toolCalls: [call],
+                                          createdAt: Date(timeIntervalSinceReferenceDate: 11))
+                answer.finishedAt = Date(timeIntervalSinceReferenceDate: 13.25)
+                answer.outputTokens = 42
+                return answer
+            }(),
             AgentMessage(role: .error, text: "Model crashed", state: .failed, createdAt: Date(timeIntervalSinceReferenceDate: 12))
         ]
     }

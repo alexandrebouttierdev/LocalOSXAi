@@ -25,7 +25,7 @@ Status as of **Phase 6 (polish, accessibility, error recovery)**:
 | Agent with tools: read, list, search files and text, edit and write files | ✅ |
 | Approval of file changes (allow once / for the session / deny), stop anytime | ✅ |
 | Context management: budget, compaction, `AGENTS.md` loading | ✅ |
-| Streaming with reasoning, context meter | ✅ |
+| Streaming with reasoning, context meter, duration and tokens of each answer (live while it streams) | ✅ |
 | Ollama and LM Studio providers, model discovery, provider settings | ✅ |
 | Model selection grouped by provider (inspector, ⌘L) | ✅ |
 | Core contracts: `LLMProvider`, `AgentTool`, `ToolRegistry`, schema validation | ✅ |
