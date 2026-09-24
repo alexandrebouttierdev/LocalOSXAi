@@ -24,8 +24,10 @@ descriptive error is enough. We do not create error types for the sake of it.
   only the user-facing text.
 - Unknown errors show a generic message (“Details were written to the system log”). Internal
   details never leak into the UI.
-- Run failures appear inline in the transcript (an error entry). Other failures use a
-  single workspace alert (`WorkspaceViewModel.currentError`).
+- Run failures appear inline in the transcript: the error, then its recovery suggestion on a
+  second line, and a **Retry** button. Other failures use a single workspace alert
+  (`WorkspaceViewModel.currentError`), including “History is not being saved” when the database
+  could not be opened at launch.
 
 ## Not hiding errors
 

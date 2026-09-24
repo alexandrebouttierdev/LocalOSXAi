@@ -68,7 +68,7 @@ The tests prove this chain: `ProviderTestDoublesTests.cancellation`,
 - No file I/O, JSON parsing of large payloads, diffing or searching on the main actor.
   Move them into services or actors, and `await` them.
 - Nothing expensive in `body`. Derived values that are costly to compute are computed once in
-  the ViewModel. Markdown rendering is deferred to Phase 6 for this reason.
+  the ViewModel. For this reason Markdown is parsed only for completed messages; streaming text stays plain.
 
 ## Timeouts
 

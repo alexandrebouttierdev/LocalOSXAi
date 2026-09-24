@@ -76,6 +76,8 @@ next run. The other limits are constants.
 | Model returns neither text nor tool calls | Run fails with `AgentError.emptyResponse`, or `outputLimitReached` when the response was cut by the output limit (for example, all tokens spent reasoning). A silent completion would look like a hang |
 | Context overflow | Compaction first (see [context.md](context.md)). If the run still does not fit, it fails with a clear message |
 | Cancellation (⌘.) | Stops streaming, any running tool and any pending approval (answered “deny”). Partial content is marked “Stopped” |
+| Retry | After a failed or stopped run, or a prompt that never got an answer (the app quit), **Retry** under the transcript runs the last prompt again and replaces what the interrupted run produced |
+| Quitting mid-run | The prompt is saved before the run starts, so it survives a crash or quit and can be retried |
 
 ## Tests
 

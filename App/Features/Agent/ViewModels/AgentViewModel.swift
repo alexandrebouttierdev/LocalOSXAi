@@ -20,6 +20,9 @@ final class AgentViewModel: ToolApprover {
     private(set) var messages: [AgentMessage]
     private(set) var runState: RunState = .idle
     private(set) var contextUsage: ContextUsage?
+    /// What VoiceOver should announce about the last run: its end, not every
+    /// token (docs/ui/accessibility.md). The view posts it when it changes.
+    private(set) var announcement: Announcement?
     /// Instruction files the last run loaded (e.g. `AGENTS.md`).
     private(set) var instructionSources: [String] = []
     /// The tool call currently waiting for the user's decision.
@@ -30,6 +33,22 @@ final class AgentViewModel: ToolApprover {
 
     var isRunning: Bool { runState == .running }
     var canSend: Bool { !isRunning && !draft.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }
+
+    /// A run can be retried when the last one failed, was stopped, or never
+    /// answered (e.g. the app quit during the run).
+    var canRetry: Bool {
+        guard !isRunning, let last = messages.last else { return false }
+        switch last.role {
+        case .error, .user: return true
+        case .assistant: return last.state == .cancelled || last.state == .failed
+        }
+    }
+
+    /// A spoken message, with an id so the same text can be announced twice.
+    struct Announcement: Equatable {
+        let id = UUID()
+        let text: String
+    }
 
     private let projectRoot: URL
     private let agentService: any AgentService
@@ -71,7 +90,20 @@ final class AgentViewModel: ToolApprover {
     func send() {
         let prompt = draft.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !prompt.isEmpty, !isRunning else { return }
+        draft = ""
+        start(prompt: prompt)
+    }
 
+    /// Runs the last prompt again, replacing what its failed or stopped run
+    /// produced. Keeps the draft the user may be typing.
+    func retry() {
+        guard canRetry, let index = messages.lastIndex(where: { $0.role == .user }) else { return }
+        let prompt = messages[index].text
+        messages.removeSubrange(index...)
+        start(prompt: prompt)
+    }
+
+    private func start(prompt: String) {
         let request = AgentRunRequest(
             sessionID: sessionID,
             projectRoot: projectRoot,
@@ -80,12 +112,20 @@ final class AgentViewModel: ToolApprover {
             model: currentModel(),
             includesClaudeInstructions: includesClaudeInstructions()
         )
-        draft = ""
         messages.append(AgentMessage(role: .user, text: prompt, createdAt: now()))
         runState = .running
+        announcement = nil
+        let saved = messages
         runTask = Task { [weak self] in
+            // Saved before the run so a crash or quit never loses the prompt;
+            // it can be retried from the transcript.
+            await self?.persist(saved)
             await self?.consume(request)
         }
+    }
+
+    private func persist(_ transcript: [AgentMessage]) async {
+        await persist(sessionID, transcript)
     }
 
     /// Stops the current run. Propagates cancellation to the model stream,
@@ -105,6 +145,7 @@ final class AgentViewModel: ToolApprover {
                 approvalContinuation?.resume(returning: .deny)
                 approvalContinuation = continuation
                 pendingApproval = request
+                announcement = Announcement(text: "Approval needed: \(request.summary)")
             }
         } onCancel: {
             Task { @MainActor [weak self] in self?.resolveApproval(.deny) }
@@ -126,23 +167,31 @@ final class AgentViewModel: ToolApprover {
     }
 
     private func consume(_ request: AgentRunRequest) async {
+        var spoken = "The agent finished."
         do {
             for try await event in agentService.run(request, approver: self) {
                 switch event {
                 case .contextUsageUpdated(let usage): contextUsage = usage
                 case .instructionsLoaded(let sources): instructionSources = sources
+                case .finished(.reachedIterationLimit): spoken = "The agent paused after its step limit."
                 default: break
                 }
                 TranscriptReducer.apply(event, to: &messages, now: now())
             }
             // A cancelled consumer ends iteration without throwing.
-            if Task.isCancelled { TranscriptReducer.cancel(&messages) }
+            if Task.isCancelled {
+                TranscriptReducer.cancel(&messages)
+                spoken = "The agent was stopped."
+            }
         } catch is CancellationError {
             TranscriptReducer.cancel(&messages)
+            spoken = "The agent was stopped."
         } catch {
             let presented = UserFacingError(error, title: "The agent run failed", category: .agent)
             TranscriptReducer.fail(&messages, error: presented, now: now())
+            spoken = "The agent run failed: \(presented.message)"
         }
+        announcement = Announcement(text: spoken)
         // A run cannot end while waiting for the user, but never leave a request dangling.
         resolveApproval(.deny)
         runState = .idle

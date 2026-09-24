@@ -33,6 +33,8 @@ struct WorkspaceView: View {
                     }
                 }
         }
+        // While the palette is open, VoiceOver stays inside it (modal).
+        .accessibilityHidden(viewModel.isCommandPalettePresented)
         .overlay { commandPalette }
         .appAnimation(AppAnimation.overlay, value: viewModel.isCommandPalettePresented)
         .fileImporter(isPresented: $viewModel.isProjectImporterPresented, allowedContentTypes: [.folder]) { result in
@@ -73,6 +75,7 @@ struct WorkspaceView: View {
                     onDismiss: { viewModel.dismissCommandPalette() }
                 )
                 .padding(.top, 88)
+                .accessibilityAddTraits(.isModal)
                 .transition(.scale(scale: 0.97, anchor: .top).combined(with: .opacity))
             }
             .transition(.opacity)

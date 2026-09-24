@@ -80,6 +80,8 @@ struct AgentMessageView: View {
             Text("Agent")
                 .font(AppTypography.headline)
                 .foregroundStyle(AppColors.textPrimary)
+                // Headings let VoiceOver users jump between turns with the rotor.
+                .accessibilityAddTraits(.isHeader)
             switch message.state {
             case .streaming:
                 StreamingStatusView(message: message)
@@ -95,10 +97,18 @@ struct AgentMessageView: View {
     }
 
     private var errorMessage: some View {
-        Label {
-            Text(message.text)
-                .foregroundStyle(AppColors.textPrimary)
-                .textSelection(.enabled)
+        let lines = message.text.split(separator: "\n", maxSplits: 1).map(String.init)
+        return Label {
+            VStack(alignment: .leading, spacing: AppSpacing.xxs) {
+                Text(lines.first ?? "")
+                    .foregroundStyle(AppColors.textPrimary)
+                if lines.count > 1 {
+                    Text(lines[1])
+                        .font(AppTypography.callout)
+                        .foregroundStyle(AppColors.textSecondary)
+                }
+            }
+            .textSelection(.enabled)
         } icon: {
             Image(systemName: "exclamationmark.triangle.fill")
                 .foregroundStyle(AppColors.danger)

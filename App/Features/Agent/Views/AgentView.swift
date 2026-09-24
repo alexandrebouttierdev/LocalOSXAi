@@ -45,6 +45,9 @@ struct AgentView: View {
             .frame(maxWidth: .infinity)
             .appAnimation(AppAnimation.standard, value: viewModel.pendingApproval)
         }
+        .onChange(of: viewModel.announcement) { _, announcement in
+            if let announcement { AccessibilityNotification.Announcement(announcement.text).post() }
+        }
     }
 
     private var transcript: some View {
@@ -56,6 +59,11 @@ struct AgentView: View {
                     AgentMessageView(message: message, showsHeader: !continuesAgentTurn)
                         .padding(.top, message.role == .user && index > 0 ? AppSpacing.md : 0)
                         .transition(reduceMotion ? .opacity : .opacity.combined(with: .offset(y: 8)))
+                }
+                if viewModel.canRetry {
+                    retryButton
+                        .padding(.leading, 22 + AppSpacing.md)
+                        .transition(.opacity)
                 }
             }
             .frame(maxWidth: AppLayout.readableWidth, alignment: .leading)
@@ -69,6 +77,17 @@ struct AgentView: View {
         // without scrolling code that would fight the user's own scrolling.
         .defaultScrollAnchor(.bottom)
         .defaultScrollAnchor(.bottom, for: .sizeChanges)
+    }
+
+    private var retryButton: some View {
+        Button(action: viewModel.retry) {
+            Label("Retry", systemImage: "arrow.clockwise")
+                .font(AppTypography.callout)
+        }
+        .appGlassButton()
+        .controlSize(.small)
+        .help("Run the last message again")
+        .accessibilityHint("Runs your last message again, replacing the failed or stopped answer.")
     }
 
     private var emptyState: some View {

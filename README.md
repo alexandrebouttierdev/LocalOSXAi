@@ -12,7 +12,7 @@ prototype, and it is not meant to be a clone of Cline or OpenCode.
 
 ## Features
 
-Status as of **Phase 5 (persistence, history, settings)**:
+Status as of **Phase 6 (polish, accessibility, error recovery)**:
 
 | Area | Status |
 |---|---|
@@ -36,7 +36,8 @@ Status as of **Phase 5 (persistence, history, settings)**:
 | SQLite history (projects, sessions, transcripts) with migrations and backups | ✅ |
 | Agent settings (steps per run, tool timeout), per-project `CLAUDE.md` opt-in | ✅ |
 | Per-model settings, per-project command policy, persisted change originals | Not yet |
-| Polish, animations, accessibility audit, performance | Phase 6 |
+| Error recovery: Retry after a failed or stopped run, prompt saved before each run, suggestions with errors | ✅ |
+| Accessibility: run and approval announcements, turn headings, modal palette | ✅ (manual VoiceOver pass not done) |
 
 The agent works inside the opened project folder only. It reads freely. File changes need your
 approval, and you see the diff first. Commands are classified: read-only and test commands run,

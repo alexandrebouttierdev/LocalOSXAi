@@ -47,7 +47,9 @@ enum TranscriptReducer {
     /// Marks in-flight content as failed and appends a visible error entry.
     static func fail(_ messages: inout [AgentMessage], error: UserFacingError, now: Date) {
         finishStreaming(&messages, as: .failed)
-        messages.append(AgentMessage(role: .error, text: error.message, state: .complete, createdAt: now))
+        // The suggestion says what to do next (start the server, pick another model…).
+        let text = [error.message, error.recoverySuggestion].compactMap { $0 }.joined(separator: "\n")
+        messages.append(AgentMessage(role: .error, text: text, state: .complete, createdAt: now))
     }
 
     // MARK: Helpers

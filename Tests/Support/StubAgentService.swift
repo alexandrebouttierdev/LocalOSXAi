@@ -15,20 +15,29 @@ final class StubAgentService: AgentService {
         case askApproval(ToolApprovalRequest, decisions: Recorder<ToolApprovalDecision>)
     }
 
-    private let behavior: Behavior
+    /// One behavior per run, in order; the last one repeats.
+    private let behaviors: [Behavior]
     private let recordedRequests = Mutex<[AgentRunRequest]>([])
     private let cancellations = Mutex(0)
 
     init(_ behavior: Behavior) {
-        self.behavior = behavior
+        behaviors = [behavior]
+    }
+
+    init(sequence: [Behavior]) {
+        precondition(!sequence.isEmpty, "A stub needs at least one behavior")
+        behaviors = sequence
     }
 
     var requests: [AgentRunRequest] { recordedRequests.withLock { $0 } }
     var cancellationCount: Int { cancellations.withLock { $0 } }
 
     func run(_ request: AgentRunRequest, approver: any ToolApprover) -> AsyncThrowingStream<AgentEvent, Error> {
-        recordedRequests.withLock { $0.append(request) }
-        let behavior = self.behavior
+        let runIndex = recordedRequests.withLock { requests in
+            requests.append(request)
+            return requests.count - 1
+        }
+        let behavior = behaviors[min(runIndex, behaviors.count - 1)]
         return AsyncThrowingStream { continuation in
             let task = Task {
                 switch behavior {

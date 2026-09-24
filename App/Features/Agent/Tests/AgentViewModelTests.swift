@@ -129,7 +129,66 @@ struct AgentViewModelTests {
         #expect(!viewModel.isRunning)
         #expect(viewModel.messages.map(\.role) == [.user, .assistant, .error])
         #expect(viewModel.messages[1].state == .failed)
-        #expect(viewModel.messages[2].text == ProviderError.unreachable(endpoint: "x").errorDescription)
+        let error = ProviderError.unreachable(endpoint: "x")
+        #expect(viewModel.messages[2].text
+                == [error.errorDescription, error.recoverySuggestion].compactMap { $0 }.joined(separator: "\n"))
+        #expect(viewModel.announcement?.text.hasPrefix("The agent run failed") == true)
+    }
+
+    @Test("a failed run can be retried: its output is replaced by the new run")
+    func retryAfterFailure() async {
+        let service = StubAgentService(sequence: [
+            .failAfter([.assistantMessageStarted(id: UUID())], ProviderError.timedOut),
+            .events([.assistantMessageStarted(id: UUID()), .textDelta("Recovered"), .finished(.completed)])
+        ])
+        let viewModel = makeViewModel(service, messages: [
+            AgentMessage(role: .user, text: "Earlier", createdAt: Date()),
+            AgentMessage(role: .assistant, text: "Earlier answer", createdAt: Date())
+        ])
+        viewModel.draft = "Go"
+        viewModel.send()
+        await viewModel.waitUntilIdle()
+        #expect(viewModel.canRetry)
+
+        viewModel.draft = "typing something else"
+        viewModel.retry()
+        await viewModel.waitUntilIdle()
+
+        #expect(viewModel.messages.map(\.text) == ["Earlier", "Earlier answer", "Go", "Recovered"])
+        #expect(!viewModel.canRetry)
+        #expect(viewModel.draft == "typing something else")
+        #expect(service.requests.map(\.prompt) == ["Go", "Go"])
+        #expect(service.requests[1].history.map(\.text) == ["Earlier", "Earlier answer"])
+        #expect(viewModel.announcement?.text == "The agent finished.")
+    }
+
+    @Test("retry is offered only when the last run did not complete")
+    func retryAvailability() {
+        func canRetry(_ messages: [AgentMessage]) -> Bool {
+            makeViewModel(StubAgentService(.events([])), messages: messages).canRetry
+        }
+        let user = AgentMessage(role: .user, text: "Q", createdAt: Date())
+        #expect(!canRetry([]))
+        #expect(canRetry([user]))
+        #expect(!canRetry([user, AgentMessage(role: .assistant, text: "A", createdAt: Date())]))
+        #expect(canRetry([user, AgentMessage(role: .assistant, text: "", state: .cancelled, createdAt: Date())]))
+        #expect(canRetry([user, AgentMessage(role: .error, text: "Boom", createdAt: Date())]))
+    }
+
+    @Test("the prompt is saved before the run starts, so quitting mid-run keeps it")
+    func savesPromptFirst() async {
+        let persisted = Recorder<[AgentMessage]>()
+        let viewModel = makeViewModel(StubAgentService(.hangAfter([])), persisted: persisted)
+        viewModel.draft = "Long task"
+        viewModel.send()
+        for _ in 0..<200 where persisted.values.isEmpty {
+            try? await Task.sleep(for: .milliseconds(5))
+        }
+        #expect(persisted.values.first?.map(\.text) == ["Long task"])
+
+        viewModel.cancel()
+        await viewModel.waitUntilIdle()
+        #expect(viewModel.announcement?.text == "The agent was stopped.")
     }
 
     // MARK: Approvals
@@ -152,6 +211,7 @@ struct AgentViewModelTests {
         try await waitForPendingApproval(viewModel)
 
         #expect(viewModel.pendingApproval == approval)
+        #expect(viewModel.announcement?.text == "Approval needed: \(approval.summary)")
         viewModel.resolveApproval(.allowOnce)
         await viewModel.waitUntilIdle()
 

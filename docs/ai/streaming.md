@@ -43,8 +43,10 @@ the full chain.
 
 - Deltas are applied to the transcript on the main actor, one small mutation each. At local
   model speeds (roughly 20–150 tokens/s), this is well within budget.
-- If profiling shows excessive view updates at very high token rates, the ViewModel will
-  coalesce deltas per frame (about 16 ms). That is a Phase 6 optimization, measured first and
-  not presumed.
+- Streaming text is shown as plain `Text`; Markdown is parsed once the message is complete.
+- Coalescing deltas per frame (about 16 ms) was **not implemented** in Phase 6: nothing has
+  shown a problem at local model speeds, and batching would delay the last token of a burst
+  until the next event. It stays the first thing to try if Instruments shows view updates
+  dominating while streaming.
 - The transcript uses `LazyVStack` and keeps the bottom anchored with
   `defaultScrollAnchor(.bottom, for: .sizeChanges)`, with no scroll code running per delta.
