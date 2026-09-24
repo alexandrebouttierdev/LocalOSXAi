@@ -17,8 +17,10 @@ interface should disappear behind the work.
 
 The reference mockup (Linear style) is a dark ground holding the sidebar, with the content on
 an **inset panel**: `surface`, 12 pt corners (`AppRadius.panel`), a `hairline` outline and 8 pt
-of ground around it. The panel starts with the header (project badge › session title, then
-text-only pill tabs, with a count badge on Changes). The sidebar starts with the app mark, then
+of ground around it. There is a single header row, the native window toolbar: the title is the
+session (the project on other tabs) with the project as subtitle, text-only pill tabs sit in the
+center with a count badge on Changes, and the inspector toggle is on the right. The panel
+itself holds only the tab content. The sidebar starts with the app mark, then
 the command palette field, projects, sessions (“2 h ago · 4 tool calls”), and a footer with
 Settings and which model servers answered (“Ollama connected”). The inspector lists model,
 context, tools (two columns) and Git.

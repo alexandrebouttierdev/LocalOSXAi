@@ -4,7 +4,7 @@
 
 ```
 ┌─ Sidebar ─────────┬─ Main content ──────────────────────────┬─ Inspector ─────┐
-│ ⌘K Search         │ Project › Session      Agent Files …    │ Model           │
+│ ⌘K Search         │ Session · Project  Agent Files …  [▥] │ Model           │
 │ Projects      +   │─────────────────────────────────────────│ Context         │
 │ Sessions      +   │ transcript / tab content                │ Tools           │
 │ Recent            │                                         │ Git             │
@@ -16,6 +16,8 @@
 - `NavigationSplitView` (sidebar + detail) plus the `.inspector` modifier (right panel).
   These are native, resizable columns that collapse correctly at small window sizes.
 - Minimum window size 900×560. Column widths come from `AppLayout`.
+- The window toolbar is the only header: title and subtitle (session and project), the tabs in
+  the center, the inspector toggle on the right (`WorkspaceViewModel.windowTitle/windowSubtitle`).
 - Main content tabs: **Agent**, **Files** (⌘P focuses its search), **Changes** (with a count badge) and **Terminal**. Each project keeps its own Files, Changes, Terminal and Git state (`ProjectPanels`).
   Tabs that are not yet implemented show a placeholder that names their phase.
 

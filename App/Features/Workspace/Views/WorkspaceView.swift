@@ -22,7 +22,14 @@ struct WorkspaceView: View {
                             min: AppLayout.inspectorMinWidth, ideal: AppLayout.inspectorIdealWidth, max: AppLayout.inspectorMaxWidth
                         )
                 }
+                .navigationTitle(viewModel.windowTitle)
+                .navigationSubtitle(viewModel.windowSubtitle)
                 .toolbar {
+                    if viewModel.selectedProject != nil {
+                        ToolbarItem(placement: .principal) {
+                            TabSwitcher(selectedTab: $viewModel.selectedTab, changesCount: viewModel.pendingChangesCount)
+                        }
+                    }
                     ToolbarItem(placement: .primaryAction) {
                         Button {
                             handle(.toggleInspector)

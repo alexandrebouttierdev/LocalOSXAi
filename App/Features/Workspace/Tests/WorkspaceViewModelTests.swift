@@ -197,6 +197,23 @@ struct WorkspaceViewModelTests {
         #expect(workspace.sessions.recentSessions.isEmpty)
     }
 
+    @Test("the window title names the session on the Agent tab and the project elsewhere")
+    func windowTitle() async {
+        let project = Fixtures.project(name: "Candilog")
+        let session = Fixtures.session(projectID: project.id, title: "Build the landing page")
+        let workspace = makeWorkspace(projects: [project], sessions: [session])
+        #expect(workspace.windowTitle == "LocalOSXAi")
+        #expect(workspace.windowSubtitle.isEmpty)
+
+        await workspace.load()
+        #expect(workspace.windowTitle == "Build the landing page")
+        #expect(workspace.windowSubtitle == "Candilog")
+
+        workspace.selectedTab = .files
+        #expect(workspace.windowTitle == "Candilog")
+        #expect(workspace.windowSubtitle.isEmpty)
+    }
+
     @Test("a storage failure at launch is reported once")
     func storageError() {
         var services = WorkspaceServices.stub(agent: StubAgentService(.events([])))

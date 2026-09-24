@@ -63,6 +63,22 @@ final class WorkspaceViewModel {
     var selectedProject: Project? { projects.project(id: selectedProjectID) }
     var selectedSession: Session? { sessions.session(id: selectedSessionID) }
 
+    /// Window title: the session on the Agent tab, otherwise the project.
+    var windowTitle: String {
+        guard let project = selectedProject else { return "LocalOSXAi" }
+        if selectedTab == .agent, let session = selectedSession { return session.title }
+        return project.name
+    }
+
+    /// Window subtitle: the project, when the title names something inside it.
+    var windowSubtitle: String {
+        guard let project = selectedProject, windowTitle != project.name else { return "" }
+        return project.name
+    }
+
+    /// Pending file changes, shown as a badge on the Changes tab.
+    var pendingChangesCount: Int { activePanels?.changes.changes.count ?? 0 }
+
     var sidebarSelection: SidebarItem? {
         if let selectedSessionID { return .session(selectedSessionID) }
         return selectedProjectID.map(SidebarItem.project)

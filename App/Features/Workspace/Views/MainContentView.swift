@@ -1,24 +1,17 @@
 import SwiftUI
 
-/// The central column: header with breadcrumb and tabs, then the selected tab,
-/// on a panel inset in the window ground (the Linear layout).
+/// The central column: the selected tab on a panel inset in the window
+/// ground (the Linear layout). The title and the tabs live in the window
+/// toolbar (`WorkspaceView`), so there is a single header row.
 struct MainContentView: View {
     @Bindable var viewModel: WorkspaceViewModel
     let onCommand: (WorkspaceCommand) -> Void
 
     var body: some View {
         Group {
-            if let project = viewModel.selectedProject {
-                VStack(spacing: 0) {
-                    ContentHeaderView(
-                        projectName: project.name,
-                        sessionTitle: viewModel.selectedTab == .agent ? viewModel.selectedSession?.title : nil,
-                        changesCount: viewModel.activePanels?.changes.changes.count ?? 0,
-                        selectedTab: $viewModel.selectedTab
-                    )
-                    Divider().overlay(AppColors.hairline)
-                    tabContent
-                }
+            if viewModel.selectedProject != nil {
+                tabContent
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
                 .background(AppColors.surface)
                 .clipShape(RoundedRectangle(cornerRadius: AppRadius.panel, style: .continuous))
                 .overlay(
@@ -27,6 +20,7 @@ struct MainContentView: View {
                 )
                 .padding([.bottom, .trailing], AppSpacing.sm)
                 .padding(.leading, AppSpacing.xxs)
+                .padding(.top, AppSpacing.xs)
             } else {
                 WelcomeView(viewModel: viewModel, onCommand: onCommand)
             }
@@ -65,113 +59,5 @@ struct MainContentView: View {
     private var modelName: String? {
         guard let model = viewModel.models.selectedModel else { return nil }
         return "\(viewModel.models.providerName(for: model.provider)) · \(model.displayName)"
-    }
-}
-
-/// Breadcrumb (“Project › Session”) and the tab switcher.
-private struct ContentHeaderView: View {
-    let projectName: String
-    let sessionTitle: String?
-    let changesCount: Int
-    @Binding var selectedTab: MainTab
-
-    var body: some View {
-        HStack(spacing: AppSpacing.md) {
-            HStack(spacing: AppSpacing.sm) {
-                ProjectBadge(name: projectName)
-                Text(projectName)
-                    .foregroundStyle(sessionTitle == nil ? AppColors.textPrimary : AppColors.textSecondary)
-                if let sessionTitle {
-                    Image(systemName: "chevron.right")
-                        .font(AppTypography.caption.weight(.semibold))
-                        .foregroundStyle(AppColors.textTertiary)
-                        .accessibilityHidden(true)
-                    Text(sessionTitle)
-                        .foregroundStyle(AppColors.textPrimary)
-                        .contentTransition(.opacity)
-                }
-            }
-            .font(AppTypography.headline)
-            .lineLimit(1)
-            .accessibilityElement(children: .combine)
-
-            Spacer(minLength: AppSpacing.md)
-
-            TabSwitcher(selectedTab: $selectedTab, changesCount: changesCount)
-        }
-        .padding(.horizontal, AppSpacing.lg)
-        .frame(height: 52)
-    }
-}
-
-/// Segmented tabs whose selection is a glass capsule that slides (and, on
-/// macOS 26, morphs) from one tab to the next.
-private struct TabSwitcher: View {
-    @Binding var selectedTab: MainTab
-    let changesCount: Int
-    @Namespace private var namespace
-
-    var body: some View {
-        AppGlassContainer(spacing: 0) {
-            HStack(spacing: AppSpacing.xxs) {
-                ForEach(MainTab.allCases) { tab in
-                    TabButton(tab: tab, isSelected: tab == selectedTab, badge: tab == .changes ? changesCount : 0, namespace: namespace) {
-                        selectedTab = tab
-                    }
-                }
-            }
-            .padding(AppSpacing.xxs + 1)
-            .background(AppColors.hover, in: Capsule())
-            .overlay(Capsule().strokeBorder(AppColors.hairline, lineWidth: AppBorders.hairline))
-        }
-        .appAnimation(AppAnimation.overlay, value: selectedTab)
-        .accessibilityElement(children: .contain)
-        .accessibilityLabel("Views")
-    }
-}
-
-private struct TabButton: View {
-    let tab: MainTab
-    let isSelected: Bool
-    let badge: Int
-    let namespace: Namespace.ID
-    let action: () -> Void
-    @State private var isHovered = false
-
-    var body: some View {
-        Button(action: action) {
-            HStack(spacing: AppSpacing.xs) {
-                // Text only, like Linear's view switcher: the labels are short
-                // and icons would add noise to a four-tab control.
-                Text(tab.title)
-                if badge > 0 {
-                    Text("\(badge)")
-                        .font(AppTypography.caption.monospacedDigit().weight(.semibold))
-                        .foregroundStyle(.white)
-                        .padding(.horizontal, AppSpacing.xs + 1)
-                        .frame(minWidth: 16, minHeight: 16)
-                        .background(AppColors.accent, in: Capsule())
-                        .accessibilityLabel("\(badge) pending")
-                }
-            }
-                .font(AppTypography.callout.weight(isSelected ? .semibold : .regular))
-                .foregroundStyle(isSelected ? AppColors.textPrimary : (isHovered ? AppColors.textPrimary : AppColors.textSecondary))
-                .padding(.horizontal, AppSpacing.md)
-                .frame(height: 26)
-                .contentShape(Capsule())
-                .background {
-                    if isSelected {
-                        Capsule()
-                            .fill(AppColors.selection)
-                            .appGlass(in: Capsule())
-                            .matchedGeometryEffect(id: "selectedTab", in: namespace)
-                            .appGlassID("selectedTab", in: namespace)
-                    }
-                }
-        }
-        .buttonStyle(.plain)
-        .onHover { isHovered = $0 }
-        .appAnimation(AppAnimation.quick, value: isHovered)
-        .accessibilityAddTraits(isSelected ? [.isSelected] : [])
     }
 }

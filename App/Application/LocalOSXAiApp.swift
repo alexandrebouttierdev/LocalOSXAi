@@ -27,7 +27,7 @@ struct LocalOSXAiApp: App {
                     NSApp.appearance = appearance.nsAppearance
                 }
         }
-        .windowToolbarStyle(.unified(showsTitle: false))
+        .windowToolbarStyle(.unified(showsTitle: true))
         .defaultSize(width: 1280, height: 820)
         .commands {
             AppCommands(workspace: workspace)
