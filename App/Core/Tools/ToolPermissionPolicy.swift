@@ -18,6 +18,8 @@ enum ToolPermission: Hashable, Sendable {
 ///   run, others require approval, dangerous ones are blocked.
 struct ToolPermissionPolicy: Sendable {
     var commands = CommandPolicy()
+    /// The project's command rules, set for each run.
+    var commandRules = CommandRules()
 
     /// File name patterns treated as secrets. Matched case-insensitively on
     /// the last path component.
@@ -39,7 +41,7 @@ struct ToolPermissionPolicy: Sendable {
             guard let command = arguments.values["command"]?.stringValue else {
                 return .requiresApproval(reason: "This runs a command on your Mac.")
             }
-            switch commands.decision(for: command, projectRoot: projectRoot) {
+            switch commands.decision(for: command, projectRoot: projectRoot, rules: commandRules) {
             case .allowed: return .allowed
             case .requiresApproval(let reason): return .requiresApproval(reason: reason)
             case .blocked(let reason): return .blocked(reason: reason)

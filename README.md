@@ -35,7 +35,7 @@ Status as of **Phase 6 (polish, accessibility, error recovery)**:
 | Files tab with fuzzy search (⌘P) and preview; `.gitignore` respected | ✅ |
 | SQLite history (projects, sessions, transcripts) with migrations and backups | ✅ |
 | Agent settings (steps per run, tool timeout), per-project `CLAUDE.md` opt-in | ✅ |
-| Per-model settings, per-project command policy, persisted change originals | Not yet |
+| Per-model settings (temperature, reasoning, context), per-project command rules, changes reviewable after a relaunch | ✅ |
 | Error recovery: Retry after a failed or stopped run, prompt saved before each run, suggestions with errors | ✅ |
 | Accessibility: run and approval announcements, turn headings, modal palette | ✅ (manual VoiceOver pass not done) |
 

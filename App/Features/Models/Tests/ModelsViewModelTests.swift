@@ -89,4 +89,37 @@ struct ModelsViewModelTests {
         #expect(viewModel.selectedModelID == nil)
         #expect(!viewModel.isLoading)
     }
+
+    @Test("model settings load with discovery, save, and turn into run options")
+    func modelSettings() async {
+        let ollamaModel = Fixtures.model("gemma", provider: "ollama", capabilities: [.tools, .reasoning], advertised: 131_072)
+        let studioModel = Fixtures.model("qwen", provider: "lmstudio", capabilities: [.tools], advertised: 131_072)
+        let saved = ModelSettings(temperature: 0.3, contextTokens: 32_768)
+        let repository = InMemoryModelSettingsRepository(settings: [ollamaModel.id: saved])
+        let viewModel = ModelsViewModel(registry: ProviderRegistry(providers: [
+            MockLLMProvider(id: "ollama", displayName: "Ollama", supportsContextLength: true, models: .success([ollamaModel])),
+            MockLLMProvider(id: "lmstudio", displayName: "LM Studio", models: .success([studioModel]))
+        ]), settingsRepository: repository)
+
+        await viewModel.refresh()
+        #expect(viewModel.settings(for: ollamaModel.id) == saved)
+        #expect(viewModel.generationOptions(for: ollamaModel.id) == GenerationOptions(temperature: 0.3, contextLength: 32_768))
+        #expect(viewModel.effectiveContextTokens(for: ollamaModel) == 32_768)
+
+        // A provider that fixes the context at load time never gets a context override.
+        await viewModel.updateSettings(ModelSettings(contextTokens: 65_536), for: studioModel.id)
+        #expect(!viewModel.canSetContext(for: studioModel.id))
+        #expect(viewModel.generationOptions(for: studioModel.id).contextLength == nil)
+        #expect(await repository.allSettings()[studioModel.id] == ModelSettings(contextTokens: 65_536))
+
+        await viewModel.updateSettings(.defaults, for: ollamaModel.id)
+        #expect(viewModel.settings(for: ollamaModel.id).isDefault)
+        #expect(await repository.allSettings()[ollamaModel.id] == nil)
+    }
+
+    @Test("temperatures outside the supported range are clamped when sent")
+    func temperatureClamp() {
+        #expect(ModelSettings(temperature: 5).generationOptions(canSetContext: false).temperature == 2)
+        #expect(ModelSettings(temperature: -1).generationOptions(canSetContext: false).temperature == 0)
+    }
 }

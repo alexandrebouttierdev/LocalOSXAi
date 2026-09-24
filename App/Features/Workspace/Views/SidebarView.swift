@@ -69,6 +69,9 @@ struct SidebarView: View {
                 .help(project.rootURL.path)
                     .tag(WorkspaceViewModel.SidebarItem.project(project.id))
                     .contextMenu {
+                        Button("Project Settings…") {
+                            Task { await viewModel.showProjectSettings(for: project.id) }
+                        }
                         Button("Reveal in Finder") { NSWorkspace.shared.activateFileViewerSelecting([project.rootURL]) }
                         Divider()
                         Button("Remove from List…", role: .destructive) {

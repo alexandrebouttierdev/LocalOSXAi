@@ -10,6 +10,7 @@ import Foundation
 struct AppEnvironment {
     let projectRepository: any ProjectRepository
     let sessionRepository: any SessionRepository
+    let modelSettingsRepository: any ModelSettingsRepository
     let settingsStore: any ProviderSettingsStore
     let agentSettingsStore: any AgentSettingsStore
     let registry: ProviderRegistry
@@ -32,13 +33,14 @@ struct AppEnvironment {
         let registry = ProviderRegistry(providers: ProviderFactory.providers(for: store.load()))
         let runner = PosixCommandRunner()
         let git = CLIGitService(runner: runner)
-        let tracker = ChangeTracker()
+        let tracker = ChangeTracker(store: storage.changeOriginals)
         let tools = builtInTools(runner: runner, git: git)
         let agent = AgentRuntime(resolver: registry, tools: tools, instructionsLoader: FileProjectInstructionsLoader(),
                                  limits: { agentLimits(from: agentSettings.load()) }, changeRecorder: tracker)
         return AppEnvironment(
             projectRepository: storage.projects,
             sessionRepository: storage.sessions,
+            modelSettingsRepository: storage.modelSettings,
             settingsStore: store,
             agentSettingsStore: agentSettings,
             registry: registry,
@@ -52,6 +54,8 @@ struct AppEnvironment {
     private struct Storage {
         let projects: any ProjectRepository
         let sessions: any SessionRepository
+        let modelSettings: any ModelSettingsRepository
+        let changeOriginals: (any ChangeOriginalsStore)?
         let error: (any Error)?
     }
 
@@ -59,9 +63,12 @@ struct AppEnvironment {
         do {
             let database = try AppDatabase.open(at: try AppDatabase.defaultURL())
             return Storage(projects: SQLiteProjectRepository(database: database),
-                           sessions: SQLiteSessionRepository(database: database), error: nil)
+                           sessions: SQLiteSessionRepository(database: database),
+                           modelSettings: SQLiteModelSettingsRepository(database: database),
+                           changeOriginals: SQLiteChangeOriginalsStore(database: database), error: nil)
         } catch {
-            return Storage(projects: InMemoryProjectRepository(), sessions: InMemorySessionRepository(), error: error)
+            return Storage(projects: InMemoryProjectRepository(), sessions: InMemorySessionRepository(),
+                           modelSettings: InMemoryModelSettingsRepository(), changeOriginals: nil, error: error)
         }
     }
 
@@ -76,6 +83,7 @@ struct AppEnvironment {
         return AppEnvironment(
             projectRepository: InMemoryProjectRepository(),
             sessionRepository: InMemorySessionRepository(),
+            modelSettingsRepository: InMemoryModelSettingsRepository(),
             settingsStore: InMemoryProviderSettingsStore(),
             agentSettingsStore: InMemoryAgentSettingsStore(),
             registry: ProviderRegistry(providers: [SimulatedLLMProvider()]),
@@ -103,7 +111,7 @@ struct AppEnvironment {
         WorkspaceViewModel(
             projects: ProjectsViewModel(service: ProjectService(repository: projectRepository)),
             sessions: SessionsViewModel(service: SessionService(repository: sessionRepository)),
-            models: ModelsViewModel(registry: registry),
+            models: ModelsViewModel(registry: registry, settingsRepository: modelSettingsRepository),
             services: services
         )
     }

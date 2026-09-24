@@ -66,9 +66,20 @@ struct ApprovalBanner: View {
                         .appGlassButton()
                         .keyboardShortcut(.delete, modifiers: .command)
                         .help("Deny (⌘⌫)")
-                    Button("Allow for Session") { onDecision(.allowForSession) }
-                        .appGlassButton()
-                        .help("Don't ask again for \(request.toolName) in this session.")
+                    if let rule = request.suggestedCommandRule {
+                        Menu("Allow for Session") {
+                            Button("Always Allow “\(rule)” in This Project") { onDecision(.allowCommandInProject(rule)) }
+                        } primaryAction: {
+                            onDecision(.allowForSession)
+                        }
+                        .fixedSize()
+                        .help("Allow \(request.toolName) for this session, or always allow “\(rule)” in this project. "
+                              + "Blocked commands stay blocked.")
+                    } else {
+                        Button("Allow for Session") { onDecision(.allowForSession) }
+                            .appGlassButton()
+                            .help("Don't ask again for \(request.toolName) in this session.")
+                    }
                     Button("Allow") { onDecision(.allowOnce) }
                         .appGlassButton(prominent: true)
                         .keyboardShortcut(.return, modifiers: .command)

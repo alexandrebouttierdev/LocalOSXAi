@@ -219,6 +219,36 @@ struct AgentViewModelTests {
         #expect(viewModel.pendingApproval == nil)
     }
 
+    @Test("always allowing a command in the project saves the rule and stops asking for it")
+    func allowCommandInProject() async throws {
+        var request = ToolApprovalRequest(id: "c1", toolName: "run_command", summary: "Run npm install",
+                                          reason: "This runs a command on your Mac.")
+        request.command = "npm install"
+        request.suggestedCommandRule = "npm install"
+        let decisions = Recorder<ToolApprovalDecision>()
+        let savedRules = Recorder<String>()
+        let viewModel = AgentViewModel(
+            sessionID: UUID(), projectRoot: root, messages: [],
+            agentService: StubAgentService(.askApproval(request, decisions: decisions)),
+            currentModel: { [model] in model },
+            addCommandRule: { savedRules.record($0) },
+            persist: { _, _ in }
+        )
+        viewModel.draft = "Install"
+        viewModel.send()
+        try await waitForPendingApproval(viewModel)
+        viewModel.resolveApproval(.allowCommandInProject("npm install"))
+        await viewModel.waitUntilIdle()
+
+        for _ in 0..<100 where savedRules.values.isEmpty {
+            try await Task.sleep(for: .milliseconds(5))
+        }
+        #expect(savedRules.values == ["npm install"])
+        var later = request
+        later.command = "npm install lodash"
+        #expect(await viewModel.decide(later) == .allowOnce)
+    }
+
     @Test("allowing for the session stops asking for that tool")
     func allowForSession() async throws {
         let decisions = Recorder<ToolApprovalDecision>()

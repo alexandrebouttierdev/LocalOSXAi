@@ -14,6 +14,8 @@ struct Project: Identifiable, Hashable, Sendable, Codable {
     /// rule systems are never mixed without the user choosing it
     /// (docs/ai/context.md).
     var includesClaudeInstructions = false
+    /// Which commands the agent may run without asking, in this project.
+    var commandRules = CommandRules()
 }
 
 /// Errors raised while opening or managing projects.

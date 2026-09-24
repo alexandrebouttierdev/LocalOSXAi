@@ -1,6 +1,9 @@
 # Migrations
 
-Implemented in `AppDatabase` (Phase 5). The shipped migrations are: `v1_initial`.
+Implemented in `AppDatabase` (Phase 5). The shipped migrations are: `v1_initial`, and
+`v2_model_settings_command_rules_change_originals` (adds `project.commandRules`, the
+`modelSettings` and `changeOriginal` tables). `AppDatabaseTests` and
+`SQLiteSettingsTests.migrationFromV1` cover them, the latter with v1 fixture data.
 
 ## Strategy
 

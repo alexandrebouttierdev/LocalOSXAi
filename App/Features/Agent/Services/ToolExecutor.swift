@@ -69,6 +69,10 @@ struct ToolExecutor: Sendable {
             statusChanged(.awaitingApproval)
             var request = ToolApprovalRequest(id: call.id, toolName: tool.name,
                                               summary: tool.describe(arguments: arguments), reason: reason)
+            if tool.effect == .executesCommands, let command = arguments.values["command"]?.stringValue {
+                request.command = command
+                request.suggestedCommandRule = CommandRules.suggestedPrefix(for: command)
+            }
             request.preview = proposal.map {
                 .init(path: $0.path, isNewFile: $0.currentContent == nil,
                       diff: FileDiff(old: $0.currentContent ?? "", new: $0.proposedContent))

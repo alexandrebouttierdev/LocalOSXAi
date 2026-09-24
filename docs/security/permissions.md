@@ -48,7 +48,9 @@ the run denies a pending request. Listing and searching never include hidden fil
 `search_text` never reads secret-looking files, so their contents cannot reach the model
 without an explicit, approved `read_file`.
 
-The policy is not configurable per project yet (planned). **Nothing is ever executed silently**:
+Each project can tune command approvals (Project Settings, ⌥⌘,): ask before every command, or
+let listed prefixes run without asking. Blocked commands stay blocked
+([ADR 0020](../decisions/0020-per-project-command-rules.md)). **Nothing is ever executed silently**:
 every action appears in the transcript with its arguments and result.
 
 ## Secrets and credentials

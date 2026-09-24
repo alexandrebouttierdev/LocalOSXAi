@@ -11,6 +11,10 @@ struct ToolApprovalRequest: Identifiable, Hashable, Sendable {
     let reason: String
     /// The change a file-writing call would make, shown as a diff before approving.
     var preview: Preview?
+    /// For commands: the command line, and the project rule the user may add
+    /// to stop being asked (`npm install`). Blocked commands never get here.
+    var command: String?
+    var suggestedCommandRule: String?
 
     struct Preview: Hashable, Sendable {
         let path: String
@@ -23,6 +27,8 @@ enum ToolApprovalDecision: Hashable, Sendable {
     case allowOnce
     /// Allow this tool without asking again for the rest of the session.
     case allowForSession
+    /// Allow now, and add this prefix to the project's command rules.
+    case allowCommandInProject(String)
     case deny
 }
 

@@ -53,7 +53,11 @@ final class AgentViewModel: ToolApprover {
     private let projectRoot: URL
     private let agentService: any AgentService
     private let currentModel: @MainActor () -> AIModel.ID?
-    private let includesClaudeInstructions: @MainActor () -> Bool
+    private let runOptions: @MainActor () -> AgentRunOptions
+    private let addCommandRule: @MainActor (String) async -> Void
+    /// Command prefixes the user allowed for the project during this session,
+    /// honored at once, before the next run reads the saved project rules.
+    private var commandPrefixesAllowed: [String] = []
     private let persist: @Sendable (UUID, [AgentMessage]) async -> Void
     private let now: @Sendable () -> Date
     private var runTask: Task<Void, Never>?
@@ -61,7 +65,8 @@ final class AgentViewModel: ToolApprover {
 
     /// - Parameters:
     ///   - currentModel: read at send time so a model change applies to the next run.
-    ///   - includesClaudeInstructions: the project's opt-in, also read at send time.
+    ///   - runOptions: per-project and per-model settings, also read at send time.
+    ///   - addCommandRule: saves a command prefix the user always allows in the project.
     ///   - persist: called with the full transcript after each run ends.
     init(
         sessionID: UUID,
@@ -70,7 +75,8 @@ final class AgentViewModel: ToolApprover {
         messages: [AgentMessage],
         agentService: any AgentService,
         currentModel: @escaping @MainActor () -> AIModel.ID?,
-        includesClaudeInstructions: @escaping @MainActor () -> Bool = { false },
+        runOptions: @escaping @MainActor () -> AgentRunOptions = { AgentRunOptions() },
+        addCommandRule: @escaping @MainActor (String) async -> Void = { _ in },
         persist: @escaping @Sendable (UUID, [AgentMessage]) async -> Void,
         now: @escaping @Sendable () -> Date = { Date() }
     ) {
@@ -80,7 +86,8 @@ final class AgentViewModel: ToolApprover {
         self.messages = messages
         self.agentService = agentService
         self.currentModel = currentModel
-        self.includesClaudeInstructions = includesClaudeInstructions
+        self.runOptions = runOptions
+        self.addCommandRule = addCommandRule
         self.persist = persist
         self.now = now
     }
@@ -110,7 +117,7 @@ final class AgentViewModel: ToolApprover {
             prompt: prompt,
             history: messages,
             model: currentModel(),
-            includesClaudeInstructions: includesClaudeInstructions()
+            options: runOptions()
         )
         messages.append(AgentMessage(role: .user, text: prompt, createdAt: now()))
         runState = .running
@@ -138,6 +145,9 @@ final class AgentViewModel: ToolApprover {
 
     func decide(_ request: ToolApprovalRequest) async -> ToolApprovalDecision {
         if toolsAllowedForSession.contains(request.toolName) { return .allowOnce }
+        if let command = request.command, CommandRules(allowedPrefixes: commandPrefixesAllowed).allows(command: command) {
+            return .allowOnce
+        }
         guard !Task.isCancelled else { return .deny }
         return await withTaskCancellationHandler {
             await withCheckedContinuation { continuation in
@@ -155,7 +165,15 @@ final class AgentViewModel: ToolApprover {
     /// Answers the pending approval request, if any.
     func resolveApproval(_ decision: ToolApprovalDecision) {
         guard let continuation = approvalContinuation, let request = pendingApproval else { return }
-        if decision == .allowForSession { toolsAllowedForSession.insert(request.toolName) }
+        switch decision {
+        case .allowForSession:
+            toolsAllowedForSession.insert(request.toolName)
+        case .allowCommandInProject(let prefix):
+            commandPrefixesAllowed.append(prefix)
+            Task { await addCommandRule(prefix) }
+        case .allowOnce, .deny:
+            break
+        }
         approvalContinuation = nil
         pendingApproval = nil
         continuation.resume(returning: decision)

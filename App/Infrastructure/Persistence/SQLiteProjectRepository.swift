@@ -18,7 +18,7 @@ struct SQLiteProjectRepository: ProjectRepository {
     }
 
     func save(_ project: Project) async throws {
-        let record = ProjectRecord(project)
+        let record = try ProjectRecord(project)
         try await database.writer.write { db in try record.upsert(db) }
     }
 
@@ -41,25 +41,43 @@ struct ProjectRecord: Codable, FetchableRecord, PersistableRecord {
     var createdAt: Double
     var lastOpenedAt: Double
     var includesClaudeInstructions: Bool
+    /// `CommandRules` as JSON; empty for the defaults (rows from before v2).
+    var commandRules: String
 
-    init(_ project: Project) {
+    init(_ project: Project) throws {
         id = project.id.uuidString
         name = project.name
         rootPath = project.rootURL.path
         createdAt = project.createdAt.timeIntervalSinceReferenceDate
         lastOpenedAt = project.lastOpenedAt.timeIntervalSinceReferenceDate
         includesClaudeInstructions = project.includesClaudeInstructions
+        if project.commandRules == CommandRules() {
+            commandRules = ""
+        } else {
+            let data = try JSONEncoder().encode(project.commandRules)
+            guard let json = String(bytes: data, encoding: .utf8) else { throw PersistenceError.corruptData("command rules") }
+            commandRules = json
+        }
     }
 
     func project() throws -> Project {
         guard let uuid = UUID(uuidString: id) else { throw PersistenceError.corruptData("project id \(id)") }
+        var rules = CommandRules()
+        if !commandRules.isEmpty {
+            do {
+                rules = try JSONDecoder().decode(CommandRules.self, from: Data(commandRules.utf8))
+            } catch {
+                throw PersistenceError.corruptData("command rules of project \(id)")
+            }
+        }
         return Project(
             id: uuid,
             name: name,
             rootURL: URL(fileURLWithPath: rootPath, isDirectory: true),
             createdAt: Date(timeIntervalSinceReferenceDate: createdAt),
             lastOpenedAt: Date(timeIntervalSinceReferenceDate: lastOpenedAt),
-            includesClaudeInstructions: includesClaudeInstructions
+            includesClaudeInstructions: includesClaudeInstructions,
+            commandRules: rules
         )
     }
 }

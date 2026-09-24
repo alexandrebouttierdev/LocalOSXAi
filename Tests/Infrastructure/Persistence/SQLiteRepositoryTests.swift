@@ -135,6 +135,82 @@ struct SQLiteRepositoryTests {
     }
 }
 
+@Suite("SQLite settings and change originals")
+struct SQLiteSettingsTests {
+    @Test("project command rules round-trip; the defaults are stored empty")
+    func commandRules() async throws {
+        let projects = SQLiteProjectRepository(database: try AppDatabase.inMemory())
+        var project = Project(id: UUID(), name: "Demo", rootURL: URL(fileURLWithPath: "/tmp/Demo", isDirectory: true),
+                              createdAt: .distantPast, lastOpenedAt: .distantPast)
+        try await projects.save(project)
+        #expect(try await projects.allProjects().first?.commandRules == CommandRules())
+
+        project.commandRules = CommandRules(mode: .askForEverything, allowedPrefixes: ["npm install"])
+        try await projects.save(project)
+        #expect(try await projects.allProjects().first?.commandRules == project.commandRules)
+    }
+
+    @Test("model settings are saved per model, and saving the defaults removes them")
+    func modelSettings() async throws {
+        let repository = SQLiteModelSettingsRepository(database: try AppDatabase.inMemory())
+        let gemma = AIModel.ID(provider: "ollama", name: "gemma4:26b")
+        let qwen = AIModel.ID(provider: "lmstudio", name: "qwen3-8b")
+        let custom = ModelSettings(temperature: 0.2, reasoning: .high, contextTokens: 32_768)
+
+        try await repository.save(custom, for: gemma)
+        try await repository.save(ModelSettings(temperature: 1.1), for: qwen)
+        #expect(try await repository.allSettings() == [gemma: custom, qwen: ModelSettings(temperature: 1.1)])
+
+        try await repository.save(.defaults, for: gemma)
+        #expect(try await repository.allSettings().keys.sorted { $0.name < $1.name } == [qwen])
+    }
+
+    @Test("change originals round-trip, including created files and empty files")
+    func changeOriginals() async throws {
+        let store = SQLiteChangeOriginalsStore(database: try AppDatabase.inMemory())
+        let root = URL(fileURLWithPath: "/tmp/Demo", isDirectory: true)
+        let edited = TrackedOriginal(file: root.appending(path: "a.txt"), projectRoot: root, content: Data("before".utf8))
+        let created = TrackedOriginal(file: root.appending(path: "new.txt"), projectRoot: root, content: nil)
+        let emptied = TrackedOriginal(file: root.appending(path: "empty.txt"), projectRoot: root, content: Data())
+        for original in [edited, created, emptied] { try await store.save(original) }
+
+        let restored = try await store.allOriginals()
+        #expect(Set(restored.map(\.file.path)) == Set([edited, created, emptied].map(\.file.path)))
+        #expect(restored.first { $0.file.lastPathComponent == "a.txt" }?.content == Data("before".utf8))
+        #expect(restored.first { $0.file.lastPathComponent == "new.txt" }?.content == nil)
+        #expect(restored.first { $0.file.lastPathComponent == "empty.txt" }?.content == Data())
+
+        try await store.delete(file: edited.file)
+        #expect(try await store.allOriginals().count == 2)
+    }
+
+    @Test("migrating v1 to v2 keeps projects, sessions and transcripts")
+    func migrationFromV1() async throws {
+        let database = try AppDatabase.inMemory(upTo: "v1_initial")
+        let projectID = UUID().uuidString
+        let sessionID = UUID().uuidString
+        try database.executeForTesting("""
+            INSERT INTO project (id, name, rootPath, createdAt, lastOpenedAt, includesClaudeInstructions)
+            VALUES ('\(projectID)', 'Demo', '/tmp/Demo', 1, 2, 1);
+            INSERT INTO session (id, projectID, title, createdAt, updatedAt, modelProvider, modelName, toolCallCount)
+            VALUES ('\(sessionID)', '\(projectID)', 'Old session', 3, 4, 'ollama', 'gemma4:26b', 1);
+            INSERT INTO message (id, sessionID, position, role, text, reasoning, state, createdAt, toolCalls)
+            VALUES ('\(UUID().uuidString)', '\(sessionID)', 0, 'user', 'Hello', '', 'complete', 5, '[]');
+            """)
+
+        try database.migrate()
+
+        let project = try #require(try await SQLiteProjectRepository(database: database).allProjects().first)
+        #expect(project.name == "Demo")
+        #expect(project.includesClaudeInstructions)
+        #expect(project.commandRules == CommandRules())
+        let session = try await SQLiteSessionRepository(database: database).session(id: try #require(UUID(uuidString: sessionID)))
+        #expect(session?.title == "Old session")
+        #expect(session?.messages.map(\.text) == ["Hello"])
+        #expect(try await SQLiteModelSettingsRepository(database: database).allSettings().isEmpty)
+    }
+}
+
 @Suite("AppDatabase")
 struct AppDatabaseTests {
     @Test("a new file is created with the current schema, and reopening needs no backup")

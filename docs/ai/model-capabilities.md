@@ -47,5 +47,9 @@ effective = min(configured ?? loaded ?? 8_192, advertised ?? ∞)
 
 - Phase 2: provider endpoints and enablement, Ollama context length (Automatic or 8K–128K),
   and the network idle timeout. Model selection is in the inspector or with ⌘L.
-- Not implemented yet: per-model settings (context, temperature, reasoning effort:
-  off/low/medium/high, shown only for models with `.reasoning`).
+- Per-model settings (inspector › Model Settings, saved in SQLite): temperature (0–2),
+  reasoning effort (default/off/low/medium/high, only for models with `.reasoning`) and the
+  context length (only when the provider can set it per request, `ProviderDescriptor.supportsContextLength`:
+  Ollama; LM Studio fixes it at load time). A chosen context replaces the configured one and is
+  still capped by the advertised maximum. The inspector's “ctx” chip shows the context actually
+  used (`ContextWindow.effectiveTokens(choosing:)`, shared with the runtime).

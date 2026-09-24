@@ -38,3 +38,4 @@ Accepted ADRs are not edited to change their decision. Write a new ADR that supe
 | [0017](0017-posix-spawn-process-groups.md) | Run commands with posix_spawn in their own process group | Accepted |
 | [0018](0018-change-review-before-and-after.md) | Review file changes before approval and after writing | Accepted |
 | [0019](0019-session-storage-shape.md) | Session storage shape: summaries for lists, tool calls as JSON | Accepted |
+| [0020](0020-per-project-command-rules.md) | Per-project command rules only move commands between “allowed” and “ask” | Accepted |

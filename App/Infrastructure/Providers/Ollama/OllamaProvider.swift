@@ -22,7 +22,8 @@ struct OllamaProvider: LLMProvider {
     init(configuration: Configuration, session: URLSession? = nil) {
         self.configuration = configuration
         self.session = session ?? ProviderHTTP.makeSession(idleTimeout: configuration.idleTimeout)
-        descriptor = ProviderDescriptor(id: configuration.id, displayName: "Ollama", endpoint: configuration.baseURL)
+        descriptor = ProviderDescriptor(id: configuration.id, displayName: "Ollama", endpoint: configuration.baseURL,
+                                        supportsContextLength: true)
     }
 
     // MARK: Models

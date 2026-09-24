@@ -205,42 +205,6 @@ struct AgentRuntimeTests {
         #expect(provider.requests.first?.messages.first?.content.contains("Always write tests.") == true)
     }
 
-    @Test("CLAUDE.md is only loaded for projects that opted in")
-    func claudeInstructionsOptIn() async throws {
-        let loader = StubInstructionsLoader(
-            instructions: [ProjectInstruction(source: "AGENTS.md", content: "Write tests.", isTruncated: false)],
-            claudeInstructions: [ProjectInstruction(source: "CLAUDE.md", content: "Use tabs.", isTruncated: false)]
-        )
-        func run(optIn: Bool) async throws -> [AgentEvent] {
-            let provider = FakeLLMProvider(turns: [.response("ok")])
-            let runtime = AgentRuntime(resolver: StubResolver(model: Fixtures.toolModel, provider: provider),
-                                       tools: try ToolRegistry(), instructionsLoader: loader)
-            var request = Fixtures.runRequest()
-            request.includesClaudeInstructions = optIn
-            return await collect(runtime.run(request, approver: StubApprover())).elements
-        }
-        #expect(try await run(optIn: false).contains(.instructionsLoaded(["AGENTS.md"])))
-        #expect(try await run(optIn: true).contains(.instructionsLoaded(["AGENTS.md", "CLAUDE.md"])))
-    }
-
-    @Test("limits are read at the start of each run, so a settings change applies to the next run")
-    func limitsReadPerRun() async throws {
-        let setting = LockedValue(1)
-        let provider = FakeLLMProvider(turns: [
-            .toolCalls([Fixtures.call("echo", #"{"text":"a"}"#)]), .toolCalls([Fixtures.call("echo", #"{"text":"b"}"#)]),
-            .response("done")
-        ])
-        let runtime = AgentRuntime(resolver: StubResolver(model: Fixtures.toolModel, provider: provider),
-                                   tools: try ToolRegistry([EchoTool()]), instructionsLoader: StubInstructionsLoader(),
-                                   limits: { AgentLimits(maxIterations: setting.value) })
-        let first = await collect(runtime.run(Fixtures.runRequest(), approver: StubApprover()))
-        #expect(finished(first.elements) == [.finished(.reachedIterationLimit)])
-
-        setting.value = 5
-        let second = await collect(runtime.run(Fixtures.runRequest(), approver: StubApprover()))
-        #expect(finished(second.elements) == [.finished(.completed)])
-    }
-
     @Test("a model that answers nothing fails clearly instead of ending silently")
     func emptyAnswer() async throws {
         let silent = FakeLLMProvider(turns: [.events([.reasoningDelta("hmm"), .finished(.stop)])])

@@ -9,6 +9,8 @@ struct AppCommands: Commands {
         CommandGroup(replacing: .newItem) {
             button(.newSession)
             button(.openProject)
+            Divider()
+            button(.projectSettings)
         }
 
         CommandGroup(replacing: .sidebar) {

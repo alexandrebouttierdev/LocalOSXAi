@@ -40,6 +40,17 @@ struct AgentRunRequest: Sendable, Hashable {
     /// Transcript before `prompt`, oldest first.
     let history: [AgentMessage]
     let model: AIModel.ID?
-    /// The project opted in to `CLAUDE.md` (per-project setting).
+    var options = AgentRunOptions()
+}
+
+/// Per-project and per-model settings applied to one run, read when the user
+/// sends a message so a change applies to the next run.
+struct AgentRunOptions: Sendable, Hashable {
+    /// The project opted in to `CLAUDE.md`.
     var includesClaudeInstructions = false
+    /// The project's command rules.
+    var commandRules = CommandRules()
+    /// Temperature, reasoning effort and context length chosen for the model.
+    /// `contextLength` overrides the context the model would otherwise get.
+    var generation = GenerationOptions()
 }

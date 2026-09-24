@@ -25,7 +25,8 @@ all). Tools should stay simple and unaware of the UI.
   user's own uncommitted work.
 
 ## Consequences
-- The tracked originals are in memory, so they are lost when the app quits. Persisting them
-  with sessions is not implemented yet.
+- The tracked originals are saved in SQLite (`changeOriginal`), so changes can still be
+  reviewed and reverted after a relaunch. A storage failure is logged and tracking continues
+  in memory.
 - Changes made through `run_command` (e.g. a code formatter) are not tracked. Only
   `write_file`/`edit_file` are.

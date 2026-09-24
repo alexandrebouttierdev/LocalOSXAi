@@ -7,6 +7,7 @@ import Foundation
 enum WorkspaceCommand: String, CaseIterable, Identifiable, Sendable {
     case openProject
     case newSession
+    case projectSettings
     case searchFiles
     case changeModel
     case showAgent
@@ -23,6 +24,7 @@ enum WorkspaceCommand: String, CaseIterable, Identifiable, Sendable {
         switch self {
         case .openProject: "Open Project…"
         case .newSession: "New Session"
+        case .projectSettings: "Project Settings…"
         case .searchFiles: "Search Files…"
         case .changeModel: "Change Model…"
         case .showAgent: "Show Agent"
@@ -39,6 +41,7 @@ enum WorkspaceCommand: String, CaseIterable, Identifiable, Sendable {
         switch self {
         case .openProject: "folder"
         case .newSession: "square.and.pencil"
+        case .projectSettings: "slider.horizontal.3"
         case .searchFiles: "doc.text.magnifyingglass"
         case .changeModel: "cpu"
         case .showAgent: MainTab.agent.systemImage
@@ -55,6 +58,7 @@ enum WorkspaceCommand: String, CaseIterable, Identifiable, Sendable {
         switch self {
         case .openProject: CommandShortcut("o")
         case .newSession: CommandShortcut("n")
+        case .projectSettings: CommandShortcut(",", modifiers: [.option, .command])
         case .searchFiles: CommandShortcut("p")
         case .changeModel: CommandShortcut("l")
         case .showAgent: CommandShortcut("1")
@@ -69,7 +73,7 @@ enum WorkspaceCommand: String, CaseIterable, Identifiable, Sendable {
 
     var section: String {
         switch self {
-        case .openProject, .newSession, .searchFiles: "Project"
+        case .openProject, .newSession, .projectSettings, .searchFiles: "Project"
         case .changeModel: "Agent"
         case .showAgent, .showFiles, .showChanges, .openTerminal: "Navigation"
         case .toggleSidebar, .toggleInspector, .openSettings: "Window"
@@ -80,6 +84,7 @@ enum WorkspaceCommand: String, CaseIterable, Identifiable, Sendable {
         switch self {
         case .openProject: ["folder", "workspace"]
         case .newSession: ["chat", "conversation", "create"]
+        case .projectSettings: ["commands", "permissions", "rules", "claude.md", "allow"]
         case .searchFiles: ["find", "file", "go to"]
         case .changeModel: ["llm", "provider", "ollama", "lm studio"]
         case .showAgent: ["chat", "conversation"]

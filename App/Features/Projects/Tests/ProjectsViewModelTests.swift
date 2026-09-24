@@ -55,4 +55,23 @@ struct ProjectsViewModelTests {
         #expect(viewModel.project(id: project.id)?.includesClaudeInstructions == true)
         #expect(await repository.allProjects().first?.includesClaudeInstructions == true)
     }
+
+    @Test("command rules are edited per project: normalized, without duplicates")
+    func commandRules() async throws {
+        let project = Fixtures.project()
+        let repository = InMemoryProjectRepository(projects: [project])
+        let viewModel = ProjectsViewModel(service: ProjectService(repository: repository))
+        await viewModel.load()
+
+        await viewModel.addAllowedCommandPrefix("  npm   install ", for: project.id)
+        await viewModel.addAllowedCommandPrefix("npm install", for: project.id)
+        await viewModel.addAllowedCommandPrefix("   ", for: project.id)
+        await viewModel.addAllowedCommandPrefix("git commit", for: project.id)
+        await viewModel.setCommandMode(.askForEverything, for: project.id)
+        await viewModel.removeAllowedCommandPrefix("git commit", for: project.id)
+
+        let expected = CommandRules(mode: .askForEverything, allowedPrefixes: ["npm install"])
+        #expect(viewModel.project(id: project.id)?.commandRules == expected)
+        #expect(await repository.allProjects().first?.commandRules == expected)
+    }
 }

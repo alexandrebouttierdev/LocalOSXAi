@@ -25,14 +25,16 @@ backticks, `{a,b}`, subshells and here-documents. Unbalanced quotes also require
 | Requires approval | `npm install`, `brew install`, `git commit`, `git push`, `git checkout`, bare `git stash`, `git branch -D`, `rm` inside the project, `mv`, `curl`, writing to a file (`> notes.txt`), `find -delete`, any unknown program, expansion or substitution |
 | Blocked | `sudo`/`su`/`doas`; recursive `rm`/`chmod`/`chown` on `/`, `~`, `..`, `.`, `*` or an absolute path outside the project; `curl`/`wget` piped into a shell or interpreter; `git push --force` to `main`/`master`; `dd of=/dev/…`; `mkfs`, `diskutil`, `shutdown`, `reboot`, `launchctl`, `csrutil`, `nvram`; fork bombs; an empty command |
 
-The rules are data (program sets in `CommandPolicy`). Making them configurable per project is
-planned, not implemented yet.
+The rules are data (program sets in `CommandPolicy`). Each project can add its own rules
+(Project Settings, or “Always Allow … in This Project” on the approval card): a mode that asks
+before every command, and prefixes that run without asking. Rules never unblock a command
+([ADR 0020](../decisions/0020-per-project-command-rules.md)).
 
 ## Who decides
 
 | Caller | Allowed | Requires approval | Blocked |
 |---|---|---|---|
-| The agent (`run_command`, via `ToolPermissionPolicy`) | Runs | Approval banner (allow once / for the session / deny) | Refused, and the model is told why |
+| The agent (`run_command`, via `ToolPermissionPolicy` and the project's `CommandRules`) | Runs | Approval banner (allow once / for the session / always in this project / deny) | Refused, and the model is told why |
 | The user (Terminal tab) | Runs | Runs: it is the user's own action | Explicit “Run anyway?” confirmation, since the likely cause is a pasted mistake |
 
 ## Execution (`PosixCommandRunner`)

@@ -44,7 +44,8 @@ struct CommandPolicy: Sendable {
     ]
     static let shells: Set<String> = ["sh", "bash", "zsh", "fish", "python", "python3", "perl", "ruby", "node"]
 
-    func decision(for command: String, projectRoot: URL) -> Decision {
+    /// - Parameter rules: the project's own rules; they never unblock a command.
+    func decision(for command: String, projectRoot: URL, rules: CommandRules = CommandRules()) -> Decision {
         let trimmed = command.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else { return .blocked(reason: "The command is empty.") }
         if trimmed.contains(":(){") || trimmed.contains(":() {") {
@@ -61,7 +62,11 @@ struct CommandPolicy: Sendable {
         for segment in parsed.segments {
             let words = Self.dropAssignments(segment.words)
             let program = words.first.map { ($0 as NSString).lastPathComponent } ?? ""
-            decision = max(decision, classify(program: program, arguments: Array(words.dropFirst()), projectRoot: projectRoot))
+            var segmentDecision = classify(program: program, arguments: Array(words.dropFirst()), projectRoot: projectRoot)
+            if case .requiresApproval = segmentDecision, rules.allows(words: words) {
+                segmentDecision = .allowed
+            }
+            decision = max(decision, segmentDecision)
             if segment.isPiped, Self.shells.contains(program), let previous = previousProgram, ["curl", "wget"].contains(previous) {
                 decision = max(decision, Decision.blocked(reason: "Piping a download into a shell runs unreviewed code."))
             }
@@ -69,6 +74,9 @@ struct CommandPolicy: Sendable {
                 decision = max(decision, Decision.requiresApproval(reason: "The command writes to \(target)."))
             }
             previousProgram = program
+        }
+        if decision == .allowed, rules.mode == .askForEverything {
+            return .requiresApproval(reason: "This project asks before every command.")
         }
         return decision
     }

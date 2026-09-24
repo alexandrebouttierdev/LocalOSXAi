@@ -4,7 +4,7 @@
 
 | Model | Feature / layer | Key fields | Notes |
 |---|---|---|---|
-| `Project` | Projects | `id`, `name`, `rootURL`, `createdAt`, `lastOpenedAt`, `includesClaudeInstructions` | `rootURL` is standardized and symlink-resolved. It is the tool boundary |
+| `Project` | Projects | `id`, `name`, `rootURL`, `createdAt`, `lastOpenedAt`, `includesClaudeInstructions`, `commandRules` | `rootURL` is standardized and symlink-resolved. It is the tool boundary |
 | `Session` | Sessions | `id`, `projectID`, `title`, `createdAt`, `updatedAt`, `model`, `messages`, `toolCallCount` | Title derived from the first prompt while still “New session”. Lists carry summaries (`messages` empty) |
 | `AgentMessage` | Agent | `id`, `role` (user/assistant/error), `text`, `reasoning`, `toolCalls`, `state`, `createdAt` | UI and persistence model |
 | `ToolCallRecord` | Agent | `id`, `name`, `argumentsJSON`, `status`, `summary`, `output` | Status: awaitingApproval, running, succeeded, failed, denied, cancelled |
@@ -18,6 +18,10 @@
 | `GitStatus`, `GitFileChange`, `GitCommit` | Git | branch, upstream, ahead/behind, changes (staged/unstaged), commits | Read from Git on demand |
 | `TerminalEntry` | Terminal | command, output chunks per stream, state (running/finished/cancelled/failed) | Per project, in memory |
 | `ProviderSettings` | Settings | Ollama and LM Studio endpoints (enabled, base URL), Ollama context tokens, idle timeout | Stored as versioned JSON in `UserDefaults` (`providers.v1`) |
+| `ModelSettings` | Models | `temperature`, `reasoning`, `contextTokens` (all optional) | SQLite `modelSettings`, per `AIModel.ID`; defaults are not stored |
+| `CommandRules` | Core | `mode` (standard / ask for everything), `allowedPrefixes` | Stored as JSON with the project ([ADR 0020](../decisions/0020-per-project-command-rules.md)) |
+| `TrackedOriginal` | Changes | `file`, `projectRoot`, `content` (`nil` = created by the agent) | SQLite `changeOriginal` |
+| `AgentRunOptions` | Agent | `includesClaudeInstructions`, `commandRules`, `generation` | Read when a message is sent; not stored |
 | `AgentSettings` | Settings | `maxIterations` (5–100), `toolTimeoutSeconds` (15 s–5 min) | `UserDefaults` (`agent.v1`); read at the start of each run |
 
 ## Planned
@@ -25,9 +29,8 @@
 | Model | Phase | Purpose |
 |---|---|---|
 | `AgentRun` | 3 | One execution: start/end dates, outcome, iterations, token usage, model used. Makes history auditable |
-| `ModelConfiguration` | Not implemented yet | Per-model user settings: configured context, temperature, reasoning effort |
 | `CommandExecution` | Not implemented yet | Persisted audit of commands run by the agent: policy decision, exit code, duration |
-| Policy overrides | Not implemented yet | Per-project command policy, environment allowlist |
+| Environment allowlist | Not implemented yet | Per-project exceptions to the removal of secret-looking environment variables |
 
 ## Sessions in storage
 

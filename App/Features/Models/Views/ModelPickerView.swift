@@ -5,6 +5,7 @@ import SwiftUI
 /// capabilities.
 struct ModelPickerView: View {
     let viewModel: ModelsViewModel
+    @State private var showsSettings = false
 
     var body: some View {
         VStack(alignment: .leading, spacing: AppSpacing.sm) {
@@ -40,6 +41,7 @@ struct ModelPickerView: View {
 
             if let model = viewModel.selectedModel {
                 capabilities(of: model)
+                settingsButton(for: model)
             } else if viewModel.hasNoReachableProvider {
                 Text("No model server is reachable. Start Ollama or LM Studio, then choose Refresh Models.")
                     .font(AppTypography.caption)
@@ -82,9 +84,25 @@ struct ModelPickerView: View {
             if model.supportsTools { StatusBadge(title: "Tools", tone: .success) }
             if model.supportsReasoning { StatusBadge(title: "Reasoning", tone: .accent) }
             if model.supportsVision { StatusBadge(title: "Vision", tone: .accent) }
-            StatusBadge(title: "\(TokenCountFormatter.string(for: model.contextWindow.effectiveTokens)) ctx")
+            StatusBadge(title: "\(TokenCountFormatter.string(for: viewModel.effectiveContextTokens(for: model))) ctx")
             .help("Effective context window. Provider-advertised maximum: "
                   + (model.contextWindow.advertisedTokens.map { TokenCountFormatter.string(for: $0) } ?? "unknown"))
+        }
+    }
+
+    private func settingsButton(for model: AIModel) -> some View {
+        let isCustom = !viewModel.settings(for: model.id).isDefault
+        return Button {
+            showsSettings = true
+        } label: {
+            Label(isCustom ? "Model Settings · Custom" : "Model Settings", systemImage: "slider.horizontal.3")
+                .font(AppTypography.caption)
+        }
+        .buttonStyle(.plain)
+        .foregroundStyle(isCustom ? AppColors.accentText : AppColors.textSecondary)
+        .help("Temperature, reasoning and context for \(model.displayName)")
+        .popover(isPresented: $showsSettings, arrowEdge: .leading) {
+            ModelSettingsView(viewModel: viewModel, model: model)
         }
     }
 

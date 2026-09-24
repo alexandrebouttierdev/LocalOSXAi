@@ -40,6 +40,7 @@ final class WorkspaceViewModel {
     var isInspectorPresented = true
     var isCommandPalettePresented = false
     var isProjectImporterPresented = false
+    var isProjectSettingsPresented = false
 
     /// Set when history could not be opened and the app runs on memory only.
     private(set) var storageError: UserFacingError?
@@ -143,6 +144,12 @@ final class WorkspaceViewModel {
         selectedTab = .agent
     }
 
+    /// Opens the settings of a project, selecting it first.
+    func showProjectSettings(for id: Project.ID) async {
+        if selectedProjectID != id { await selectProject(id) }
+        isProjectSettingsPresented = selectedProjectID == id
+    }
+
     /// Forgets a project and its sessions (the folder on disk is untouched).
     func removeProject(_ id: Project.ID) async {
         for agent in agents.values where agent.projectID == id { agent.cancel() }
@@ -201,8 +208,9 @@ final class WorkspaceViewModel {
             messages: session.messages,
             agentService: services.agentService,
             currentModel: { [weak models] in models?.selectedModelID },
-            includesClaudeInstructions: { [weak projects] in
-                projects?.project(id: projectID)?.includesClaudeInstructions ?? false
+            runOptions: { [weak self] in self?.runOptions(for: projectID) ?? AgentRunOptions() },
+            addCommandRule: { [weak projects] prefix in
+                await projects?.addAllowedCommandPrefix(prefix, for: projectID)
             },
             persist: { [weak self] sessionID, messages in
                 await self?.persist(messages, in: sessionID)
@@ -210,6 +218,16 @@ final class WorkspaceViewModel {
         )
         agents[sessionID] = agent
         return agent
+    }
+
+    /// Settings for the next run: the project's, plus the selected model's.
+    private func runOptions(for projectID: Project.ID) -> AgentRunOptions {
+        let project = projects.project(id: projectID)
+        return AgentRunOptions(
+            includesClaudeInstructions: project?.includesClaudeInstructions ?? false,
+            commandRules: project?.commandRules ?? CommandRules(),
+            generation: models.generationOptions(for: models.selectedModelID)
+        )
     }
 
     /// Saves the transcript after a run and refreshes what the run may have changed.
@@ -230,7 +248,7 @@ final class WorkspaceViewModel {
         switch command {
         case .openProject, .toggleSidebar, .toggleInspector, .openSettings:
             nil
-        case .newSession, .showAgent, .showFiles, .showChanges, .openTerminal, .searchFiles:
+        case .newSession, .projectSettings, .showAgent, .showFiles, .showChanges, .openTerminal, .searchFiles:
             selectedProjectID == nil ? "Open a project first" : nil
         case .changeModel:
             models.allModels.isEmpty ? "No models available" : nil
@@ -249,6 +267,7 @@ final class WorkspaceViewModel {
         switch command {
         case .openProject: isProjectImporterPresented = true
         case .newSession: Task { await createSession() }
+        case .projectSettings: isProjectSettingsPresented = true
         case .searchFiles:
             selectedTab = .files
             activePanels?.files.requestSearchFocus()

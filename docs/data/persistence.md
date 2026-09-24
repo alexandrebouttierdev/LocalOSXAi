@@ -25,13 +25,16 @@ ViewModel ─▶ ProjectService ─▶ ProjectRepository (protocol, owned by the
   will, and callers must already handle it.
 - Repositories return domain values, never database rows or managed objects.
 
-## Schema (`v1_initial`)
+## Schema (`v1_initial`, `v2_…`)
 
 | Table | Columns | Notes |
 |---|---|---|
 | `project` | `id`, `name`, `rootPath` (unique), `createdAt`, `lastOpenedAt`, `includesClaudeInstructions` | |
 | `session` | `id`, `projectID` → `project` (cascade), `title`, `createdAt`, `updatedAt`, `modelProvider`, `modelName`, `toolCallCount` | Index on (`projectID`, `updatedAt`) |
 | `message` | `id`, `sessionID` → `session` (cascade), `position`, `role`, `text`, `reasoning`, `state`, `createdAt`, `toolCalls` (JSON) | Unique (`sessionID`, `position`) |
+| `project.commandRules` (v2) | JSON of `CommandRules`, empty for the defaults | |
+| `modelSettings` (v2) | `provider`, `name` (primary key), `temperature`, `reasoning`, `contextTokens` | Defaults are not stored |
+| `changeOriginal` (v2) | `path` (primary key), `projectRoot`, `existed`, `content` (blob) | Removed when a change is accepted or reverted |
 
 Dates are stored as seconds since the reference date (`Double`), so they round-trip exactly.
 Session lists read only the `session` table; a transcript is read when a session is opened

@@ -71,6 +71,14 @@ struct ContextWindow: Hashable, Sendable, Codable {
     /// The token budget the context manager must respect, and the context
     /// length requested from runtimes that allocate on demand (Ollama).
     /// Reusing the loaded size avoids a costly model reload.
+    /// The effective size when the user chose a context length for this run
+    /// (per-model settings); `nil` keeps the usual rule.
+    func effectiveTokens(choosing chosen: Int?) -> Int {
+        var window = self
+        if let chosen { window.configuredTokens = chosen }
+        return window.effectiveTokens
+    }
+
     var effectiveTokens: Int {
         let requested = configuredTokens ?? loadedTokens ?? Self.fallbackTokens
         guard let advertisedTokens, advertisedTokens > 0 else { return requested }

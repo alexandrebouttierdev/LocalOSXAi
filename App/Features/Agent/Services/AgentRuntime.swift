@@ -67,11 +67,11 @@ struct AgentRuntime: AgentService {
         let limits = limits()
         let toolsEnabled = resolved.model.supportsTools && !tools.isEmpty
         let instructions = await instructionsLoader.instructions(
-            for: request.projectRoot, includingClaudeInstructions: request.includesClaudeInstructions
+            for: request.projectRoot, includingClaudeInstructions: request.options.includesClaudeInstructions
         )
         if !instructions.isEmpty { emit(.instructionsLoaded(instructions.map(\.source))) }
 
-        let contextTokens = resolved.model.contextWindow.effectiveTokens
+        let contextTokens = resolved.model.contextWindow.effectiveTokens(choosing: request.options.generation.contextLength)
         var context = RunContext(
             contextTokens: contextTokens,
             systemPrompt: AgentPrompt.system(projectName: request.projectRoot.lastPathComponent,
@@ -79,8 +79,7 @@ struct AgentRuntime: AgentService {
             history: AgentPrompt.history(from: request.history),
             prompt: request.prompt
         )
-        let executor = ToolExecutor(registry: tools, policy: policy, timeout: limits.toolTimeout,
-                                    maxOutputCharacters: limits.maxToolOutputCharacters)
+        let executor = makeExecutor(commandRules: request.options.commandRules, limits: limits)
         let toolContext = ToolContext(projectRoot: request.projectRoot, changeRecorder: changeRecorder)
         var consecutiveInvalidIterations = 0
 
@@ -92,7 +91,7 @@ struct AgentRuntime: AgentService {
             let response = try await streamResponse(
                 LLMRequest(model: resolved.model.name, messages: messages,
                            tools: toolsEnabled ? tools.definitions : [],
-                           options: GenerationOptions(contextLength: contextTokens)),
+                           options: generationOptions(request.options.generation, contextTokens: contextTokens)),
                 provider: resolved.provider, contextTokens: contextTokens, emit: emit
             )
             context.appendAssistant(text: response.text, toolCalls: response.toolCalls)
@@ -117,6 +116,21 @@ struct AgentRuntime: AgentService {
             }
         }
         emit(.finished(.reachedIterationLimit))
+    }
+
+    /// The tool executor for one run, with the project's command rules.
+    private func makeExecutor(commandRules: CommandRules, limits: AgentLimits) -> ToolExecutor {
+        var policy = policy
+        policy.commandRules = commandRules
+        return ToolExecutor(registry: tools, policy: policy, timeout: limits.toolTimeout,
+                            maxOutputCharacters: limits.maxToolOutputCharacters)
+    }
+
+    /// The model settings for this run, with the context length the budget uses.
+    private func generationOptions(_ chosen: GenerationOptions, contextTokens: Int) -> GenerationOptions {
+        var options = chosen
+        options.contextLength = contextTokens
+        return options
     }
 
     /// Runs one tool call, reporting its progress; a cancelled call ends the run.

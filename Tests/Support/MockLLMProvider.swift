@@ -19,10 +19,11 @@ final class MockLLMProvider: LLMProvider {
     init(
         id: ProviderID = "mock",
         displayName: String = "Mock",
+        supportsContextLength: Bool = false,
         models: Result<[AIModel], ProviderError> = .success([]),
         handler: @escaping Handler = { _ in [.finished(.stop)] }
     ) {
-        descriptor = ProviderDescriptor(id: id, displayName: displayName, endpoint: nil)
+        descriptor = ProviderDescriptor(id: id, displayName: displayName, endpoint: nil, supportsContextLength: supportsContextLength)
         modelsResult = models
         self.handler = handler
     }

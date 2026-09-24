@@ -106,6 +106,57 @@ struct ChangeTrackerTests {
         #expect(await tracker.changes(in: projectB).count == 1)
     }
 
+    @Test("originals survive a relaunch: a new tracker on the same store can still revert")
+    func survivesRelaunch() async throws {
+        let temp = try TemporaryDirectory()
+        defer { temp.remove() }
+        let edited = try temp.makeFile("a.txt", contents: "before")
+        let created = temp.url.appending(path: "new.txt")
+        let store = MemoryChangeOriginalsStore()
+        let first = ChangeTracker(store: store)
+        await first.willModify(edited, in: temp.url)
+        try Data("after".utf8).write(to: edited)
+        await first.willModify(created, in: temp.url)
+        try Data("new".utf8).write(to: created)
+
+        let relaunched = ChangeTracker(store: store)
+        #expect(await relaunched.changes(in: temp.url).map(\.path) == ["a.txt", "new.txt"])
+        try await relaunched.revertAll(in: temp.url)
+
+        #expect(try String(contentsOf: edited, encoding: .utf8) == "before")
+        #expect(!FileManager.default.fileExists(atPath: created.path))
+        #expect(await store.isEmpty)
+    }
+
+    @Test("accepting a change removes its saved original")
+    func acceptForgets() async throws {
+        let temp = try TemporaryDirectory()
+        defer { temp.remove() }
+        let file = try temp.makeFile("a.txt", contents: "before")
+        let store = MemoryChangeOriginalsStore()
+        let tracker = ChangeTracker(store: store)
+        await tracker.willModify(file, in: temp.url)
+        try Data("after".utf8).write(to: file)
+        #expect(await store.count == 1)
+
+        await tracker.accept(file)
+        #expect(await store.isEmpty)
+        #expect(await ChangeTracker(store: store).changes(in: temp.url).isEmpty)
+    }
+
+    @Test("a failing store never stops tracking in memory")
+    func failingStore() async throws {
+        let temp = try TemporaryDirectory()
+        defer { temp.remove() }
+        let file = try temp.makeFile("a.txt", contents: "before")
+        let tracker = ChangeTracker(store: MemoryChangeOriginalsStore(failing: true))
+        await tracker.willModify(file, in: temp.url)
+        try Data("after".utf8).write(to: file)
+        #expect(await tracker.changes(in: temp.url).count == 1)
+        try await tracker.revert(file)
+        #expect(try String(contentsOf: file, encoding: .utf8) == "before")
+    }
+
     @Test("a file edited back to its original is not a change")
     func noNetChange() async throws {
         let temp = try TemporaryDirectory()

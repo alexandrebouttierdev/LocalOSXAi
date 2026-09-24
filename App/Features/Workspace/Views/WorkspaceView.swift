@@ -44,6 +44,11 @@ struct WorkspaceView: View {
         .accessibilityHidden(viewModel.isCommandPalettePresented)
         .overlay { commandPalette }
         .appAnimation(AppAnimation.overlay, value: viewModel.isCommandPalettePresented)
+        .sheet(isPresented: $viewModel.isProjectSettingsPresented) {
+            if let project = viewModel.selectedProject {
+                ProjectSettingsView(viewModel: viewModel.projects, projectID: project.id)
+            }
+        }
         .fileImporter(isPresented: $viewModel.isProjectImporterPresented, allowedContentTypes: [.folder]) { result in
             if case .success(let url) = result {
                 Task { await viewModel.openProject(at: url) }

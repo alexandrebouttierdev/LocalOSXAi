@@ -229,21 +229,44 @@ struct WorkspaceViewModelTests {
         #expect(workspace.currentError == nil)
     }
 
-    @Test("the project's CLAUDE.md opt-in reaches the run request")
-    func claudeOptInReachesRun() async throws {
+    @Test("project and model settings reach the run request")
+    func settingsReachRun() async throws {
         let agentService = StubAgentService(.events([.finished(.completed)]))
         let project = Fixtures.project()
         let workspace = makeWorkspace(projects: [project], agent: agentService)
         await workspace.load()
         await workspace.createSession()
         await workspace.projects.setIncludesClaudeInstructions(true, for: project.id)
+        await workspace.projects.addAllowedCommandPrefix("npm install", for: project.id)
+        let model = try #require(workspace.models.selectedModelID)
+        await workspace.models.updateSettings(ModelSettings(temperature: 0.4, reasoning: .off), for: model)
         let agent = try #require(workspace.activeAgent)
 
         agent.draft = "Go"
         agent.send()
         await agent.waitUntilIdle()
 
-        #expect(agentService.requests.last?.includesClaudeInstructions == true)
+        let options = try #require(agentService.requests.last?.options)
+        #expect(options.includesClaudeInstructions)
+        #expect(options.commandRules.allowedPrefixes == ["npm install"])
+        #expect(options.generation == GenerationOptions(temperature: 0.4, reasoning: .off))
+    }
+
+    @Test("project settings open for the selected project, selecting it first from the sidebar")
+    func projectSettings() async {
+        let first = Fixtures.project(name: "First", openedAt: Date(timeIntervalSinceReferenceDate: 2))
+        let second = Fixtures.project(name: "Second", openedAt: Date(timeIntervalSinceReferenceDate: 1))
+        let workspace = makeWorkspace(projects: [first, second])
+        #expect(!workspace.isEnabled(.projectSettings))
+        await workspace.load()
+
+        workspace.perform(.projectSettings)
+        #expect(workspace.isProjectSettingsPresented)
+
+        workspace.isProjectSettingsPresented = false
+        await workspace.showProjectSettings(for: second.id)
+        #expect(workspace.selectedProjectID == second.id)
+        #expect(workspace.isProjectSettingsPresented)
     }
 
     @Test("the command palette lists every command with its shortcut and state")

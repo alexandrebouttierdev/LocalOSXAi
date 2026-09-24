@@ -127,3 +127,39 @@ func collect<Element>(_ stream: AsyncThrowingStream<Element, Error>) async -> (e
         return (elements, error)
     }
 }
+
+extension ModelsViewModel {
+    /// Tests that do not exercise model settings get an empty in-memory store.
+    convenience init(registry: ProviderRegistry) {
+        self.init(registry: registry, settingsRepository: InMemoryModelSettingsRepository())
+    }
+}
+
+/// An in-memory `ChangeOriginalsStore`, optionally failing every operation.
+actor MemoryChangeOriginalsStore: ChangeOriginalsStore {
+    struct Failure: Error {}
+    private var originals: [URL: TrackedOriginal] = [:]
+    private let failing: Bool
+
+    init(failing: Bool = false) {
+        self.failing = failing
+    }
+
+    var count: Int { originals.count }
+    var isEmpty: Bool { originals.isEmpty }
+
+    func allOriginals() throws -> [TrackedOriginal] {
+        if failing { throw Failure() }
+        return Array(originals.values)
+    }
+
+    func save(_ original: TrackedOriginal) throws {
+        if failing { throw Failure() }
+        originals[original.file] = original
+    }
+
+    func delete(file: URL) throws {
+        if failing { throw Failure() }
+        originals[file] = nil
+    }
+}

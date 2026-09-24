@@ -47,8 +47,32 @@ final class ProjectsViewModel {
     }
 
     func setIncludesClaudeInstructions(_ isIncluded: Bool, for id: Project.ID) async {
-        guard var project = project(id: id), project.includesClaudeInstructions != isIncluded else { return }
-        project.includesClaudeInstructions = isIncluded
+        await update(id) { $0.includesClaudeInstructions = isIncluded }
+    }
+
+    func setCommandMode(_ mode: CommandRules.Mode, for id: Project.ID) async {
+        await update(id) { $0.commandRules.mode = mode }
+    }
+
+    /// Adds a prefix the agent may run without asking; ignores blanks and duplicates.
+    func addAllowedCommandPrefix(_ prefix: String, for id: Project.ID) async {
+        guard let normalized = CommandRules.normalizedPrefix(prefix) else { return }
+        await update(id) { project in
+            if !project.commandRules.allowedPrefixes.contains(normalized) {
+                project.commandRules.allowedPrefixes.append(normalized)
+            }
+        }
+    }
+
+    func removeAllowedCommandPrefix(_ prefix: String, for id: Project.ID) async {
+        await update(id) { $0.commandRules.allowedPrefixes.removeAll { $0 == prefix } }
+    }
+
+    /// Applies a settings change and saves it; the list only changes once saved.
+    private func update(_ id: Project.ID, _ change: (inout Project) -> Void) async {
+        guard var project = project(id: id) else { return }
+        change(&project)
+        guard project != self.project(id: id) else { return }
         do {
             try await service.update(project)
             if let index = projects.firstIndex(where: { $0.id == id }) { projects[index] = project }

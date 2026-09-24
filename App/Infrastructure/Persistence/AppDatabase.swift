@@ -9,19 +9,34 @@ struct AppDatabase: Sendable {
     /// `DatabasePool` (WAL) on disk, `DatabaseQueue` in memory for tests.
     let writer: any DatabaseWriter
 
-    /// Wraps an open database and brings its schema up to date.
-    init(_ writer: any DatabaseWriter) throws {
+    /// Wraps an open database and brings its schema up to date, or only up
+    /// to `lastMigration` (migration tests start from an older schema).
+    init(_ writer: any DatabaseWriter, upTo lastMigration: String? = nil) throws {
         self.writer = writer
         do {
-            try Self.migrator.migrate(writer)
+            if let lastMigration {
+                try Self.migrator.migrate(writer, upTo: lastMigration)
+            } else {
+                try Self.migrator.migrate(writer)
+            }
         } catch {
             throw PersistenceError.migrationFailed(String(describing: error))
         }
     }
 
     /// An empty database for tests and previews.
-    static func inMemory() throws -> AppDatabase {
-        try AppDatabase(DatabaseQueue())
+    static func inMemory(upTo lastMigration: String? = nil) throws -> AppDatabase {
+        try AppDatabase(DatabaseQueue(), upTo: lastMigration)
+    }
+
+    /// Applies the remaining migrations (migration tests).
+    func migrate() throws {
+        try Self.migrator.migrate(writer)
+    }
+
+    /// Runs raw SQL. Only for migration tests, to write fixtures in an old schema.
+    func executeForTesting(_ sql: String) throws {
+        try writer.write { db in try db.execute(sql: sql) }
     }
 
     /// Opens (or creates) the database file at `url`.
@@ -128,6 +143,29 @@ struct AppDatabase: Sendable {
                 // a JSON column, not a table (ADR 0019).
                 table.column("toolCalls", .text).notNull()
                 table.uniqueKey(["sessionID", "position"])
+            }
+        }
+        migrator.registerMigration("v2_model_settings_command_rules_change_originals") { db in
+            // Per-project command rules, as JSON (`CommandRules`). Empty means defaults.
+            try db.alter(table: "project") { table in
+                table.add(column: "commandRules", .text).notNull().defaults(to: "")
+            }
+            // Per-model generation settings, keyed by provider and model name.
+            try db.create(table: "modelSettings") { table in
+                table.column("provider", .text).notNull()
+                table.column("name", .text).notNull()
+                table.column("temperature", .double)
+                table.column("reasoning", .text)
+                table.column("contextTokens", .integer)
+                table.primaryKey(["provider", "name"])
+            }
+            // Originals of files changed by the agent, so the Changes tab can
+            // still review and revert them after a relaunch.
+            try db.create(table: "changeOriginal") { table in
+                table.primaryKey("path", .text)
+                table.column("projectRoot", .text).notNull().indexed()
+                table.column("existed", .boolean).notNull()
+                table.column("content", .blob)
             }
         }
         return migrator
