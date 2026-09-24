@@ -24,7 +24,10 @@ struct CommandPaletteView: View {
         .frame(width: AppLayout.commandPaletteWidth)
         .appGlass(in: RoundedRectangle(cornerRadius: AppRadius.overlay, style: .continuous))
         .appShadow(.overlay)
-        .onAppear { isSearchFocused = true }
+        .defaultFocus($isSearchFocused, true)
+        // Also after the first layout pass: focus requested during onAppear
+        // alone is sometimes dropped when the overlay is inserted.
+        .task { isSearchFocused = true }
         .onKeyPress(.downArrow) { viewModel.moveSelection(by: 1); return .handled }
         .onKeyPress(.upArrow) { viewModel.moveSelection(by: -1); return .handled }
         .onKeyPress(.escape) { onDismiss(); return .handled }

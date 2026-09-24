@@ -3,6 +3,7 @@
 included:
   - App
   - Tests
+  - UITests
 
 excluded:
   - .build

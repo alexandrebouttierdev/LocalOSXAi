@@ -1,15 +1,15 @@
 import SwiftUI
 
 /// The view switcher in the window toolbar: text-only tabs whose selection is
-/// a glass capsule that slides (and, on macOS 26, morphs) from one tab to the
-/// next, with a pending-count badge on Changes.
+/// a capsule that slides from one tab to the next, with a pending-count badge
+/// on Changes. The toolbar provides the glass around it.
 struct TabSwitcher: View {
     @Binding var selectedTab: MainTab
     let changesCount: Int
     @Namespace private var namespace
 
     var body: some View {
-        AppGlassContainer(spacing: 0) {
+        Group {
             HStack(spacing: AppSpacing.xxs) {
                 ForEach(MainTab.allCases) { tab in
                     TabButton(tab: tab, isSelected: tab == selectedTab, badge: tab == .changes ? changesCount : 0, namespace: namespace) {
@@ -58,11 +58,12 @@ private struct TabButton: View {
                 .contentShape(Capsule())
                 .background {
                     if isSelected {
+                        // A plain fill: the toolbar already puts the switcher on
+                        // glass, and glass on glass blurs the selected label.
                         Capsule()
                             .fill(AppColors.selection)
-                            .appGlass(in: Capsule())
+                            .overlay(Capsule().strokeBorder(AppColors.border, lineWidth: AppBorders.hairline))
                             .matchedGeometryEffect(id: "selectedTab", in: namespace)
-                            .appGlassID("selectedTab", in: namespace)
                     }
                 }
         }

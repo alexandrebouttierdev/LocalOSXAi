@@ -26,7 +26,8 @@ struct ProjectSettingsView: View {
             }
             .padding(AppSpacing.lg)
         }
-        .frame(width: 520, height: 540)
+        .frame(width: 520)
+        .frame(minHeight: 420, idealHeight: 470)
         .navigationTitle("\(project?.name ?? "Project") Settings")
     }
 
@@ -77,12 +78,16 @@ struct ProjectSettingsView: View {
                     .accessibilityLabel("Remove \(prefix)")
                 }
             }
-            HStack {
-                TextField("Command prefix", text: $newPrefix, prompt: Text("e.g. npm install"))
-                    .font(AppTypography.code)
-                    .onSubmit(addPrefix)
-                Button("Add", action: addPrefix)
-                    .disabled(CommandRules.normalizedPrefix(newPrefix) == nil)
+            LabeledContent("Add a prefix") {
+                HStack {
+                    TextField("Add a prefix", text: $newPrefix, prompt: Text("npm install"))
+                        .labelsHidden()
+                        .font(AppTypography.code)
+                        .multilineTextAlignment(.trailing)
+                        .onSubmit(addPrefix)
+                    Button("Add", action: addPrefix)
+                        .disabled(CommandRules.normalizedPrefix(newPrefix) == nil)
+                }
             }
         } header: {
             Text("Agent commands")

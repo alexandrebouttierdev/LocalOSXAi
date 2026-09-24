@@ -78,10 +78,16 @@ struct AppEnvironment {
 
     /// Scripted agent and a fixed simulated model: for UI work and demos.
     /// The terminal, Git and Files tabs still work on real folders.
+    /// `LOCALOSXAI_DEMO_PROJECT=<folder>` opens that folder at launch, so UI
+    /// snapshots (`make ui-snapshots`) start inside a project.
     static func simulated() -> AppEnvironment {
         let runner = PosixCommandRunner()
+        let demo = ProcessInfo.processInfo.environment["LOCALOSXAI_DEMO_PROJECT"].map { path in
+            let root = ProjectService.normalized(URL(fileURLWithPath: path, isDirectory: true))
+            return Project(id: UUID(), name: root.lastPathComponent, rootURL: root, createdAt: .now, lastOpenedAt: .now)
+        }
         return AppEnvironment(
-            projectRepository: InMemoryProjectRepository(),
+            projectRepository: InMemoryProjectRepository(projects: demo.map { [$0] } ?? []),
             sessionRepository: InMemorySessionRepository(),
             modelSettingsRepository: InMemoryModelSettingsRepository(),
             settingsStore: InMemoryProviderSettingsStore(),

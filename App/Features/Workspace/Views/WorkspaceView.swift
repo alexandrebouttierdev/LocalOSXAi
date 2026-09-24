@@ -81,6 +81,12 @@ struct WorkspaceView: View {
                     .ignoresSafeArea()
                     .onTapGesture { viewModel.dismissCommandPalette() }
                     .accessibilityHidden(true)
+                // Esc closes the palette even when its search field lost focus.
+                Button("Close Command Palette") { viewModel.dismissCommandPalette() }
+                    .keyboardShortcut(.cancelAction)
+                    .opacity(0)
+                    .frame(width: 0, height: 0)
+                    .accessibilityHidden(true)
                 CommandPaletteView(
                     viewModel: viewModel.palette,
                     onActivate: { item in apply(viewModel.activatePaletteItem(item)) },

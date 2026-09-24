@@ -46,6 +46,16 @@ Run with `make test`. The full gate is `make check`.
 | Repositories ✅ | CRUD, ordering, summaries vs full sessions, cascade deletes, migrations and backups (`SQLiteRepositoryTests`, `AppDatabaseTests`) |
 | ViewModels | every action, loading/error/success states, cancellation |
 
+## Visual review (`make ui-snapshots`)
+
+`UITests/UISnapshotTests.swift` (XCTest: Swift Testing cannot drive a UI) launches the
+simulated app on a demo project created in `/tmp/localosxai-demo`, walks through the main
+screens in dark and light mode, and attaches a screenshot of each. The Makefile exports them
+as PNG files to `.build/ui-snapshots` (or `SNAPSHOT_DIR`). It is not part of `make test`: it
+takes over the screen for about a minute, and macOS must allow UI automation once
+(`automationmodetool`). The app and the demo project live outside `~/Documents`, so no
+folder-access prompt interrupts the run.
+
 ## Style
 
 - One behavior per test. The display name states the behavior: `"a missing folder is rejected"`.

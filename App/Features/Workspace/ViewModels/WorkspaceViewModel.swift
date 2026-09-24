@@ -230,12 +230,18 @@ final class WorkspaceViewModel {
         )
     }
 
-    /// Saves the transcript after a run and refreshes what the run may have changed.
+    /// Saves the transcript, then refreshes what a run may have changed.
+    ///
+    /// The refresh is not awaited: the prompt is saved before each run starts,
+    /// and a slow Git (a large repository, a macOS permission prompt) must never
+    /// delay the run.
     private func persist(_ messages: [AgentMessage], in sessionID: Session.ID) async {
         await sessions.updateMessages(messages, model: models.selectedModelID, in: sessionID)
         guard let panels = activePanels else { return }
-        await panels.changes.refresh()
-        await panels.git.refresh()
+        Task {
+            await panels.changes.refresh()
+            await panels.git.refresh()
+        }
     }
 
     // MARK: Commands
