@@ -13,6 +13,16 @@ interface should disappear behind the work.
 - **Density.** 13 pt body, 28 pt rows, 4 pt grid.
 - **Quiet motion.** 120–220 ms, ease-out, disabled under Reduce Motion.
 
+## Layout
+
+The reference mockup (Linear style) is a dark ground holding the sidebar, with the content on
+an **inset panel**: `surface`, 12 pt corners (`AppRadius.panel`), a `hairline` outline and 8 pt
+of ground around it. The panel starts with the header (project badge › session title, then
+text-only pill tabs, with a count badge on Changes). The sidebar starts with the app mark, then
+the command palette field, projects, sessions (“2 h ago · 4 tool calls”), and a footer with
+Settings and which model servers answered (“Ollama connected”). The inspector lists model,
+context, tools (two columns) and Git.
+
 Avoided: gradients, large cards, large colored buttons, heavy shadows, decorative “AI startup”
 aesthetics, dashboards of widgets.
 
@@ -23,8 +33,9 @@ and nothing else ([ADR 0016](../decisions/0016-liquid-glass-with-fallback.md)).
 
 | Surface | Glass |
 |---|---|
+| Content panel | **Opaque** `surface`, inset on the `background` ground |
 | Sidebar, inspector | Native system material (Liquid Glass on macOS 26): no custom background |
-| Command palette, composer, approval banner (warning tint), suggestion chips, recent-projects card | `appGlass(in:)` |
+| Command palette, composer, approval banner (warning tint and outline), suggestion chips, recent-projects card | `appGlass(in:)` |
 | Selected tab | A glass capsule that slides between tabs and morphs on macOS 26 (`appGlassID`) |
 | Send/Stop, Allow/Deny, primary actions | `appGlassButton(prominent:)` → `.glassProminent` / `.glass` |
 | Transcript, messages, code blocks, tool rows, lists | **Opaque**: content must stay legible |
@@ -44,10 +55,10 @@ Increase Contrast.
 
 | Token | Values |
 |---|---|
-| `AppColors` | `background`, `surface`, `surfaceRaised`, `hover`, `selection`, `scrim`, `border`, `borderStrong`, `textPrimary/Secondary/Tertiary`, `accent`, `accentSubtle`, `success`, `warning`, `danger`, `projectPalette`, `codeBackground` |
+| `AppColors` | `background` (ground), `surface` (content panel), `surfaceRaised`, `hover`, `selection`, `scrim`, `hairline`, `border`, `borderStrong`, `textPrimary/Secondary/Tertiary`, `accent` (fills), `accentText` (accent as text), `accentSubtle`, `success`, `warning`, `danger`, `projectPalette`, `codeBackground` |
 | `AppTypography` | `display` (22 semibold), `title` (15 semibold), `headline` (13 medium), `body` (13), `callout` (12), `caption` (11), `sectionHeader`, `code` (mono 12), `shortcut` |
 | `AppSpacing` | `xxs 2`, `xs 4`, `sm 8`, `md 12`, `lg 16`, `xl 24`, `xxl 32` |
-| `AppRadius` | `small 4`, `medium 6`, `large 8`, `overlay 14`, `bubble 16`, `composer 20` |
+| `AppRadius` | `small 4`, `medium 6`, `large 8`, `panel 12`, `overlay 14`, `bubble 16`, `composer 20` |
 | `AppBorders` | `hairline 1` |
 | `AppShadow` | `overlay` (floating layers only) |
 | `AppAnimation` | `quick`, `standard`, `overlay`, and `.appAnimation(_:value:)`, which respects Reduce Motion |
@@ -57,7 +68,11 @@ Increase Contrast.
 
 - Colors are **dynamic** (`NSColor(name:dynamicProvider:)`). They resolve per appearance at
   draw time, so switching light/dark/Increase Contrast needs no view reload.
-- Dark background is `#0F1012`, not pure black, so borders and surfaces stay visible.
+- Dark ground is `#0B0C0D` and the content panel `#111214`, not pure black, so hairlines and
+  surfaces stay visible.
+- The accent has two tokens. `accent` (`#5B64CF` in dark mode) is a fill that carries white
+  text (primary button, badges, meter). `accentText` (`#AAB0F5` in dark mode) is the accent
+  used as text or a thin glyph, where the fill color would be under 4.5:1 on dark surfaces.
 - Borders become much stronger under Increase Contrast (alpha 0.35–0.5).
 - Text contrast is at least 4.5:1 on backgrounds in both modes (see [accessibility](accessibility.md)).
 

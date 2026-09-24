@@ -33,6 +33,10 @@ struct ApprovalBanner: View {
         }
         .padding(AppSpacing.md)
         .appGlass(.tinted(AppColors.warning), in: RoundedRectangle(cornerRadius: AppRadius.composer, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: AppRadius.composer, style: .continuous)
+                .strokeBorder(AppColors.warning.opacity(0.35), lineWidth: AppBorders.hairline)
+        )
         .accessibilityElement(children: .contain)
         .accessibilityLabel("Approval needed: \(request.summary). \(request.reason)")
     }

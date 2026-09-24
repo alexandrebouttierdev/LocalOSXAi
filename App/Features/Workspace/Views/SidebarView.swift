@@ -21,7 +21,12 @@ struct SidebarView: View {
         }
         // Native sidebar material: Liquid Glass on macOS 26, vibrancy before.
         .listStyle(.sidebar)
-        .safeAreaInset(edge: .top, spacing: 0) { searchButton }
+        .safeAreaInset(edge: .top, spacing: 0) {
+            VStack(alignment: .leading, spacing: AppSpacing.xs) {
+                appHeader
+                searchButton
+            }
+        }
         .safeAreaInset(edge: .bottom, spacing: 0) { footer }
     }
 
@@ -75,7 +80,7 @@ struct SidebarView: View {
                     .selectionDisabled()
             }
             ForEach(viewModel.sessions.sessions) { session in
-                SessionRow(session: session, subtitle: nil)
+                SessionRow(session: session, subtitle: nil, showsToolCalls: true)
                     .tag(WorkspaceViewModel.SidebarItem.session(session.id))
                     .contextMenu {
                         Button("Delete Session", role: .destructive) {
@@ -93,7 +98,8 @@ struct SidebarView: View {
     private var recentSection: some View {
         Section {
             ForEach(viewModel.sessions.recentSessions) { session in
-                SessionRow(session: session, subtitle: viewModel.projects.project(id: session.projectID)?.name)
+                SessionRow(session: session, subtitle: viewModel.projects.project(id: session.projectID)?.name,
+                           showsToolCalls: false)
                     .tag(WorkspaceViewModel.SidebarItem.session(session.id))
             }
         } header: {
@@ -102,6 +108,24 @@ struct SidebarView: View {
     }
 
     // MARK: Chrome
+
+    private var appHeader: some View {
+        HStack(spacing: AppSpacing.sm) {
+            Image(systemName: "sparkle")
+                .font(.system(size: 11, weight: .bold))
+                .foregroundStyle(.white)
+                .frame(width: 22, height: 22)
+                .background(AppColors.accent, in: RoundedRectangle(cornerRadius: AppRadius.medium, style: .continuous))
+                .accessibilityHidden(true)
+            Text("LocalOSXAi")
+                .font(AppTypography.headline.weight(.semibold))
+                .foregroundStyle(AppColors.textPrimary)
+        }
+        .padding(.horizontal, AppSpacing.md + AppSpacing.xxs)
+        .padding(.top, AppSpacing.xs)
+        .accessibilityElement(children: .combine)
+        .accessibilityAddTraits(.isHeader)
+    }
 
     private var searchButton: some View {
         Button {
@@ -139,11 +163,32 @@ struct SidebarView: View {
             if viewModel.isSimulated {
                 StatusBadge(title: "Simulated", systemImage: "theatermasks", tone: .warning)
                     .help("Simulated mode (LOCALOSXAI_SIMULATED=1): no model server is called and no file is read.")
+            } else {
+                connectionStatus
             }
         }
         .padding(.horizontal, AppSpacing.sm)
         .padding(.vertical, AppSpacing.sm)
         .overlay(alignment: .top) { Divider().overlay(AppColors.border) }
+    }
+
+    /// Which model servers answered, in words: the dot is decoration only.
+    @ViewBuilder
+    private var connectionStatus: some View {
+        let connected = viewModel.models.connectedProviderNames
+        if !viewModel.models.catalog.isEmpty {
+            HStack(spacing: AppSpacing.xs + AppSpacing.xxs) {
+                Circle()
+                    .fill(connected.isEmpty ? AppColors.danger : AppColors.success)
+                    .frame(width: 6, height: 6)
+                    .accessibilityHidden(true)
+                Text(connected.isEmpty ? "No model server" : "\(connected.joined(separator: ", ")) connected")
+                    .lineLimit(1)
+            }
+            .font(AppTypography.caption)
+            .foregroundStyle(AppColors.textTertiary)
+            .help(connected.isEmpty ? "Start Ollama or LM Studio, then refresh the models." : "Model servers that answered.")
+        }
     }
 
     private func addButton(_ title: String, command: WorkspaceCommand) -> some View {
@@ -166,6 +211,7 @@ struct SidebarView: View {
 private struct SessionRow: View {
     let session: Session
     let subtitle: String?
+    let showsToolCalls: Bool
 
     var body: some View {
         VStack(alignment: .leading, spacing: AppSpacing.xxs) {
@@ -178,6 +224,10 @@ private struct SessionRow: View {
                     Text("·")
                 }
                 Text(session.updatedAt, format: .relative(presentation: .named, unitsStyle: .abbreviated))
+                if showsToolCalls, session.toolCallCount > 0 {
+                    Text("·")
+                    Text(session.toolCallCount == 1 ? "1 tool call" : "\(session.toolCallCount) tool calls")
+                }
             }
             .font(AppTypography.caption)
             .foregroundStyle(AppColors.textTertiary)

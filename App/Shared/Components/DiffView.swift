@@ -17,7 +17,7 @@ struct DiffView: View {
                 ForEach(Array(diff.hunks.enumerated()), id: \.offset) { _, hunk in
                     Text(hunk.header)
                         .font(AppTypography.code)
-                        .foregroundStyle(AppColors.accent)
+                        .foregroundStyle(AppColors.accentText)
                         .padding(.horizontal, AppSpacing.sm)
                         .padding(.vertical, AppSpacing.xxs)
                         .frame(maxWidth: .infinity, alignment: .leading)

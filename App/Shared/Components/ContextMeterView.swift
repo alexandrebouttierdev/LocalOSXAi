@@ -30,7 +30,7 @@ struct ContextMeterView: View {
                 ZStack(alignment: .leading) {
                     Capsule().fill(AppColors.selection)
                     Capsule()
-                        .fill(tone.color)
+                        .fill(tone == .accent ? AppColors.accent : tone.color)
                         .frame(width: max(proxy.size.width * usage.fraction, usage.usedTokens > 0 ? 3 : 0))
                 }
             }

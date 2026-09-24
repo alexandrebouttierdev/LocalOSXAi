@@ -48,7 +48,7 @@ struct TerminalView: View {
         HStack(spacing: AppSpacing.sm) {
             Text("❯")
                 .font(AppTypography.code.weight(.bold))
-                .foregroundStyle(AppColors.accent)
+                .foregroundStyle(AppColors.accentText)
                 .accessibilityHidden(true)
             TextField("Command", text: $viewModel.input)
                 .textFieldStyle(.plain)

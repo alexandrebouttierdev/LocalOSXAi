@@ -70,6 +70,18 @@ struct ModelsViewModelTests {
         #expect(viewModel.hasNoReachableProvider)
     }
 
+    @Test("connected providers are the ones that answered, in configuration order")
+    func connectedProviders() async {
+        let viewModel = ModelsViewModel(registry: ProviderRegistry(providers: [
+            MockLLMProvider(id: "down", displayName: "Down", models: .failure(.unreachable(endpoint: "http://localhost:1"))),
+            MockLLMProvider(id: "up", displayName: "Up", models: .success([])),
+            MockLLMProvider(id: "also", displayName: "Also", models: .success([]))
+        ]))
+        #expect(viewModel.connectedProviderNames.isEmpty)
+        await viewModel.refresh()
+        #expect(viewModel.connectedProviderNames == ["Up", "Also"])
+    }
+
     @Test("no models means no selection")
     func noModels() async {
         let viewModel = makeViewModel([])

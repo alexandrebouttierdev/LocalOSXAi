@@ -11,7 +11,7 @@ enum StatusTone: Sendable {
     var color: Color {
         switch self {
         case .neutral: AppColors.textSecondary
-        case .accent: AppColors.accent
+        case .accent: AppColors.accentText
         case .success: AppColors.success
         case .warning: AppColors.warning
         case .danger: AppColors.danger

@@ -27,6 +27,13 @@ final class ModelsViewModel {
         !catalog.isEmpty && catalog.allSatisfy { if case .unavailable = $0.status { true } else { false } }
     }
 
+    /// Names of the providers that answered the last discovery, in configuration order.
+    var connectedProviderNames: [String] {
+        catalog.compactMap { group in
+            if case .available = group.status { group.provider.displayName } else { nil }
+        }
+    }
+
     func providerName(for id: ProviderID) -> String {
         catalog.first { $0.id == id }?.provider.displayName ?? id.rawValue
     }

@@ -76,4 +76,17 @@ struct SessionServiceTests {
         #expect(SessionService.derivedTitle(from: []) == nil)
         #expect(SessionService.derivedTitle(from: [AgentMessage(role: .user, text: "   ", createdAt: Date())]) == nil)
     }
+
+    @Test("the tool call count spans every message")
+    func toolCallCount() {
+        let call = ToolCallRecord(id: "1", name: "read_file", argumentsJSON: "{}", status: .succeeded)
+        var session = Fixtures.session(projectID: projectID, title: "T", updatedAt: Date())
+        #expect(session.toolCallCount == 0)
+        session.messages = [
+            AgentMessage(role: .assistant, text: "", toolCalls: [call, call], createdAt: Date()),
+            AgentMessage(role: .user, text: "go", createdAt: Date()),
+            AgentMessage(role: .assistant, text: "", toolCalls: [call], createdAt: Date())
+        ]
+        #expect(session.toolCallCount == 3)
+    }
 }

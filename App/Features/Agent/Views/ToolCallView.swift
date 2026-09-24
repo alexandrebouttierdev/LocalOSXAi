@@ -8,6 +8,7 @@ struct ToolCallView: View {
     @State private var isHovered = false
 
     private var presentation: ToolCallPresentation { ToolCallPresentation(call) }
+    private var isAwaitingApproval: Bool { call.status == .awaitingApproval }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
@@ -27,11 +28,11 @@ struct ToolCallView: View {
                     .transition(.opacity)
             }
         }
-        .background(isHovered || isExpanded ? AppColors.hover : .clear,
-                    in: RoundedRectangle(cornerRadius: AppRadius.medium, style: .continuous))
+        .background(background, in: RoundedRectangle(cornerRadius: AppRadius.large, style: .continuous))
         .overlay(
-            RoundedRectangle(cornerRadius: AppRadius.medium, style: .continuous)
-                .strokeBorder(AppColors.border, lineWidth: AppBorders.hairline)
+            RoundedRectangle(cornerRadius: AppRadius.large, style: .continuous)
+                .strokeBorder(isAwaitingApproval ? AppColors.warning.opacity(0.35) : AppColors.border,
+                              lineWidth: AppBorders.hairline)
         )
         .appAnimation(AppAnimation.quick, value: isHovered)
         .appAnimation(AppAnimation.standard, value: isExpanded)
@@ -56,7 +57,11 @@ struct ToolCallView: View {
                     .lineLimit(1)
             }
             Spacer(minLength: AppSpacing.sm)
-            if call.status.isFinished, let summary = call.summary, call.status != .succeeded {
+            if isAwaitingApproval {
+                Text("Awaiting approval")
+                    .font(AppTypography.caption.weight(.medium))
+                    .foregroundStyle(AppColors.warning)
+            } else if call.status.isFinished, let summary = call.summary, call.status != .succeeded {
                 Text(summary)
                     .font(AppTypography.caption)
                     .foregroundStyle(AppColors.textSecondary)
@@ -73,6 +78,13 @@ struct ToolCallView: View {
         .padding(.horizontal, AppSpacing.sm + AppSpacing.xxs)
         .frame(minHeight: 32)
         .contentShape(Rectangle())
+    }
+
+    /// The pending call is tinted so it is found at a glance next to the
+    /// approval card; its state is also written out in the row.
+    private var background: Color {
+        if isAwaitingApproval { return AppColors.warning.opacity(0.06) }
+        return isHovered || isExpanded ? AppColors.hover : .clear
     }
 
     private var detail: some View {

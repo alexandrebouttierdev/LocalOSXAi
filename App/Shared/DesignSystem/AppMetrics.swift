@@ -19,6 +19,8 @@ enum AppRadius {
     static let medium: CGFloat = 6
     /// Panels and cards.
     static let large: CGFloat = 8
+    /// The content panel inset on the window ground.
+    static let panel: CGFloat = 12
     /// Floating overlays such as the command palette.
     static let overlay: CGFloat = 14
     /// User message bubbles.

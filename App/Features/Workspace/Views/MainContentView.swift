@@ -1,6 +1,7 @@
 import SwiftUI
 
-/// The central column: header with breadcrumb and tabs, then the selected tab.
+/// The central column: header with breadcrumb and tabs, then the selected tab,
+/// on a panel inset in the window ground (the Linear layout).
 struct MainContentView: View {
     @Bindable var viewModel: WorkspaceViewModel
     let onCommand: (WorkspaceCommand) -> Void
@@ -15,9 +16,17 @@ struct MainContentView: View {
                         changesCount: viewModel.activePanels?.changes.changes.count ?? 0,
                         selectedTab: $viewModel.selectedTab
                     )
-                    Divider().overlay(AppColors.border)
+                    Divider().overlay(AppColors.hairline)
                     tabContent
                 }
+                .background(AppColors.surface)
+                .clipShape(RoundedRectangle(cornerRadius: AppRadius.panel, style: .continuous))
+                .overlay(
+                    RoundedRectangle(cornerRadius: AppRadius.panel, style: .continuous)
+                        .strokeBorder(AppColors.hairline, lineWidth: AppBorders.hairline)
+                )
+                .padding([.bottom, .trailing], AppSpacing.sm)
+                .padding(.leading, AppSpacing.xxs)
             } else {
                 WelcomeView(viewModel: viewModel, onCommand: onCommand)
             }
@@ -113,6 +122,7 @@ private struct TabSwitcher: View {
             }
             .padding(AppSpacing.xxs + 1)
             .background(AppColors.hover, in: Capsule())
+            .overlay(Capsule().strokeBorder(AppColors.hairline, lineWidth: AppBorders.hairline))
         }
         .appAnimation(AppAnimation.overlay, value: selectedTab)
         .accessibilityElement(children: .contain)
@@ -131,8 +141,9 @@ private struct TabButton: View {
     var body: some View {
         Button(action: action) {
             HStack(spacing: AppSpacing.xs) {
-                Label(tab.title, systemImage: tab.systemImage)
-                    .labelStyle(.titleAndIcon)
+                // Text only, like Linear's view switcher: the labels are short
+                // and icons would add noise to a four-tab control.
+                Text(tab.title)
                 if badge > 0 {
                     Text("\(badge)")
                         .font(AppTypography.caption.monospacedDigit().weight(.semibold))
@@ -151,7 +162,7 @@ private struct TabButton: View {
                 .background {
                     if isSelected {
                         Capsule()
-                            .fill(AppColors.surfaceRaised.opacity(0.9))
+                            .fill(AppColors.selection)
                             .appGlass(in: Capsule())
                             .matchedGeometryEffect(id: "selectedTab", in: namespace)
                             .appGlassID("selectedTab", in: namespace)

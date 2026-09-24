@@ -139,7 +139,7 @@ private struct PaletteRow: View {
         HStack(spacing: AppSpacing.md) {
             Image(systemName: item.systemImage)
                 .font(.system(size: 12, weight: .medium))
-                .foregroundStyle(isSelected ? AppColors.accent : AppColors.textSecondary)
+                .foregroundStyle(isSelected ? AppColors.accentText : AppColors.textSecondary)
                 .frame(width: 24, height: 24)
                 .background(isSelected ? AppColors.accentSubtle : AppColors.hover,
                             in: RoundedRectangle(cornerRadius: AppRadius.medium, style: .continuous))

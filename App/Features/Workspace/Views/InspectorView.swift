@@ -27,11 +27,14 @@ struct InspectorView: View {
                     if viewModel.toolDefinitions.isEmpty {
                         placeholder("No tools available.")
                     } else {
-                        ForEach(viewModel.toolDefinitions, id: \.name) { tool in
-                            Text(tool.name)
-                                .font(AppTypography.code)
-                                .foregroundStyle(AppColors.textPrimary)
-                                .help(tool.description)
+                        LazyVGrid(columns: Self.toolColumns, alignment: .leading, spacing: AppSpacing.xs) {
+                            ForEach(viewModel.toolDefinitions, id: \.name) { tool in
+                                Text(tool.name)
+                                    .font(AppTypography.code)
+                                    .foregroundStyle(AppColors.textPrimary)
+                                    .lineLimit(1)
+                                    .help(tool.description)
+                            }
                         }
                         if viewModel.models.selectedModel?.supportsTools == false {
                             placeholder("The selected model does not support tools: the agent can only chat.")
@@ -54,6 +57,11 @@ struct InspectorView: View {
         }
         // No background: the inspector uses the native (glass) material.
     }
+
+    private static let toolColumns = [
+        GridItem(.flexible(), spacing: AppSpacing.md, alignment: .leading),
+        GridItem(.flexible(), spacing: AppSpacing.md, alignment: .leading)
+    ]
 
     private func placeholder(_ text: String) -> some View {
         Text(text)

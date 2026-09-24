@@ -16,4 +16,7 @@ struct Session: Identifiable, Hashable, Sendable, Codable {
     /// Model used by the latest run, remembered so the session resumes with it.
     var model: AIModel.ID?
     var messages: [AgentMessage]
+
+    /// Tool calls made across the session, shown as sidebar metadata.
+    var toolCallCount: Int { messages.reduce(0) { $0 + $1.toolCalls.count } }
 }
