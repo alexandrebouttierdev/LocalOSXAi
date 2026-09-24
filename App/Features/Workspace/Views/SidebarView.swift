@@ -134,7 +134,10 @@ struct SidebarView: View {
             HStack(spacing: AppSpacing.sm) {
                 Image(systemName: "magnifyingglass")
                     .accessibilityHidden(true)
-                Text("Search or run a command")
+                // Short on purpose: the sidebar can be narrow, and this label
+                // must stay on one line.
+                Text("Search")
+                    .lineLimit(1)
                 Spacer(minLength: AppSpacing.xs)
                 ShortcutBadge(shortcut: "⌘K")
             }

@@ -78,14 +78,11 @@ struct ModelPickerView: View {
     }
 
     private func capabilities(of model: AIModel) -> some View {
-        HStack(spacing: AppSpacing.xs) {
-            if model.supportsTools { StatusBadge(title: "Tools", systemImage: "wrench.and.screwdriver", tone: .success) }
-            if model.supportsReasoning { StatusBadge(title: "Reasoning", systemImage: "brain", tone: .accent) }
-            if model.supportsVision { StatusBadge(title: "Vision", systemImage: "eye", tone: .accent) }
-            StatusBadge(
-                title: "\(TokenCountFormatter.string(for: model.contextWindow.effectiveTokens)) ctx",
-                systemImage: "text.alignleft"
-            )
+        FlowLayout {
+            if model.supportsTools { StatusBadge(title: "Tools", tone: .success) }
+            if model.supportsReasoning { StatusBadge(title: "Reasoning", tone: .accent) }
+            if model.supportsVision { StatusBadge(title: "Vision", tone: .accent) }
+            StatusBadge(title: "\(TokenCountFormatter.string(for: model.contextWindow.effectiveTokens)) ctx")
             .help("Effective context window. Provider-advertised maximum: "
                   + (model.contextWindow.advertisedTokens.map { TokenCountFormatter.string(for: $0) } ?? "unknown"))
         }

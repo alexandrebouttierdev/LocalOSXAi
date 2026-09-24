@@ -1,9 +1,6 @@
 import SwiftUI
 
 /// The Settings window (⌘,).
-///
-/// Agent limits and the permission policy arrive with Phases 3 and 4; their
-/// absence is stated in the General tab rather than hidden.
 struct SettingsView: View {
     let providers: ProviderSettingsViewModel
     let models: ModelsViewModel
@@ -30,11 +27,6 @@ private struct GeneralSettingsView: View {
                 }
             }
             .pickerStyle(.segmented)
-
-            LabeledContent("Agent") {
-                Text("Iteration limits, timeouts and permissions arrive in Phases 3 and 4.")
-                    .foregroundStyle(.secondary)
-            }
         }
         .formStyle(.grouped)
         .padding(AppSpacing.sm)

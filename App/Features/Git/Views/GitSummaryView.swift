@@ -20,8 +20,8 @@ struct GitSummaryView: View {
                     Image(systemName: "arrow.triangle.branch").foregroundStyle(AppColors.textSecondary)
                     Text(status.branch ?? "Detached HEAD").font(AppTypography.headline).foregroundStyle(AppColors.textPrimary)
                     Spacer(minLength: 0)
-                    if status.ahead > 0 { StatusBadge(title: "↑\(status.ahead)", systemImage: "arrow.up", tone: .accent) }
-                    if status.behind > 0 { StatusBadge(title: "↓\(status.behind)", systemImage: "arrow.down", tone: .warning) }
+                    if status.ahead > 0 { StatusBadge(title: "↑ \(status.ahead)") }
+                    if status.behind > 0 { StatusBadge(title: "↓ \(status.behind)", tone: .warning) }
                 }
                 if status.isClean {
                     Label("Working tree clean", systemImage: "checkmark.circle")

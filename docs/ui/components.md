@@ -7,7 +7,8 @@ in that feature's `Components/` or `Views/` folder.
 |---|---|---|
 | `SectionHeader` | Sidebar and inspector section titles, with an optional trailing accessory | Header trait for VoiceOver |
 | `ShortcutBadge` | Discreet keycap (“⌘K”) | Hidden from VoiceOver; the control exposes the shortcut |
-| `StatusBadge` | Status as icon + text + tone | Never color alone |
+| `StatusBadge` | Status as text + tone, with an icon or a small dot; never wraps | Never color alone: the text carries the meaning |
+| `FlowLayout` | Wraps chips to the next row instead of squeezing them (inspector capabilities) | Reading order is preserved |
 | `EmptyStateView` | Empty or not-yet-available content | One icon, a title, a sentence, and at most a couple of actions |
 | `ContextMeterView` | “38.4K / 100K context” with a gauge | Spoken value for VoiceOver; “Over budget” in text |
 | `SubtleButtonStyle` (`.subtle`) | Default low-emphasis button | Hover background |
