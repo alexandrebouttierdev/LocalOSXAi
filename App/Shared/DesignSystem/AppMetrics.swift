@@ -62,6 +62,8 @@ enum AppLayout {
     /// Column of a settings page on the settings screen.
     static let settingsWidth: CGFloat = 720
     static let rowHeight: CGFloat = 28
+    /// Width of the leading icon column of sidebar rows, so titles align.
+    static let rowIconWidth: CGFloat = 16
     /// Buttons and icon buttons (Linear's compact 28 pt controls).
     static let buttonHeight: CGFloat = 28
 }

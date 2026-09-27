@@ -297,7 +297,7 @@ private struct SidebarIcon: View {
         Image(systemName: systemImage)
             .font(AppTypography.body)
             .foregroundStyle(AppColors.textSecondary)
-            .frame(width: 16)
+            .frame(width: AppLayout.rowIconWidth)
             .accessibilityHidden(true)
     }
 }

@@ -32,13 +32,19 @@ struct SettingsScreen: View {
                 .frame(height: AppLayout.windowControlsHeight - AppSpacing.sm)
                 .contentShape(Rectangle())
                 .gesture(WindowDragGesture())
-            backButton
-                .padding(.bottom, AppSpacing.sm)
+            BackToAppButton(showsShortcut: closesWithEscape, action: onClose)
+                .padding(.bottom, AppSpacing.md)
             SectionHeader(title: "Settings")
                 .padding(.horizontal, AppSpacing.sm)
             ForEach(SettingsSection.allCases) { item in
                 SidebarRow(isSelected: item == section, action: { section = item }) {
-                    Label(item.title, systemImage: item.systemImage)
+                    HStack(spacing: AppSpacing.sm) {
+                        Image(systemName: item.systemImage)
+                            .foregroundStyle(AppColors.textSecondary)
+                            .frame(width: AppLayout.rowIconWidth)
+                            .accessibilityHidden(true)
+                        Text(item.title)
+                    }
                 }
             }
             Spacer(minLength: 0)
@@ -46,16 +52,6 @@ struct SettingsScreen: View {
         .padding(AppSpacing.sm)
         .frame(maxHeight: .infinity, alignment: .top)
         .background(AppColors.background)
-    }
-
-    private var backButton: some View {
-        Button(action: onClose) {
-            Label("Back to app", systemImage: "chevron.left")
-                .frame(maxWidth: .infinity, alignment: .leading)
-        }
-        .buttonStyle(.subtle)
-        .keyboardShortcut(closesWithEscape ? .cancelAction : nil)
-        .help("Back to the workspace (Esc)")
     }
 
     /// The selected section on the content panel, with its title above.
@@ -94,6 +90,64 @@ struct SettingsScreen: View {
         switch section {
         case .general: GeneralSettingsView(agent: agent)
         case .providers: ProvidersSettingsView(viewModel: providers, models: models)
+        }
+    }
+}
+
+/// Linear's way out of settings: “‹ Back to app” as a sidebar-height row,
+/// secondary until hovered, with its Esc key shown on hover.
+private struct BackToAppButton: View {
+    let showsShortcut: Bool
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            HStack(spacing: AppSpacing.sm) {
+                Image(systemName: "chevron.left")
+                    .font(AppTypography.caption.weight(.semibold))
+                    .frame(width: AppLayout.rowIconWidth)
+                Text("Back to app")
+                    .font(AppTypography.headline)
+                Spacer(minLength: AppSpacing.sm)
+            }
+        }
+        .buttonStyle(BackRowStyle(showsShortcut: showsShortcut))
+        .keyboardShortcut(showsShortcut ? .cancelAction : nil)
+        .help(showsShortcut ? "Back to the workspace (Esc)" : "Back to the workspace")
+        .accessibilityLabel("Back to app")
+    }
+}
+
+private struct BackRowStyle: ButtonStyle {
+    let showsShortcut: Bool
+
+    func makeBody(configuration: Configuration) -> some View {
+        Row(configuration: configuration, showsShortcut: showsShortcut)
+    }
+
+    private struct Row: View {
+        let configuration: Configuration
+        let showsShortcut: Bool
+        @State private var isHovered = false
+
+        var body: some View {
+            configuration.label
+                .foregroundStyle(isHovered ? AppColors.textPrimary : AppColors.textSecondary)
+                .overlay(alignment: .trailing) {
+                    if showsShortcut {
+                        ShortcutBadge(shortcut: "Esc")
+                            .opacity(isHovered ? 1 : 0)
+                    }
+                }
+                .padding(.horizontal, AppSpacing.sm)
+                .frame(maxWidth: .infinity, minHeight: AppLayout.rowHeight, alignment: .leading)
+                .background(
+                    RoundedRectangle(cornerRadius: AppRadius.medium, style: .continuous)
+                        .fill(configuration.isPressed ? AppColors.selection : (isHovered ? AppColors.hover : .clear))
+                )
+                .contentShape(RoundedRectangle(cornerRadius: AppRadius.medium, style: .continuous))
+                .onHover { isHovered = $0 }
+                .appAnimation(AppAnimation.quick, value: isHovered)
         }
     }
 }

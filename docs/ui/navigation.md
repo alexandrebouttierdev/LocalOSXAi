@@ -46,8 +46,9 @@
   **Terminal**. Each project keeps its own Files, Changes, Terminal and Git state (`ProjectPanels`).
 - **Settings are a screen of the main window**, not a separate window
   ([ADR 0024](../decisions/0024-settings-screen.md)). ⌘, (menu, palette or the sidebar's Settings
-  button) replaces the workspace with `SettingsScreen`: “Back to app” and the sections (General,
-  Providers) on the left, the selected section on the inset panel. Esc or “Back to app” returns
+  button) replaces the workspace with `SettingsScreen`: a “‹ Back to app” row (brightens on hover
+  and shows its Esc key) and the sections (General, Providers) on the left, the selected section
+  on the inset panel. Esc or “Back to app” returns
   to the workspace as it was left; going to a tab, a new session or a file search returns too.
 
 ## State ownership
