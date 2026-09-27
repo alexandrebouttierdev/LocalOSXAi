@@ -5,6 +5,8 @@ import SwiftUI
 struct ChangesView: View {
     @Bindable var viewModel: ChangesViewModel
     @State private var isConfirmingRevertAll = false
+    /// Remembered between launches, like Linear's diff mode.
+    @AppStorage("changes.diffLayout") private var layout = DiffView.Layout.split
 
     var body: some View {
         Group {
@@ -40,31 +42,26 @@ struct ChangesView: View {
 
     private var fileList: some View {
         VStack(spacing: 0) {
-            HStack {
-                Text("\(viewModel.changes.count) file\(viewModel.changes.count == 1 ? "" : "s")")
-                    .font(AppTypography.sectionHeader)
-                    .foregroundStyle(AppColors.textSecondary)
-                Spacer()
+            SectionHeader(title: "Pending review \(viewModel.changes.count)") {
                 DiffStatView(added: viewModel.totals.added, removed: viewModel.totals.removed)
             }
             .padding(.horizontal, AppSpacing.md)
-            .frame(height: 36)
-            List(viewModel.changes, selection: $viewModel.selectedFile) { change in
-                HStack(spacing: AppSpacing.sm) {
-                    Image(systemName: icon(for: change.status))
-                        .foregroundStyle(color(for: change.status))
-                        .accessibilityLabel(change.status.rawValue)
-                    Text(change.path)
-                        .lineLimit(1)
-                        .truncationMode(.head)
-                    Spacer()
-                    DiffStatView(added: change.diff.addedLines, removed: change.diff.removedLines)
+            .frame(height: AppLayout.panelHeaderHeight)
+            ScrollView {
+                LazyVStack(spacing: AppSpacing.xxs) {
+                    ForEach(viewModel.changes) { change in
+                        ChangeRow(change: change, isSelected: change.file == viewModel.selectedChange?.file) {
+                            viewModel.selectedFile = change.file
+                        }
+                    }
                 }
-                .tag(change.file)
+                .padding(.horizontal, AppSpacing.sm)
             }
-            .listStyle(.sidebar)
-            .scrollContentBackground(.hidden)
-            Divider().overlay(AppColors.border)
+            .focusable()
+            .focusEffectDisabled()
+            .onKeyPress(.upArrow) { viewModel.selectAdjacent(-1); return .handled }
+            .onKeyPress(.downArrow) { viewModel.selectAdjacent(1); return .handled }
+            Rectangle().fill(AppColors.hairline).frame(height: AppBorders.hairline)
             HStack(spacing: AppSpacing.sm) {
                 Button("Reject All", role: .destructive) { isConfirmingRevertAll = true }
                     .appButton()
@@ -74,6 +71,7 @@ struct ChangesView: View {
             }
             .padding(AppSpacing.sm)
         }
+        .background(AppColors.surface)
     }
 
     @ViewBuilder
@@ -81,13 +79,11 @@ struct ChangesView: View {
         if let change = viewModel.selectedChange {
             VStack(spacing: 0) {
                 HStack(spacing: AppSpacing.sm) {
-                    Text(change.path)
-                        .font(AppTypography.headline)
-                        .lineLimit(1)
-                        .truncationMode(.head)
-                    StatusBadge(title: change.status.rawValue.capitalized, systemImage: icon(for: change.status),
-                                tone: change.status == .deleted ? .danger : change.status == .created ? .success : .warning)
-                    Spacer()
+                    ChangeStatusIcon(status: change.status)
+                    breadcrumb(change.path)
+                    DiffStatView(added: change.diff.addedLines, removed: change.diff.removedLines)
+                    Spacer(minLength: AppSpacing.sm)
+                    PillPicker(options: DiffView.Layout.allCases, selection: $layout, title: \.title)
                     Button("Revert", systemImage: "arrow.uturn.backward") { Task { await viewModel.revert(change) } }
                         .appButton()
                         .help("Restore the file as it was before the agent changed it")
@@ -96,16 +92,107 @@ struct ChangesView: View {
                         .help("Keep this change and remove it from the list")
                 }
                 .padding(.horizontal, AppSpacing.md)
-                .frame(height: 44)
-                Divider().overlay(AppColors.border)
-                DiffView(diff: change.diff, path: change.path, showsHeader: false)
-                    .frame(maxHeight: .infinity, alignment: .top)
+                .frame(height: AppLayout.panelHeaderHeight)
+                Rectangle().fill(AppColors.hairline).frame(height: AppBorders.hairline)
+                DiffView(diff: change.diff, path: change.path, badge: change.status == .created ? "New file" : nil,
+                         layout: layout)
                     .background(AppColors.codeBackground)
+                    .clipShape(RoundedRectangle(cornerRadius: AppRadius.large, style: .continuous))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: AppRadius.large, style: .continuous)
+                            .strokeBorder(AppColors.border, lineWidth: AppBorders.hairline)
+                    )
+                    .padding(AppSpacing.md)
+                    .frame(maxHeight: .infinity, alignment: .top)
             }
+            .background(AppColors.surface)
         }
     }
 
-    private func icon(for status: FileChange.Status) -> String {
+    /// “Sources › Views › App.swift”, the file name in full strength.
+    private func breadcrumb(_ path: String) -> some View {
+        let parts = path.split(separator: "/").map(String.init)
+        return HStack(spacing: AppSpacing.xs) {
+            ForEach(Array(parts.dropLast().suffix(2).enumerated()), id: \.offset) { _, folder in
+                Text(folder).foregroundStyle(AppColors.textTertiary)
+                Image(systemName: "chevron.right")
+                    .font(AppTypography.caption)
+                    .foregroundStyle(AppColors.textTertiary)
+            }
+            Text(parts.last ?? path)
+                .font(AppTypography.headline)
+                .foregroundStyle(AppColors.textPrimary)
+        }
+        .font(AppTypography.callout)
+        .lineLimit(1)
+        .help(path)
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(path)
+    }
+}
+
+/// A changed file in the review list, like a Linear review row: its name and
+/// “+12 −3”, then its status and folder.
+private struct ChangeRow: View {
+    let change: FileChange
+    let isSelected: Bool
+    let select: () -> Void
+    @State private var isHovered = false
+
+    var body: some View {
+        Button(action: select) {
+            VStack(alignment: .leading, spacing: AppSpacing.xxs) {
+                HStack(spacing: AppSpacing.sm) {
+                    Text((change.path as NSString).lastPathComponent)
+                        .font(AppTypography.headline)
+                        .foregroundStyle(AppColors.textPrimary)
+                        .lineLimit(1)
+                    Spacer(minLength: AppSpacing.xs)
+                    DiffStatView(added: change.diff.addedLines, removed: change.diff.removedLines)
+                }
+                HStack(spacing: AppSpacing.xs + AppSpacing.xxs) {
+                    ChangeStatusIcon(status: change.status)
+                    Text(detail)
+                        .font(AppTypography.caption)
+                        .foregroundStyle(AppColors.textSecondary)
+                        .lineLimit(1)
+                        .truncationMode(.head)
+                }
+            }
+            .padding(.horizontal, AppSpacing.sm)
+            .padding(.vertical, AppSpacing.sm)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background(
+                RoundedRectangle(cornerRadius: AppRadius.large, style: .continuous)
+                    .fill(isSelected ? AppColors.selection : (isHovered ? AppColors.hover : .clear))
+            )
+            .contentShape(RoundedRectangle(cornerRadius: AppRadius.large, style: .continuous))
+        }
+        .buttonStyle(.plain)
+        .onHover { isHovered = $0 }
+        .appAnimation(AppAnimation.quick, value: isHovered)
+        .accessibilityLabel("\(change.path), \(change.status.title)")
+        .accessibilityAddTraits(isSelected ? .isSelected : [])
+    }
+
+    private var detail: String {
+        let folder = (change.path as NSString).deletingLastPathComponent
+        return folder.isEmpty ? change.status.title : "\(change.status.title) · \(folder)"
+    }
+}
+
+/// Created, modified or deleted, as a small colored mark (the word is next to it).
+private struct ChangeStatusIcon: View {
+    let status: FileChange.Status
+
+    var body: some View {
+        Image(systemName: symbol)
+            .font(AppTypography.caption.weight(.semibold))
+            .foregroundStyle(color)
+            .accessibilityHidden(true)
+    }
+
+    private var symbol: String {
         switch status {
         case .created: "plus.circle.fill"
         case .modified: "pencil.circle.fill"
@@ -113,7 +200,7 @@ struct ChangesView: View {
         }
     }
 
-    private func color(for status: FileChange.Status) -> Color {
+    private var color: Color {
         switch status {
         case .created: AppColors.success
         case .modified: AppColors.warning

@@ -25,6 +25,13 @@ final class ChangesViewModel {
         changes.reduce((0, 0)) { ($0.0 + $1.diff.addedLines, $0.1 + $1.diff.removedLines) }
     }
 
+    /// Moves the selection by `offset` files (↑ −1, ↓ +1), staying in the list.
+    func selectAdjacent(_ offset: Int) {
+        guard !changes.isEmpty else { return }
+        let current = selectedChange.flatMap { change in changes.firstIndex { $0.file == change.file } } ?? 0
+        selectedFile = changes[min(max(current + offset, 0), changes.count - 1)].file
+    }
+
     func refresh() async {
         changes = await tracker.changes(in: projectRoot)
         if let selectedFile, !changes.contains(where: { $0.file == selectedFile }) { self.selectedFile = nil }

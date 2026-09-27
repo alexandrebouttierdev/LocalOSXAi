@@ -33,6 +33,19 @@ struct FileDiffTests {
         #expect(diff.hunks[0].lines.filter { $0.kind == .context }.count == 4)
     }
 
+    @Test("side by side, removed lines face the added lines that replace them; context is on both sides")
+    func splitRows() throws {
+        let diff = FileDiff(old: "a\nb\nc\nd\n", new: "a\nB\nC2\nC3\nd\n")
+        let rows = try #require(diff.hunks.first).splitRows
+        #expect(rows.map { $0.old?.text } == ["a", "b", "c", nil, "d"])
+        #expect(rows.map { $0.new?.text } == ["a", "B", "C2", "C3", "d"])
+        #expect(rows.first?.old == rows.first?.new)
+
+        let removal = try #require(FileDiff(old: "x\ny\n", new: "x\n").hunks.first).splitRows
+        #expect(removal.last?.old?.text == "y")
+        #expect(removal.last?.new == nil)
+    }
+
     @Test("a new file is all additions")
     func newFile() {
         let diff = FileDiff(old: "", new: "a\nb")
@@ -187,6 +200,13 @@ struct ChangesViewModelTests {
         await viewModel.refresh()
         #expect(viewModel.changes.count == 2)
         #expect(viewModel.totals.added == 4)
+        #expect(viewModel.selectedChange?.path == "one.txt")
+
+        viewModel.selectAdjacent(1)
+        #expect(viewModel.selectedChange?.path == "two.txt")
+        viewModel.selectAdjacent(1)
+        #expect(viewModel.selectedChange?.path == "two.txt")
+        viewModel.selectAdjacent(-1)
         #expect(viewModel.selectedChange?.path == "one.txt")
 
         await viewModel.revert(try #require(viewModel.changes.first))

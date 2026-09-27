@@ -4,6 +4,8 @@ import Foundation
 struct FileChange: Identifiable, Hashable, Sendable {
     enum Status: String, Hashable, Sendable {
         case created, modified, deleted
+
+        var title: String { rawValue.capitalized }
     }
 
     let file: URL

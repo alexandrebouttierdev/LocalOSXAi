@@ -16,11 +16,42 @@ struct FileDiff: Hashable, Sendable {
 
     struct Hunk: Hashable, Sendable {
         let lines: [Line]
+
+        /// The hunk side by side: old lines on the left, new on the right.
+        /// A run of removed lines faces the run of added lines that follows
+        /// it, line for line; the shorter run leaves blanks.
+        var splitRows: [SplitRow] {
+            var rows: [SplitRow] = []
+            var index = 0
+            while index < lines.count {
+                let line = lines[index]
+                guard line.kind != .context else {
+                    rows.append(SplitRow(old: line, new: line))
+                    index += 1
+                    continue
+                }
+                var removed: [Line] = []
+                var added: [Line] = []
+                while index < lines.count, lines[index].kind == .removed { removed.append(lines[index]); index += 1 }
+                while index < lines.count, lines[index].kind == .added { added.append(lines[index]); index += 1 }
+                for offset in 0..<max(removed.count, added.count) {
+                    rows.append(SplitRow(old: offset < removed.count ? removed[offset] : nil,
+                                         new: offset < added.count ? added[offset] : nil))
+                }
+            }
+            return rows
+        }
         var header: String {
             let old = lines.compactMap(\.oldNumber)
             let new = lines.compactMap(\.newNumber)
             return "@@ -\(old.first ?? 0),\(old.count) +\(new.first ?? 0),\(new.count) @@"
         }
+    }
+
+    /// One row of a side-by-side diff; `nil` is a blank on that side.
+    struct SplitRow: Hashable, Sendable {
+        let old: Line?
+        let new: Line?
     }
 
     let hunks: [Hunk]

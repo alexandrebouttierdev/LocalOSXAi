@@ -8,6 +8,16 @@ import SwiftUI
 /// middle; long lines scroll horizontally. Added and removed lines keep a
 /// “+”/“−” sign in the gutter, so the change is not conveyed by color alone.
 struct DiffView: View {
+    enum Layout: String, CaseIterable, Identifiable, Sendable {
+        /// One column, removed lines above the added ones.
+        case unified
+        /// Old on the left, new on the right, like Linear's reviews.
+        case split
+
+        var id: String { rawValue }
+        var title: String { self == .unified ? "Unified" : "Split" }
+    }
+
     let diff: FileDiff
     /// Shown in the header and used for syntax colors.
     var path: String?
@@ -17,6 +27,7 @@ struct DiffView: View {
     var badge: String?
     /// The lines' height limit; `nil` fills the available space (Changes tab).
     var maxHeight: CGFloat?
+    var layout = Layout.unified
 
     static let lineHeight: CGFloat = 20
     @State private var viewportWidth: CGFloat = 0
@@ -78,7 +89,9 @@ struct DiffView: View {
         let showsHeaders = diff.hunks.count > 1
             || diff.hunks.first?.lines.first.map { ($0.newNumber ?? $0.oldNumber ?? 1) > 1 } == true
         return diff.hunks.enumerated().flatMap { index, hunk in
-            let lines = hunk.lines.enumerated().map { offset, line in Row.line(index, offset, line) }
+            let lines = layout == .split
+                ? hunk.splitRows.enumerated().map { offset, pair in Row.split(index, offset, pair) }
+                : hunk.lines.enumerated().map { offset, line in Row.line(index, offset, line) }
             return (showsHeaders ? [Row.hunk(index, hunk.header)] : []) + lines
         }
     }
@@ -88,20 +101,28 @@ struct DiffView: View {
         let language = SyntaxHighlighter.Language.forPath(path ?? "")
         let digits = String(diff.hunks.flatMap(\.lines).compactMap { $0.newNumber ?? $0.oldNumber }.max() ?? 1).count
         let content = CGFloat(rows.count) * Self.lineHeight + 2 * AppSpacing.xs
-        return ScrollView([.vertical, .horizontal]) {
+        // Split halves clip long lines, like Linear; unified lines scroll.
+        return ScrollView(layout == .split ? .vertical : [.vertical, .horizontal]) {
             LazyVStack(alignment: .leading, spacing: 0) {
                 ForEach(rows) { row in
                     switch row {
                     case let .hunk(_, header):
                         HunkHeaderRow(header: header)
                     case let .line(_, _, line):
-                        DiffLineRow(line: line, language: language, gutterDigits: digits)
+                        DiffLineRow(line: line, number: line.newNumber ?? line.oldNumber, language: language,
+                                    gutterDigits: digits)
+                    case let .split(_, _, pair):
+                        HStack(spacing: 0) {
+                            half(pair.old, number: pair.old?.oldNumber, language: language, digits: digits)
+                            Rectangle().fill(AppColors.hairline).frame(width: AppBorders.hairline)
+                            half(pair.new, number: pair.new?.newNumber, language: language, digits: digits)
+                        }
                     }
                 }
             }
             .padding(.vertical, AppSpacing.xs)
             // Rows fill the visible width even when every line is short.
-            .frame(minWidth: viewportWidth, alignment: .topLeading)
+            .frame(minWidth: layout == .split ? nil : viewportWidth, alignment: .topLeading)
             .textSelection(.enabled)
         }
         .scrollBounceBehavior(.basedOnSize)
@@ -109,14 +130,33 @@ struct DiffView: View {
         .frame(height: maxHeight.map { min(content, $0) })
     }
 
+    /// Exactly half of the visible width, so both sides line up.
+    private var halfWidth: CGFloat { max((viewportWidth - AppBorders.hairline) / 2, 0) }
+
+    /// One side of a split row: the line, clipped to its half, or a blank.
+    @ViewBuilder
+    private func half(_ line: FileDiff.Line?, number: Int?, language: SyntaxHighlighter.Language, digits: Int) -> some View {
+        if let line {
+            DiffLineRow(line: line, number: number, language: language, gutterDigits: digits)
+                .frame(width: halfWidth, alignment: .leading)
+                .clipped()
+        } else {
+            AppColors.hover
+                .frame(width: halfWidth, height: Self.lineHeight)
+                .accessibilityHidden(true)
+        }
+    }
+
     private enum Row: Identifiable {
         case hunk(Int, String)
         case line(Int, Int, FileDiff.Line)
+        case split(Int, Int, FileDiff.SplitRow)
 
         var id: String {
             switch self {
             case let .hunk(hunk, _): "h\(hunk)"
             case let .line(hunk, index, _): "l\(hunk).\(index)"
+            case let .split(hunk, index, _): "s\(hunk).\(index)"
             }
         }
     }
@@ -138,6 +178,8 @@ private struct HunkHeaderRow: View {
 
 private struct DiffLineRow: View {
     let line: FileDiff.Line
+    /// The old number on the old side of a split diff, else the new one.
+    let number: Int?
     let language: SyntaxHighlighter.Language
     let gutterDigits: Int
 
@@ -149,7 +191,7 @@ private struct DiffLineRow: View {
             Rectangle()
                 .fill(color ?? .clear)
                 .frame(width: Self.barWidth)
-            Text(line.newNumber.map(String.init) ?? line.oldNumber.map(String.init) ?? "")
+            Text(number.map(String.init) ?? "")
                 .foregroundStyle(color ?? AppColors.textTertiary)
                 .frame(width: CGFloat(max(gutterDigits, 2)) * AppSpacing.sm, alignment: .trailing)
                 .padding(.leading, AppSpacing.sm)
