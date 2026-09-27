@@ -79,6 +79,8 @@ struct WorkspaceViewModelTests {
         #expect(workspace.isProjectImporterPresented)
         workspace.perform(.openSettings)
         #expect(workspace.isSettingsPresented)
+        workspace.perform(.about)
+        #expect(workspace.isAboutPresented)
     }
 
     @Test("settings open as a screen, remember their section, and close when navigating back to work")

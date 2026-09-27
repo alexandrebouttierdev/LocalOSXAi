@@ -16,6 +16,7 @@ final class WorkspaceViewModel {
     let palette = CommandPaletteViewModel()
     let services: WorkspaceServices
     var isSimulated: Bool { services.isSimulated }
+    var appInfo: AppInfo { services.appInfo }
 
     private(set) var selectedProjectID: Project.ID?
     private(set) var selectedSessionID: Session.ID?
@@ -28,6 +29,7 @@ final class WorkspaceViewModel {
     var isCommandPalettePresented = false
     var isProjectImporterPresented = false
     var isProjectSettingsPresented = false
+    var isAboutPresented = false
     /// The settings screen replaces the workspace in the main window.
     private(set) var isSettingsPresented = false
     /// The app is frontmost. Set by the window; a session is only “seen”
@@ -259,7 +261,7 @@ final class WorkspaceViewModel {
 
     func disabledReason(for command: WorkspaceCommand) -> String? {
         switch command {
-        case .openProject, .toggleSidebar, .toggleInspector, .openSettings:
+        case .openProject, .toggleSidebar, .toggleInspector, .openSettings, .about:
             nil
         case .newSession, .projectSettings, .showAgent, .showFiles, .showChanges, .openTerminal, .searchFiles:
             selectedProjectID == nil ? "Open a project first" : nil
@@ -297,6 +299,7 @@ final class WorkspaceViewModel {
         case .toggleSidebar: isSidebarVisible.toggle()
         case .toggleInspector: isInspectorPresented.toggle()
         case .openSettings: showSettings()
+        case .about: isAboutPresented = true
         case .showAgent, .showFiles, .showChanges, .openTerminal: break
         }
     }

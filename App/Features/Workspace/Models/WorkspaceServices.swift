@@ -18,6 +18,8 @@ struct WorkspaceServices {
     var attachmentLoader: (any AttachmentLoading)?
     /// Tells the user a session needs them; `nil` posts nothing.
     var notifier: (any UserNotifying)?
+    /// Version and links for the sidebar and the About window.
+    var appInfo = AppInfo(infoDictionary: [:])
     /// Read each time a session needs the user, so a Settings change applies at once.
     var notificationPreferences: @Sendable () -> NotificationPreferences = { NotificationPreferences() }
 }

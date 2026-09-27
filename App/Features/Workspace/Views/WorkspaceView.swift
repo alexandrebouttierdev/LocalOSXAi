@@ -36,6 +36,9 @@ struct WorkspaceView: View {
         .accessibilityHidden(viewModel.isCommandPalettePresented)
         .overlay { commandPalette }
         .appAnimation(AppAnimation.overlay, value: viewModel.isCommandPalettePresented)
+        .sheet(isPresented: $viewModel.isAboutPresented) {
+            AboutView(info: viewModel.appInfo)
+        }
         .sheet(isPresented: $viewModel.isProjectSettingsPresented) {
             if let project = viewModel.selectedProject {
                 ProjectSettingsView(viewModel: viewModel.projects, projectID: project.id)

@@ -50,7 +50,7 @@ struct AppEnvironment {
             services: WorkspaceServices(agentService: agent, commandRunner: runner, git: git, changeTracker: tracker,
                                         fileBrowser: LocalFileBrowser(), isSimulated: false,
                                         storageError: storage.error, attachmentLoader: LocalAttachmentLoader(),
-                                        notifier: SystemUserNotifier(),
+                                        notifier: SystemUserNotifier(), appInfo: bundleInfo,
                                         notificationPreferences: { notificationPreferences(from: agentSettings.load()) }),
             makeProviders: { ProviderFactory.providers(for: $0, secrets: secrets) }
         )
@@ -84,6 +84,9 @@ struct AppEnvironment {
                     customInstructions: settings.customInstructions)
     }
 
+    /// The running app's version, from its Info.plist.
+    static var bundleInfo: AppInfo { AppInfo(infoDictionary: Bundle.main.infoDictionary ?? [:]) }
+
     nonisolated static func notificationPreferences(from settings: AgentSettings) -> NotificationPreferences {
         NotificationPreferences(showsNotifications: settings.showsNotifications, playsSound: settings.playsSound)
     }
@@ -108,7 +111,7 @@ struct AppEnvironment {
             registry: ProviderRegistry(providers: [SimulatedLLMProvider()]),
             services: WorkspaceServices(agentService: SimulatedAgentService(), commandRunner: runner, git: CLIGitService(runner: runner),
                                         changeTracker: ChangeTracker(), fileBrowser: LocalFileBrowser(),
-                                        isSimulated: true, attachmentLoader: LocalAttachmentLoader()),
+                                        isSimulated: true, attachmentLoader: LocalAttachmentLoader(), appInfo: bundleInfo),
             makeProviders: { _ in [SimulatedLLMProvider()] }
         )
     }

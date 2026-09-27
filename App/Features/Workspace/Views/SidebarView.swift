@@ -248,6 +248,27 @@ struct SidebarView: View {
     // MARK: Chrome
 
     private var footer: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            footerRow
+            versionButton
+        }
+    }
+
+    /// The app's version, at the very bottom; opens the About window.
+    private var versionButton: some View {
+        Button { onCommand(.about) } label: {
+            Text("LocalOSXAi \(viewModel.appInfo.shortVersion)")
+                .font(AppTypography.caption.monospacedDigit())
+                .foregroundStyle(AppColors.textTertiary)
+        }
+        .buttonStyle(.subtle)
+        .padding(.horizontal, AppSpacing.sm)
+        .padding(.bottom, AppSpacing.sm)
+        .help("About LocalOSXAi")
+        .accessibilityLabel("About LocalOSXAi, \(viewModel.appInfo.fullVersion)")
+    }
+
+    private var footerRow: some View {
         HStack(spacing: AppSpacing.sm) {
             Button {
                 onCommand(.openSettings)

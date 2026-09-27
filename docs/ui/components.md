@@ -36,7 +36,8 @@ Feature views worth knowing:
 | `ModelPropertiesView` | Models | Inspector › Model rows: model menu grouped by provider (with its logo), context, temperature, reasoning, abilities |
 | `PropertyRow`, `PropertyValue`, `PropertyLabel` | Shared | Linear's property rows: a quiet 84 pt label column; values with a tinted icon (`AppColors.Hue`: context teal, temperature blue → orange → red, reasoning and branch purple, instructions green), highlighted on hover when they open a menu (`propertyMenuStyle()`); labels as a colored dot and a word on a hairline pill (abilities: tools orange, reasoning purple, vision blue) |
 | `ProviderLogo` | Shared | A provider's logo as a template image, or `server.rack` |
-| `SidebarView`, `MainContentView`, `InspectorView`, `WelcomeView` | Workspace | Window shell |
+| `SidebarView`, `MainContentView`, `InspectorView`, `WelcomeView` | Workspace | Window shell; the app's version (“LocalOSXAi v0.1.0”) at the very bottom of the sidebar opens About |
+| `AboutView` | Workspace | The About window (sidebar version, app menu › About LocalOSXAi, palette): name, version and build (`AppInfo`, from the Info.plist), author, links to the GitHub repository, the author's site, issues and the license, each with a tinted icon; Esc closes |
 | `SidebarRows` (`SidebarIcon`, `SessionRowLabel`, `RunningIcon`, `StatusDot`) | Workspace | Sidebar marks: view icons in their hue (Files blue, Changes orange with its count, Terminal teal); a running session shows a turning accent arc and a light sweeping its title (`SweepingText`), one awaiting approval an orange hand; the footer's server status has a green dot when a server answered, red otherwise, always with words |
 
 ## Adding a component

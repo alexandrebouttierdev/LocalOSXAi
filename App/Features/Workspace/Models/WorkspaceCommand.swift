@@ -18,6 +18,7 @@ enum WorkspaceCommand: String, CaseIterable, Identifiable, Sendable {
     case toggleSidebar
     case toggleInspector
     case openSettings
+    case about
 
     var id: String { rawValue }
 
@@ -36,6 +37,7 @@ enum WorkspaceCommand: String, CaseIterable, Identifiable, Sendable {
         case .toggleSidebar: "Toggle Sidebar"
         case .toggleInspector: "Toggle Inspector"
         case .openSettings: "Open Settings"
+        case .about: "About LocalOSXAi"
         }
     }
 
@@ -54,6 +56,7 @@ enum WorkspaceCommand: String, CaseIterable, Identifiable, Sendable {
         case .toggleSidebar: "sidebar.left"
         case .toggleInspector: "sidebar.right"
         case .openSettings: "gearshape"
+        case .about: "info.circle"
         }
     }
 
@@ -72,6 +75,7 @@ enum WorkspaceCommand: String, CaseIterable, Identifiable, Sendable {
         case .toggleSidebar: CommandShortcut("s", modifiers: [.control, .command])
         case .toggleInspector: CommandShortcut("i", modifiers: [.option, .command])
         case .openSettings: CommandShortcut(",")
+        case .about: nil
         }
     }
 
@@ -80,7 +84,7 @@ enum WorkspaceCommand: String, CaseIterable, Identifiable, Sendable {
         case .openProject, .newSession, .projectSettings, .searchFiles: "Project"
         case .changeModel, .compactSession: "Agent"
         case .showAgent, .showFiles, .showChanges, .openTerminal: "Navigation"
-        case .toggleSidebar, .toggleInspector, .openSettings: "Window"
+        case .toggleSidebar, .toggleInspector, .openSettings, .about: "Window"
         }
     }
 
@@ -98,6 +102,7 @@ enum WorkspaceCommand: String, CaseIterable, Identifiable, Sendable {
         case .openTerminal: ["shell", "command", "run"]
         case .toggleSidebar, .toggleInspector: ["panel", "hide", "show"]
         case .openSettings: ["preferences", "configuration"]
+        case .about: ["version", "github", "author", "license", "website"]
         }
     }
 
