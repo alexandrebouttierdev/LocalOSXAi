@@ -51,8 +51,8 @@ struct TurnStats: Hashable, Sendable {
     }
 
     var accessibilityDescription: String {
-        let seconds = Int((duration(now: end ?? start)).rounded())
-        return "\(seconds) seconds, \(isEstimated ? "about " : "")\(outputTokens) output tokens"
+        let time = DurationFormatter.spoken(duration(now: end ?? start))
+        return "\(time), \(isEstimated ? "about " : "")\(outputTokens) output tokens"
     }
 
     private var tokenLabel: String {
@@ -61,11 +61,7 @@ struct TurnStats: Hashable, Sendable {
     }
 
     static func duration(_ seconds: TimeInterval, precise: Bool) -> String {
-        if seconds < 60 {
-            return precise ? String(format: "%.1f s", seconds) : "\(Int(seconds)) s"
-        }
-        let total = Int(seconds)
-        return String(format: "%d min %02d s", total / 60, total % 60)
+        DurationFormatter.string(seconds, precise: precise)
     }
 
     /// What the model wrote: answer, reasoning and tool call arguments.

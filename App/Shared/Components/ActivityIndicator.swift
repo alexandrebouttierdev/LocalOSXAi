@@ -28,7 +28,7 @@ struct ActivityIndicator: View {
                         .symbolEffect(.pulse, options: .repeating, isActive: !reduceMotion)
                     SweepingText(text: title + "…", animates: !reduceMotion)
                     if let elapsed {
-                        Text("\(Int(elapsed)) s")
+                        Text(DurationFormatter.string(elapsed))
                             .font(AppTypography.caption.monospacedDigit())
                             .foregroundStyle(AppColors.textTertiary)
                             .contentTransition(.numericText())

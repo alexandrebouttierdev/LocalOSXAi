@@ -189,8 +189,8 @@ private struct StreamingStatusView: View {
     }
 
     private func label(now: Date) -> String {
-        let seconds = max(Int(now.timeIntervalSince(message.createdAt)), 0)
-        if message.preparingToolCall != nil { return "Preparing a tool call… \(seconds) s" }
+        let elapsed = DurationFormatter.string(now.timeIntervalSince(message.createdAt))
+        if message.preparingToolCall != nil { return "Preparing a tool call… \(elapsed)" }
         return "Working…"
     }
 }
@@ -245,8 +245,8 @@ private struct ConversationSummaryView: View {
             HStack(spacing: AppSpacing.sm) {
                 ProgressView().controlSize(.mini)
                 TimelineView(.periodic(from: message.createdAt, by: 1)) { context in
-                    let seconds = max(Int(context.date.timeIntervalSince(message.createdAt)), 0)
-                    Text("Summarizing the conversation… \(seconds) s")
+                    let elapsed = DurationFormatter.string(context.date.timeIntervalSince(message.createdAt))
+                    Text("Summarizing the conversation… \(elapsed)")
                         .font(AppTypography.callout.monospacedDigit())
                         .foregroundStyle(AppColors.textTertiary)
                         .contentTransition(.numericText())

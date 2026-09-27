@@ -17,8 +17,8 @@ struct InspectorView: View {
                 }
                 section("Context") {
                     PropertyRow(label: "Usage") {
-                        if let usage = viewModel.activeAgent?.contextUsage {
-                            ContextMeterView(usage: usage)
+                        if let agent = viewModel.activeAgent, let usage = agent.contextUsage {
+                            ContextMeterView(usage: usage, isActive: agent.isRunning)
                                 .padding(.horizontal, AppSpacing.xs + AppSpacing.xxs)
                         } else {
                             PropertyValue("After the first message", systemImage: "chart.bar", isPlaceholder: true,

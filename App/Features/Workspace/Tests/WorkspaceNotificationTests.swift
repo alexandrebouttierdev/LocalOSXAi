@@ -98,7 +98,10 @@ struct WorkspaceNotificationTests {
         workspace.showSettings()
 
         notifier.click(target.id)
-        for _ in 0..<200 where workspace.selectedSessionID != target.id { await Task.yield() }
+        // Opening selects the project (and its first session) before the tab: wait for all of it.
+        for _ in 0..<200 where workspace.selectedSessionID != target.id || workspace.selectedTab != .agent {
+            await Task.yield()
+        }
 
         #expect(workspace.selectedProjectID == other.id)
         #expect(workspace.selectedSessionID == target.id)

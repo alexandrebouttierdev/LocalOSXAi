@@ -46,7 +46,7 @@ struct TurnStatsTests {
         #expect(stats.isEstimated)
         #expect(stats.outputTokens == 100)
         #expect(stats.summary(now: date(7.9)) == "7 s · ~100 tokens")
-        #expect(stats.summary(now: date(125)) == "2 min 05 s · ~100 tokens")
+        #expect(stats.summary(now: date(125)) == "2:05 min · ~100 tokens")
     }
 
     @Test("reasoning, tool arguments and a tool call being written count in the estimate")

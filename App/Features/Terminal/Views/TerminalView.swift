@@ -124,6 +124,6 @@ private struct TerminalEntryView: View {
 
     static func format(_ duration: Duration) -> String {
         let seconds = Double(duration.components.seconds) + Double(duration.components.attoseconds) / 1e18
-        return seconds < 10 ? String(format: "%.1f s", seconds) : "\(Int(seconds)) s"
+        return DurationFormatter.string(seconds, precise: seconds < 10)
     }
 }
