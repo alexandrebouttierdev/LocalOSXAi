@@ -3,9 +3,10 @@
 # “GitHub Actions”. Details: site/README.md.
 #
 # `page_build`: while the source is still “Deploy from a branch”, GitHub's
-# own build publishes the README on every push and replaced the landing
-# page. That build fires `page_build` when it ends, so the landing page is
-# deployed again after it and stays the published site either way.
+# own build publishes the README on every push and replaces the landing
+# page. It fires `page_build` when its build step ends, about 25 seconds
+# before its deploy step does, so this workflow waits, then deploys the
+# landing page again after it.
 name: Pages
 
 on:
@@ -32,6 +33,9 @@ jobs:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
     steps:
+      - name: Let GitHub's branch deploy finish first
+        if: github.event_name == 'page_build'
+        run: sleep 75
       - uses: actions/checkout@v4
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
