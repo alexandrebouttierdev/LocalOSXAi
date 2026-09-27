@@ -26,6 +26,7 @@ Feature views worth knowing:
 |---|---|---|
 | `CommandPaletteView` | CommandPalette | Overlay with keyboard handling. Performs no actions |
 | `AgentMessageView`, `ToolCallView`, `ComposerView`, `ApprovalBanner` | Agent | User bubbles, Markdown answers, human-readable tool rows (`ToolCallPresentation`), floating composer (paperclip, drop target) |
+| `PromptEditor` | Agent | The composer's text field: an `NSTextView`, because SwiftUI's vertical `TextField` hangs on long pasted text. Plain text, grows to 10 lines then scrolls; ↩ sends, ⌥↩/⇧↩ new line. The composer is its own view (`AgentComposer`), so typing never re-renders the transcript |
 | `AttachmentChip` | Agent | An attached file: icon, name, size, remove button in the composer; path in the tooltip |
 | `ActivityIndicator` | Shared | Loader for work without visible output: pulsing symbol, title with a moving highlight, elapsed seconds, optional hint. Used by the agent for `StreamingActivity` (waiting for the model, thinking, next step). Still with Reduce Motion |
 | `AgentView` transcript | Agent | Opens at the bottom and follows a streaming answer while the user is at the bottom. Sending or retrying a message always jumps to the bottom (`AgentViewModel.latestPromptID`), even after scrolling up; the agent's own messages never move a user who scrolled up |

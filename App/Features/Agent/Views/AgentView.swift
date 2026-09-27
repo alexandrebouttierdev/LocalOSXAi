@@ -3,11 +3,10 @@ import SwiftUI
 /// The conversation for one session: the transcript scrolls under a
 /// floating glass composer (and approval banner, when one is pending).
 struct AgentView: View {
-    @Bindable var viewModel: AgentViewModel
+    let viewModel: AgentViewModel
     /// “Provider · model” label shown in the composer, if a model is selected.
     let modelName: String?
 
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var isDropTargeted = false
 
     static let suggestions = [
@@ -17,11 +16,13 @@ struct AgentView: View {
     ]
 
     var body: some View {
+        // Reads only what changes the layout. The transcript and the composer
+        // are separate views, so typing never re-renders the conversation.
         Group {
             if viewModel.messages.isEmpty {
                 emptyState
             } else {
-                transcript
+                TranscriptView(viewModel: viewModel)
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -31,20 +32,7 @@ struct AgentView: View {
                     ApprovalBanner(request: request, onDecision: viewModel.resolveApproval)
                         .transition(.move(edge: .bottom).combined(with: .opacity))
                 }
-                ComposerView(
-                    draft: $viewModel.draft,
-                    isRunning: viewModel.isRunning,
-                    canSend: viewModel.canSend,
-                    modelName: modelName,
-                    attachments: viewModel.draftAttachments,
-                    attachmentError: viewModel.attachmentError,
-                    canAttach: viewModel.canAttach,
-                    isDropTargeted: isDropTargeted,
-                    onAttach: { files in Task { await viewModel.attach(files) } },
-                    onRemoveAttachment: viewModel.removeAttachment,
-                    onSend: viewModel.send,
-                    onStop: viewModel.cancel
-                )
+                AgentComposer(viewModel: viewModel, modelName: modelName, isDropTargeted: isDropTargeted)
             }
             .padding(.horizontal, AppSpacing.xl)
             .padding(.bottom, AppSpacing.lg)
@@ -63,10 +51,83 @@ struct AgentView: View {
         }
     }
 
+    private var emptyState: some View {
+        VStack(spacing: AppSpacing.lg) {
+            AgentAvatar(size: 44)
+            VStack(spacing: AppSpacing.xs) {
+                Text("What should we work on?")
+                    .font(AppTypography.display)
+                    .foregroundStyle(AppColors.textPrimary)
+                Text("The agent reads your project freely and asks before changing anything.")
+                    .font(AppTypography.body)
+                    .foregroundStyle(AppColors.textSecondary)
+                    .multilineTextAlignment(.center)
+            }
+            Group {
+                VStack(spacing: AppSpacing.sm) {
+                    ForEach(Self.suggestions, id: \.self) { suggestion in
+                        Button {
+                            viewModel.draft = suggestion
+                        } label: {
+                            HStack(spacing: AppSpacing.xs + AppSpacing.xxs) {
+                                Text(suggestion)
+                                Image(systemName: "arrow.up.right")
+                                    .font(AppTypography.caption)
+                                    .foregroundStyle(AppColors.textTertiary)
+                            }
+                            .font(AppTypography.callout)
+                            .padding(.horizontal, AppSpacing.md)
+                            .frame(height: AppLayout.buttonHeight)
+                            .contentShape(RoundedRectangle(cornerRadius: AppRadius.medium, style: .continuous))
+                        }
+                        .buttonStyle(.plain)
+                        .foregroundStyle(AppColors.textSecondary)
+                        .appFloating(in: RoundedRectangle(cornerRadius: AppRadius.medium, style: .continuous),
+                                     interactive: true, elevated: false)
+                    }
+                }
+            }
+            .padding(.top, AppSpacing.xs)
+        }
+        .padding(AppSpacing.xl)
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+    }
+}
+
+/// The composer bound to the draft: the only view that re-renders while the
+/// user types.
+private struct AgentComposer: View {
+    @Bindable var viewModel: AgentViewModel
+    let modelName: String?
+    let isDropTargeted: Bool
+
+    var body: some View {
+        ComposerView(
+            draft: $viewModel.draft,
+            isRunning: viewModel.isRunning,
+            canSend: viewModel.canSend,
+            modelName: modelName,
+            attachments: viewModel.draftAttachments,
+            attachmentError: viewModel.attachmentError,
+            canAttach: viewModel.canAttach,
+            isDropTargeted: isDropTargeted,
+            onAttach: { files in Task { await viewModel.attach(files) } },
+            onRemoveAttachment: viewModel.removeAttachment,
+            onSend: viewModel.send,
+            onStop: viewModel.cancel
+        )
+    }
+}
+
+/// The messages, scrolled to the bottom while an answer streams in.
+private struct TranscriptView: View {
+    let viewModel: AgentViewModel
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
     /// Marks the end of the transcript, where sending a message scrolls to.
     private static let bottomID = "transcript-bottom"
 
-    private var transcript: some View {
+    var body: some View {
         ScrollViewReader { proxy in
             ScrollView {
                 VStack(spacing: 0) {
@@ -122,47 +183,5 @@ struct AgentView: View {
         .controlSize(.small)
         .help("Run the last message again")
         .accessibilityHint("Runs your last message again, replacing the failed or stopped answer.")
-    }
-
-    private var emptyState: some View {
-        VStack(spacing: AppSpacing.lg) {
-            AgentAvatar(size: 44)
-            VStack(spacing: AppSpacing.xs) {
-                Text("What should we work on?")
-                    .font(AppTypography.display)
-                    .foregroundStyle(AppColors.textPrimary)
-                Text("The agent reads your project freely and asks before changing anything.")
-                    .font(AppTypography.body)
-                    .foregroundStyle(AppColors.textSecondary)
-                    .multilineTextAlignment(.center)
-            }
-            Group {
-                VStack(spacing: AppSpacing.sm) {
-                    ForEach(Self.suggestions, id: \.self) { suggestion in
-                        Button {
-                            viewModel.draft = suggestion
-                        } label: {
-                            HStack(spacing: AppSpacing.xs + AppSpacing.xxs) {
-                                Text(suggestion)
-                                Image(systemName: "arrow.up.right")
-                                    .font(AppTypography.caption)
-                                    .foregroundStyle(AppColors.textTertiary)
-                            }
-                            .font(AppTypography.callout)
-                            .padding(.horizontal, AppSpacing.md)
-                            .frame(height: AppLayout.buttonHeight)
-                            .contentShape(RoundedRectangle(cornerRadius: AppRadius.medium, style: .continuous))
-                        }
-                        .buttonStyle(.plain)
-                        .foregroundStyle(AppColors.textSecondary)
-                        .appFloating(in: RoundedRectangle(cornerRadius: AppRadius.medium, style: .continuous),
-                                     interactive: true, elevated: false)
-                    }
-                }
-            }
-            .padding(.top, AppSpacing.xs)
-        }
-        .padding(AppSpacing.xl)
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 }

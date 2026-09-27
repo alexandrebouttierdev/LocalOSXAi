@@ -4,8 +4,8 @@ import UniformTypeIdentifiers
 /// Floating composer: attached files, prompt field, attach button, model
 /// label and a square send/stop button, on a raised opaque surface.
 ///
-/// ↩ sends, ⌥↩ inserts a new line (standard behavior of a vertical
-/// `TextField` on macOS), ⌘. stops a running agent. Files are attached with
+/// ↩ sends, ⌥↩ or ⇧↩ inserts a new line (`PromptEditor`), ⌘. stops a
+/// running agent. Files are attached with
 /// the paperclip or by dropping them on the conversation.
 struct ComposerView: View {
     @Binding var draft: String
@@ -23,8 +23,8 @@ struct ComposerView: View {
     let onSend: () -> Void
     let onStop: () -> Void
 
-    @FocusState private var isFocused: Bool
     @State private var isImporting = false
+    @State private var editorHeight = PromptEditor.lineHeight
 
     var body: some View {
         VStack(alignment: .leading, spacing: AppSpacing.sm) {
@@ -42,13 +42,17 @@ struct ComposerView: View {
                     .foregroundStyle(AppColors.danger)
                     .fixedSize(horizontal: false, vertical: true)
             }
-            TextField("Ask the agent…", text: $draft, axis: .vertical)
-                .textFieldStyle(.plain)
-                .font(AppTypography.body)
-                .lineLimit(1...10)
-                .focused($isFocused)
-                .onSubmit(onSend)
-                .accessibilityLabel("Message")
+            PromptEditor(text: $draft, height: $editorHeight, onSubmit: onSend)
+                .frame(height: editorHeight)
+                .overlay(alignment: .topLeading) {
+                    if draft.isEmpty {
+                        Text("Ask the agent…")
+                            .font(AppTypography.body)
+                            .foregroundStyle(AppColors.textTertiary)
+                            .allowsHitTesting(false)
+                            .accessibilityHidden(true)
+                    }
+                }
 
             HStack(spacing: AppSpacing.sm) {
                 if canAttach {
@@ -84,7 +88,6 @@ struct ComposerView: View {
                     .strokeBorder(AppColors.accent, lineWidth: AppBorders.focus)
             }
         }
-        .onAppear { isFocused = true }
         .fileImporter(isPresented: $isImporting, allowedContentTypes: [.item], allowsMultipleSelection: true) { result in
             if case .success(let files) = result { onAttach(files) }
         }

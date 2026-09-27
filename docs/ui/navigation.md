@@ -88,7 +88,7 @@ never disagree.
 | ⌃⌘S | Toggle sidebar |
 | ⌥⌘I | Toggle inspector |
 | ⌘, | Settings screen (General, Providers); Esc or “Back to app” returns |
-| ↩ / ⌥↩ | Send / new line in the composer |
+| ↩ / ⌥↩ or ⇧↩ | Send / new line in the composer |
 | ⌘. | Stop the running agent or compaction |
 | ⌃C / ↑↓ | Stop the running command / browse history (Terminal) |
 

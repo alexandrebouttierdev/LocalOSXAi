@@ -18,8 +18,10 @@ enum AppTypography {
     static let title = inter(15, .semibold, relativeTo: .title3)
     /// Emphasized body text: row titles, message authors.
     static let headline = inter(13, .medium, relativeTo: .body)
+    /// Size of `body`, for AppKit views that need an `NSFont` (the composer).
+    static let bodySize: CGFloat = 13
     /// Default reading text (13 pt).
-    static let body = inter(13, .regular, relativeTo: .body)
+    static let body = inter(bodySize, .regular, relativeTo: .body)
     /// Secondary information next to body text (12 pt).
     static let callout = inter(12, .regular, relativeTo: .callout)
     /// Metadata, timestamps, hints (11 pt).
