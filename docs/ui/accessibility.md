@@ -6,7 +6,7 @@ Accessibility is a requirement from the first phase, not a polish item.
 
 | Area | How |
 |---|---|
-| Keyboard navigation | Sidebar ↑/↓ (`selectAdjacentSidebarItem`) and Tab through its rows (buttons), menu shortcuts for every command, palette ↑/↓/↩/⎋, composer ↩/⌥↩/⌘. Type-select was lost with the native `List` ([ADR 0025](../decisions/0025-flat-sidebar.md)) |
+| Keyboard navigation | Sidebar ↑/↓ through the sessions (`selectAdjacentSession`) and Tab through its buttons; a session's state is a symbol with a spoken label (“Running”, “Waiting for your approval”), menu shortcuts for every command, palette ↑/↓/↩/⎋, composer ↩/⌥↩/⌘. Type-select was lost with the native `List` ([ADR 0025](../decisions/0025-flat-sidebar.md)) |
 | VoiceOver | Labels on icon-only controls (“Toggle Inspector”, “Command palette”, add buttons); header traits on section titles; combined elements for rows; palette rows expose the selected trait and their shortcut or disabled reason as a hint; the context meter speaks “38.4 thousand of 100 thousand context tokens used” |
 | State not by color alone | `StatusBadge` pairs icon and text; tool call status has distinct icons and a spoken status; “Over budget” in text; failed and stopped messages have text badges |
 | Contrast | Text tokens meet 4.5:1 on backgrounds in light and dark (tertiary text was tuned for this: `#7C7F89` on `#111214` (4.7:1), `#696C75` on `#F4F4F5` (4.8:1)) |

@@ -83,8 +83,7 @@ struct SQLiteRepositoryTests {
         let listed = try await sessions.sessions(forProject: demo.id)
         #expect(listed == [older.summary])
         #expect(listed.first?.toolCallCount == 1)
-        #expect(try await sessions.recentSessions(limit: 5).map(\.title) == ["New", "Old"])
-        #expect(try await sessions.recentSessions(limit: 1).map(\.title) == ["New"])
+        #expect(try await sessions.sessions(forProject: other.id).map(\.title) == ["New"])
     }
 
     @Test("saving replaces the stored transcript")
@@ -112,7 +111,7 @@ struct SQLiteRepositoryTests {
 
         #expect(try await projects.allProjects().isEmpty)
         #expect(try await sessions.session(id: session.id) == nil)
-        #expect(try await sessions.recentSessions(limit: 10).isEmpty)
+        #expect(try await sessions.sessions(forProject: demo.id).isEmpty)
     }
 
     @Test("sessions can be deleted one by one or per project")

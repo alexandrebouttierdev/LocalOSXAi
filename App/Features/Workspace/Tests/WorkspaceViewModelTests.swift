@@ -33,7 +33,6 @@ struct WorkspaceViewModelTests {
         #expect(workspace.selectedProjectID == project.id)
         #expect(workspace.selectedSessionID == newer.id)
         #expect(workspace.activeAgent?.sessionID == newer.id)
-        #expect(workspace.sidebarSelection == .session(newer.id))
         #expect(workspace.models.selectedModel?.name == "m")
     }
 
@@ -97,24 +96,49 @@ struct WorkspaceViewModelTests {
         #expect(workspace.isSettingsPresented)
     }
 
-    @Test("the sidebar lists projects, then sessions, and ↑/↓ move the selection within it")
+    @Test("↑/↓ move the selection through the project's sessions, in sidebar order")
     func sidebarKeyboardNavigation() async {
         let project = Fixtures.project()
         let older = Fixtures.session(projectID: project.id, title: "Old", updatedAt: Date(timeIntervalSinceReferenceDate: 1))
         let newer = Fixtures.session(projectID: project.id, title: "New", updatedAt: Date(timeIntervalSinceReferenceDate: 2))
         let workspace = makeWorkspace(projects: [project], sessions: [older, newer])
         await workspace.load()
-
-        #expect(workspace.sidebarItems == [.project(project.id), .session(newer.id), .session(older.id)])
-        #expect(workspace.sidebarSelection == .session(newer.id))
-
-        await workspace.selectAdjacentSidebarItem(1)
-        #expect(workspace.selectedSessionID == older.id)
-        await workspace.selectAdjacentSidebarItem(1)
-        #expect(workspace.selectedSessionID == older.id)
-
-        await workspace.selectAdjacentSidebarItem(-1)
         #expect(workspace.selectedSessionID == newer.id)
+
+        await workspace.selectAdjacentSession(1)
+        #expect(workspace.selectedSessionID == older.id)
+        await workspace.selectAdjacentSession(1)
+        #expect(workspace.selectedSessionID == older.id)
+
+        await workspace.selectAdjacentSession(-1)
+        #expect(workspace.selectedSessionID == newer.id)
+        #expect(workspace.sessionGroups(now: Date(timeIntervalSinceReferenceDate: 2)).flatMap(\.sessions).map(\.id)
+                == [newer.id, older.id])
+    }
+
+    @Test("a session shows when its agent runs or waits for approval")
+    func sessionActivity() async throws {
+        let request = ToolApprovalRequest(id: "c1", toolName: "write_file", summary: "Write a.txt", reason: "Writes a file")
+        let workspace = makeWorkspace(
+            projects: [Fixtures.project()],
+            agent: StubAgentService(.askApproval(request, decisions: Recorder()))
+        )
+        await workspace.load()
+        await workspace.createSession()
+        let sessionID = try #require(workspace.selectedSessionID)
+        let agent = try #require(workspace.activeAgent)
+        #expect(workspace.activity(of: sessionID) == nil)
+
+        agent.draft = "Write a.txt"
+        agent.send()
+        #expect(workspace.activity(of: sessionID) == .running)
+        while agent.pendingApproval == nil { await Task.yield() }
+        #expect(workspace.activity(of: sessionID) == .awaitingApproval)
+
+        agent.resolveApproval(.deny)
+        await agent.waitUntilIdle()
+        #expect(workspace.activity(of: sessionID) == nil)
+        #expect(workspace.activity(of: UUID()) == nil)
     }
 
     @Test("each project gets its own panels, kept when switching back")
@@ -168,8 +192,8 @@ struct WorkspaceViewModelTests {
         #expect(workspace.selectedSession?.model == workspace.models.selectedModelID)
     }
 
-    @Test("selecting a session from another project switches project")
-    func selectSessionInOtherProject() async {
+    @Test("the sidebar lists the selected project's sessions; switching project switches the list")
+    func sessionsFollowTheProject() async {
         let first = Fixtures.project(name: "First", openedAt: Date(timeIntervalSinceReferenceDate: 2))
         let second = Fixtures.project(name: "Second", root: URL(fileURLWithPath: "/tmp/Second"),
                                       openedAt: Date(timeIntervalSinceReferenceDate: 1))
@@ -177,11 +201,13 @@ struct WorkspaceViewModelTests {
         let workspace = makeWorkspace(projects: [first, second], sessions: [foreign])
         await workspace.load()
         #expect(workspace.selectedProjectID == first.id)
-        #expect(workspace.sessions.recentSessions.map(\.id) == [foreign.id])
+        #expect(workspace.sessions.sessions.isEmpty)
 
-        await workspace.select(.session(foreign.id))
+        await workspace.selectSession(foreign.id)
+        #expect(workspace.selectedSessionID == nil)
 
-        #expect(workspace.selectedProjectID == second.id)
+        await workspace.selectProject(second.id)
+        #expect(workspace.sessions.sessions.map(\.id) == [foreign.id])
         #expect(workspace.selectedSessionID == foreign.id)
     }
 
@@ -238,7 +264,7 @@ struct WorkspaceViewModelTests {
         #expect(workspace.selectedProjectID == second.id)
         #expect(workspace.selectedSessionID == nil)
         #expect(await workspace.sessions.fullSession(id: session.id) == nil)
-        #expect(workspace.sessions.recentSessions.isEmpty)
+        #expect(workspace.sessions.sessions.isEmpty)
     }
 
     @Test("the window title names the session on the Agent tab and the project elsewhere")

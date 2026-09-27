@@ -5,8 +5,8 @@ import Testing
 @MainActor
 @Suite("SessionsViewModel")
 struct SessionsViewModelTests {
-    @Test("recent sessions exclude the current project's sessions")
-    func recentExcludesCurrentProject() async {
+    @Test("only the loaded project's sessions are listed")
+    func loadsProjectSessions() async {
         let current = UUID()
         let other = UUID()
         let own = Fixtures.session(projectID: current, title: "Own", updatedAt: Date(timeIntervalSinceReferenceDate: 3))
@@ -16,8 +16,8 @@ struct SessionsViewModelTests {
         await viewModel.load(projectID: current)
 
         #expect(viewModel.sessions.map(\.title) == ["Own"])
-        #expect(viewModel.recentSessions.map(\.title) == ["Foreign"])
-        #expect(viewModel.session(id: foreign.id) == foreign)
+        #expect(viewModel.session(id: own.id) == own)
+        #expect(viewModel.session(id: foreign.id) == nil)
     }
 
     @Test("creating a session requires a loaded project")

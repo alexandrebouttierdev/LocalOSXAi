@@ -13,10 +13,6 @@ actor InMemorySessionRepository: SessionRepository {
         sessions.values.filter { $0.projectID == projectID }.map(\.summary)
     }
 
-    func recentSessions(limit: Int) -> [Session] {
-        Array(sessions.values.sorted { $0.updatedAt > $1.updatedAt }.prefix(max(limit, 0))).map(\.summary)
-    }
-
     func session(id: Session.ID) -> Session? {
         sessions[id]
     }

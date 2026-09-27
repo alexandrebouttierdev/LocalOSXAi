@@ -16,8 +16,11 @@ turned off with public SwiftUI API.
   sidebar button; the existing Toggle Sidebar command drives `isSidebarVisible`.
 - Rows are `SidebarRow` buttons: 28 pt, 6 pt corners, `hover` on hover, `selection` (7% white)
   when selected, primary text. Context menus are unchanged.
-- Keyboard: ↑/↓ move the selection through `WorkspaceViewModel.sidebarItems` /
-  `selectAdjacentSidebarItem`, which is unit-tested; clicking a row focuses the list.
+- Keyboard: ↑/↓ move the selection through the sessions (`selectAdjacentSession`, unit-tested);
+  clicking a row focuses the list.
+- Follow-up: the sidebar's content then took Claude Code's layout (New session, project switcher,
+  sessions grouped by date with their agent's state). The cross-project “Recent” list, and the
+  `recentSessions(limit:)` query that only it used, were removed.
 
 ## Alternatives
 - **Keep `NavigationSplitView`, style the list**: the glass panel and the accent selection

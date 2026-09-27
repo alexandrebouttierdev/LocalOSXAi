@@ -10,7 +10,7 @@ lists are reloaded after every run. Tool calls also had to find a place in the s
 
 ## Decision
 - **Lists return summaries.** `SessionRepository.sessions(forProject:)` and
-  `recentSessions(limit:)` return `Session` values whose `messages` is empty. Only
+  `recentSessions(limit:)` (removed with the Recent list, [ADR 0025](0025-flat-sidebar.md)) return `Session` values whose `messages` is empty. Only
   `session(id:)` loads a transcript, when a session is opened. The sidebar's metadata
   ("4 tool calls") comes from a stored `toolCallCount`, updated by `SessionService` whenever
   the transcript is saved.

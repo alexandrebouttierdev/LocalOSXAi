@@ -19,16 +19,6 @@ struct SQLiteSessionRepository: SessionRepository {
         }
     }
 
-    func recentSessions(limit: Int) async throws -> [Session] {
-        try await database.writer.read { db in
-            try SessionRecord
-                .order(Column("updatedAt").desc)
-                .limit(max(limit, 0))
-                .fetchAll(db)
-                .map { try $0.session(messages: []) }
-        }
-    }
-
     func session(id: Session.ID) async throws -> Session? {
         try await database.writer.read { db in
             guard let record = try SessionRecord.fetchOne(db, key: id.uuidString) else { return nil }

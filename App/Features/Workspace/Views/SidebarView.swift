@@ -1,13 +1,13 @@
 import SwiftUI
 
-/// Sidebar: command palette entry point, projects, sessions of the selected
-/// project, recent sessions elsewhere, and settings.
+/// Sidebar, laid out like Claude Code's: New session, search, the project
+/// switcher, then the project's sessions as one-line rows grouped by date,
+/// each with what its agent is doing; Settings and the model servers below.
 ///
-/// Linear's sidebar: flat on the window ground, rows with a neutral
-/// selection (`SidebarRow`). Built from plain views rather than a `List`,
-/// whose selection always takes the system accent; ↑/↓ still move the
-/// selection (`WorkspaceViewModel.selectAdjacentSidebarItem`), and every row
-/// is a labelled button for VoiceOver.
+/// Flat on the window ground with neutral rows (`SidebarRow`), built from
+/// plain views rather than a `List`, whose selection always takes the system
+/// accent (ADR 0025). ↑/↓ move through the sessions
+/// (`WorkspaceViewModel.selectAdjacentSession`).
 struct SidebarView: View {
     @Bindable var viewModel: WorkspaceViewModel
     let onCommand: (WorkspaceCommand) -> Void
@@ -19,20 +19,15 @@ struct SidebarView: View {
         VStack(alignment: .leading, spacing: 0) {
             VStack(alignment: .leading, spacing: AppSpacing.xs) {
                 appHeader
+                newSessionButton
                 searchButton
+                projectSwitcher
             }
+            .padding(.bottom, AppSpacing.sm)
             ScrollView {
-                VStack(alignment: .leading, spacing: AppSpacing.lg) {
-                    projectsSection
-                    if viewModel.selectedProject != nil {
-                        sessionsSection
-                    }
-                    if !viewModel.sessions.recentSessions.isEmpty {
-                        recentSection
-                    }
-                }
-                .padding(.horizontal, AppSpacing.sm)
-                .padding(.bottom, AppSpacing.md)
+                sessionList
+                    .padding(.horizontal, AppSpacing.sm)
+                    .padding(.bottom, AppSpacing.md)
             }
             .scrollIndicators(.never)
             .focusable()
@@ -57,86 +52,46 @@ struct SidebarView: View {
     }
 
     private func move(_ offset: Int) -> KeyPress.Result {
-        Task { await viewModel.selectAdjacentSidebarItem(offset) }
+        Task { await viewModel.selectAdjacentSession(offset) }
         return .handled
     }
 
-    private func select(_ item: WorkspaceViewModel.SidebarItem) {
-        isListFocused = true
-        Task { await viewModel.select(item) }
-    }
+    // MARK: Sessions
 
-    // MARK: Sections
-
-    private var projectsSection: some View {
-        SidebarSection {
-            SectionHeader(title: "Projects") {
-                addButton("Open Project…", command: .openProject)
-            }
-        } content: {
-            if viewModel.projects.projects.isEmpty {
-                placeholder("No projects yet")
-            }
-            ForEach(viewModel.projects.projects) { project in
-                let item = WorkspaceViewModel.SidebarItem.project(project.id)
-                SidebarRow(isSelected: viewModel.sidebarSelection == item, action: { select(item) }) {
-                    Label {
-                        Text(project.name)
-                            .fontWeight(project.id == viewModel.selectedProjectID ? .semibold : .regular)
-                            .lineLimit(1)
-                    } icon: {
-                        ProjectBadge(name: project.name, size: 16)
-                    }
-                }
-                .help(project.rootURL.path)
-                .contextMenu {
-                    Button("Project Settings…") {
-                        Task { await viewModel.showProjectSettings(for: project.id) }
-                    }
-                    Button("Reveal in Finder") { NSWorkspace.shared.activateFileViewerSelecting([project.rootURL]) }
-                    Divider()
-                    Button("Remove from List…", role: .destructive) {
-                        projectPendingRemoval = project
-                    }
-                }
-            }
-        }
-    }
-
-    private var sessionsSection: some View {
-        SidebarSection {
-            SectionHeader(title: "Sessions") {
-                addButton("New Session", command: .newSession)
-            }
-        } content: {
-            if viewModel.sessions.sessions.isEmpty {
-                placeholder("No sessions yet")
-            }
-            ForEach(viewModel.sessions.sessions) { session in
-                sessionRow(session, subtitle: nil, showsToolCalls: true)
-                    .contextMenu {
-                        Button("Delete Session", role: .destructive) {
-                            Task { await viewModel.sessions.delete(session.id) }
+    @ViewBuilder
+    private var sessionList: some View {
+        if viewModel.selectedProject == nil {
+            placeholder(viewModel.projects.projects.isEmpty ? "Open a project folder to start a session."
+                                                           : "Choose a project above.")
+        } else if viewModel.sessions.sessions.isEmpty {
+            placeholder("No sessions yet. Start one with New session.")
+        } else {
+            // Recomputed with the list, so “Today” rolls over on the next change.
+            VStack(alignment: .leading, spacing: AppSpacing.md) {
+                ForEach(viewModel.sessionGroups(now: .now)) { group in
+                    VStack(alignment: .leading, spacing: AppSpacing.xxs) {
+                        SectionHeader(title: group.period.title)
+                            .padding(.horizontal, AppSpacing.sm)
+                        ForEach(group.sessions) { session in
+                            sessionRow(session)
                         }
                     }
+                }
             }
         }
     }
 
-    private var recentSection: some View {
-        SidebarSection {
-            SectionHeader(title: "Recent")
-        } content: {
-            ForEach(viewModel.sessions.recentSessions) { session in
-                sessionRow(session, subtitle: viewModel.projects.project(id: session.projectID)?.name, showsToolCalls: false)
-            }
+    private func sessionRow(_ session: Session) -> some View {
+        SidebarRow(isSelected: session.id == viewModel.selectedSessionID, action: {
+            isListFocused = true
+            Task { await viewModel.selectSession(session.id) }
+        }) {
+            SessionRowLabel(session: session, activity: viewModel.activity(of: session.id))
         }
-    }
-
-    private func sessionRow(_ session: Session, subtitle: String?, showsToolCalls: Bool) -> some View {
-        let item = WorkspaceViewModel.SidebarItem.session(session.id)
-        return SidebarRow(isSelected: viewModel.sidebarSelection == item, action: { select(item) }) {
-            SessionRow(session: session, subtitle: subtitle, showsToolCalls: showsToolCalls)
+        .contextMenu {
+            Button("Delete Session", role: .destructive) {
+                Task { await viewModel.sessions.delete(session.id) }
+            }
         }
     }
 
@@ -144,8 +99,100 @@ struct SidebarView: View {
         Text(text)
             .font(AppTypography.callout)
             .foregroundStyle(AppColors.textTertiary)
+            .fixedSize(horizontal: false, vertical: true)
             .padding(.horizontal, AppSpacing.sm)
-            .frame(minHeight: AppLayout.rowHeight)
+            .padding(.top, AppSpacing.xs)
+    }
+
+    // MARK: Project and new session
+
+    private var newSessionButton: some View {
+        Button {
+            onCommand(.newSession)
+        } label: {
+            HStack(spacing: AppSpacing.sm) {
+                Image(systemName: "square.and.pencil")
+                    .accessibilityHidden(true)
+                Text("New session")
+                    .lineLimit(1)
+                Spacer(minLength: AppSpacing.xs)
+                if let shortcut = WorkspaceCommand.newSession.shortcut?.displayString {
+                    ShortcutBadge(shortcut: shortcut)
+                }
+            }
+            .font(AppTypography.callout.weight(.medium))
+            .foregroundStyle(AppColors.textPrimary)
+            .padding(.leading, AppSpacing.md)
+            .padding(.trailing, AppSpacing.xs + AppSpacing.xxs)
+            .frame(height: AppLayout.buttonHeight)
+            .contentShape(RoundedRectangle(cornerRadius: AppRadius.medium, style: .continuous))
+        }
+        .buttonStyle(.plain)
+        .appFloating(in: RoundedRectangle(cornerRadius: AppRadius.medium, style: .continuous), interactive: true, elevated: false)
+        .disabled(!viewModel.isEnabled(.newSession))
+        .help(viewModel.disabledReason(for: .newSession) ?? "Start a new session in this project")
+        .padding(.horizontal, AppSpacing.md)
+    }
+
+    /// The current project, and every project action, in one menu: the list
+    /// below is the project's sessions.
+    private var projectSwitcher: some View {
+        Menu {
+            ForEach(viewModel.projects.projects) { project in
+                Button {
+                    Task { await viewModel.selectProject(project.id) }
+                } label: {
+                    if project.id == viewModel.selectedProjectID {
+                        Label(project.name, systemImage: "checkmark")
+                    } else {
+                        Text(project.name)
+                    }
+                }
+            }
+            if !viewModel.projects.projects.isEmpty { Divider() }
+            Button("Open Project…") { onCommand(.openProject) }
+            if let project = viewModel.selectedProject {
+                Button("Project Settings…") {
+                    Task { await viewModel.showProjectSettings(for: project.id) }
+                }
+                Button("Reveal in Finder") { NSWorkspace.shared.activateFileViewerSelecting([project.rootURL]) }
+                Divider()
+                Button("Remove “\(project.name)” from List…", role: .destructive) {
+                    projectPendingRemoval = project
+                }
+            }
+        } label: {
+            HStack(spacing: AppSpacing.sm) {
+                if let project = viewModel.selectedProject {
+                    ProjectBadge(name: project.name, size: 16)
+                    Text(project.name)
+                        .font(AppTypography.body.weight(.medium))
+                        .foregroundStyle(AppColors.textPrimary)
+                        .lineLimit(1)
+                } else {
+                    Image(systemName: "folder")
+                        .accessibilityHidden(true)
+                    Text("Open a project")
+                        .font(AppTypography.body)
+                        .foregroundStyle(AppColors.textSecondary)
+                }
+                Spacer(minLength: AppSpacing.xs)
+                Image(systemName: "chevron.up.chevron.down")
+                    .font(AppTypography.caption)
+                    .foregroundStyle(AppColors.textTertiary)
+                    .accessibilityHidden(true)
+            }
+            .padding(.horizontal, AppSpacing.sm)
+            .frame(height: AppLayout.rowHeight)
+            .contentShape(RoundedRectangle(cornerRadius: AppRadius.medium, style: .continuous))
+        }
+        .menuStyle(.button)
+        .menuIndicator(.hidden)
+        .buttonStyle(.plain)
+        .help(viewModel.selectedProject?.rootURL.path ?? "Open a project folder")
+        .accessibilityLabel("Project")
+        .accessibilityValue(viewModel.selectedProject?.name ?? "None")
+        .padding(.horizontal, AppSpacing.sm)
     }
 
     // MARK: Chrome
@@ -192,7 +239,6 @@ struct SidebarView: View {
         .buttonStyle(.plain)
         .appFloating(in: RoundedRectangle(cornerRadius: AppRadius.medium, style: .continuous), interactive: true, elevated: false)
         .padding(.horizontal, AppSpacing.md)
-        .padding(.vertical, AppSpacing.sm)
         .accessibilityLabel("Command palette")
         .accessibilityHint("Shortcut Command K")
     }
@@ -248,63 +294,43 @@ struct SidebarView: View {
             .help(connected.isEmpty ? "Start Ollama or LM Studio, then refresh the models." : "Model servers that answered.")
         }
     }
-
-    private func addButton(_ title: String, command: WorkspaceCommand) -> some View {
-        Button {
-            onCommand(command)
-        } label: {
-            Image(systemName: "plus")
-                .font(AppTypography.caption.weight(.semibold))
-                .frame(width: 18, height: 18)
-                .contentShape(Rectangle())
-        }
-        .buttonStyle(.plain)
-        .foregroundStyle(AppColors.textTertiary)
-        .help(title)
-        .accessibilityLabel(title)
-        .disabled(!viewModel.isEnabled(command))
-    }
 }
 
-private struct SessionRow: View {
+/// One session in the sidebar: its title on one line, and what its agent is
+/// doing, as a symbol with a spoken label (never color alone).
+private struct SessionRowLabel: View {
     let session: Session
-    let subtitle: String?
-    let showsToolCalls: Bool
+    let activity: SessionActivity?
 
     var body: some View {
-        VStack(alignment: .leading, spacing: AppSpacing.xxs) {
+        HStack(spacing: AppSpacing.sm) {
             Text(session.title)
                 .lineLimit(1)
-            HStack(spacing: AppSpacing.xs) {
-                if let subtitle {
-                    Text(subtitle)
-                        .lineLimit(1)
-                    Text("·")
-                }
-                Text(session.updatedAt, format: .relative(presentation: .named, unitsStyle: .abbreviated))
-                if showsToolCalls, session.toolCallCount > 0 {
-                    Text("·")
-                    Text(session.toolCallCount == 1 ? "1 tool call" : "\(session.toolCallCount) tool calls")
-                }
+                .truncationMode(.tail)
+            Spacer(minLength: AppSpacing.xs)
+            switch activity {
+            case .running:
+                ProgressView()
+                    .controlSize(.mini)
+                    .accessibilityLabel("Running")
+            case .awaitingApproval:
+                Image(systemName: "hand.raised.fill")
+                    .font(AppTypography.caption)
+                    .foregroundStyle(AppColors.warning)
+                    .accessibilityLabel("Waiting for your approval")
+            case nil:
+                EmptyView()
             }
-            .font(AppTypography.caption)
-            .foregroundStyle(AppColors.textTertiary)
         }
-        .padding(.vertical, AppSpacing.xxs)
+        .help(details)
         .accessibilityElement(children: .combine)
     }
-}
 
-/// A titled group of sidebar rows.
-private struct SidebarSection<Header: View, Content: View>: View {
-    @ViewBuilder var header: Header
-    @ViewBuilder var content: Content
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: AppSpacing.xxs) {
-            header
-                .padding(.horizontal, AppSpacing.sm)
-            content
-        }
+    /// Shown on hover: the row itself stays on one line, like Claude Code's.
+    private var details: String {
+        let updated = session.updatedAt.formatted(.relative(presentation: .named, unitsStyle: .wide))
+        guard session.toolCallCount > 0 else { return "Updated \(updated)" }
+        let calls = session.toolCallCount == 1 ? "1 tool call" : "\(session.toolCallCount) tool calls"
+        return "Updated \(updated) · \(calls)"
     }
 }

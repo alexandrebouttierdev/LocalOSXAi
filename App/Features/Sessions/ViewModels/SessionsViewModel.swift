@@ -1,15 +1,11 @@
 import Foundation
 import Observation
 
-/// Session lists shown in the sidebar: the current project's sessions and
-/// recent sessions from other projects.
+/// The current project's sessions, shown in the sidebar.
 @MainActor
 @Observable
 final class SessionsViewModel {
-    static let recentLimit = 5
-
     private(set) var sessions: [Session] = []
-    private(set) var recentSessions: [Session] = []
     var error: UserFacingError?
 
     private let service: SessionService
@@ -21,17 +17,14 @@ final class SessionsViewModel {
 
     func session(id: Session.ID?) -> Session? {
         guard let id else { return nil }
-        return sessions.first { $0.id == id } ?? recentSessions.first { $0.id == id }
+        return sessions.first { $0.id == id }
     }
 
-    /// Loads sessions for `projectID` (or clears them when `nil`) and
-    /// refreshes the recent list, excluding sessions already listed above.
+    /// Loads sessions for `projectID`, or clears them when `nil`.
     func load(projectID: Project.ID?) async {
         self.projectID = projectID
         do {
             sessions = if let projectID { try await service.sessions(in: projectID) } else { [] }
-            let recent = try await service.recentSessions(limit: Self.recentLimit + sessions.count)
-            recentSessions = Array(recent.filter { $0.projectID != projectID }.prefix(Self.recentLimit))
         } catch {
             self.error = UserFacingError(error, title: "Could not load sessions", category: .persistence)
         }

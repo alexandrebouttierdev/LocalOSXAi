@@ -29,9 +29,7 @@ struct InMemoryRepositoryTests {
         try await repository.save(new)
 
         #expect(try await repository.sessions(forProject: projectA) == [old])
-        #expect(try await repository.recentSessions(limit: 10) == [new, old])
-        #expect(try await repository.recentSessions(limit: 1) == [new])
-        #expect(try await repository.recentSessions(limit: -1).isEmpty)
+        #expect(try await repository.sessions(forProject: projectB) == [new])
 
         try await repository.deleteSession(id: old.id)
         #expect(try await repository.session(id: old.id) == nil)

@@ -10,12 +10,6 @@ import Observation
 @MainActor
 @Observable
 final class WorkspaceViewModel {
-    /// Identifies a selectable sidebar row.
-    enum SidebarItem: Hashable {
-        case project(Project.ID)
-        case session(Session.ID)
-    }
-
     let projects: ProjectsViewModel
     let sessions: SessionsViewModel
     let models: ModelsViewModel
@@ -76,28 +70,28 @@ final class WorkspaceViewModel {
     /// Pending file changes, shown as a badge on the Changes tab.
     var pendingChangesCount: Int { activePanels?.changes.changes.count ?? 0 }
 
-    var sidebarSelection: SidebarItem? {
-        if let selectedSessionID { return .session(selectedSessionID) }
-        return selectedProjectID.map(SidebarItem.project)
+    /// The selected project's sessions grouped by date, in sidebar order.
+    func sessionGroups(now: Date) -> [SessionGroup] {
+        SessionGroup.grouped(sessions.sessions, now: now)
     }
 
-    /// The sidebar's rows in display order: projects, the selected project's
-    /// sessions, then recent sessions of other projects.
-    var sidebarItems: [SidebarItem] {
-        projects.projects.map { SidebarItem.project($0.id) }
-            + (selectedProjectID == nil ? [] : sessions.sessions.map { SidebarItem.session($0.id) })
-            + sessions.recentSessions.map { SidebarItem.session($0.id) }
+    /// Running or waiting for approval, for a session whose agent was opened
+    /// in this launch; `nil` when idle.
+    func activity(of sessionID: Session.ID) -> SessionActivity? {
+        guard let agent = agents[sessionID] else { return nil }
+        if agent.pendingApproval != nil { return .awaitingApproval }
+        return agent.isRunning ? .running : nil
     }
 
-    /// Moves the sidebar selection by `offset` rows (↑ −1, ↓ +1), staying
-    /// within the list. Without a selection, ↓ selects the first row.
-    func selectAdjacentSidebarItem(_ offset: Int) async {
-        let items = sidebarItems
-        guard !items.isEmpty else { return }
-        let current = sidebarSelection.flatMap { items.firstIndex(of: $0) }
-        let target = current.map { min(max($0 + offset, 0), items.count - 1) } ?? (offset > 0 ? 0 : items.count - 1)
+    /// Moves the session selection by `offset` rows of the sidebar (↑ −1,
+    /// ↓ +1), staying within the list. Without a selection, ↓ selects the first.
+    func selectAdjacentSession(_ offset: Int) async {
+        let ids = sessions.sessions.map(\.id)
+        guard !ids.isEmpty else { return }
+        let current = selectedSessionID.flatMap { ids.firstIndex(of: $0) }
+        let target = current.map { min(max($0 + offset, 0), ids.count - 1) } ?? (offset > 0 ? 0 : ids.count - 1)
         guard target != current else { return }
-        await select(items[target])
+        await selectSession(ids[target])
     }
 
     /// First pending error across child view models, for a single alert.
@@ -123,14 +117,6 @@ final class WorkspaceViewModel {
         }
     }
 
-    func select(_ item: SidebarItem?) async {
-        switch item {
-        case .project(let id): await selectProject(id)
-        case .session(let id): await selectSession(id)
-        case nil: break
-        }
-    }
-
     /// Selects a project and resumes its most recently updated session.
     func selectProject(_ id: Project.ID) async {
         guard let project = projects.project(id: id) else { return }
@@ -147,14 +133,9 @@ final class WorkspaceViewModel {
         activePanels = panels[project.id]
     }
 
-    /// Selects a session, switching project first when it belongs to another one.
+    /// Selects one of the selected project's sessions.
     func selectSession(_ id: Session.ID) async {
-        guard let session = sessions.session(id: id) else { return }
-        if session.projectID != selectedProjectID {
-            selectedProjectID = session.projectID
-            if let project = projects.project(id: session.projectID) { activatePanels(for: project) }
-            await sessions.load(projectID: session.projectID)
-        }
+        guard sessions.session(id: id) != nil else { return }
         await activateSession(id)
         selectedTab = .agent
     }

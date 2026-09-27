@@ -21,8 +21,10 @@ an **inset panel**: `surface`, 12 pt corners (`AppRadius.panel`), a `hairline` o
 of ground around it. There is a single header row, the native window toolbar: the title is the
 session (the project on other tabs) with the project as subtitle, text-only pill tabs sit in the
 center with a count badge on Changes, and the inspector toggle is on the right. The panel
-itself holds only the tab content. The sidebar starts with the app mark, then
-the search field, projects, sessions (“2 h ago · 4 tool calls”), and a footer with
+itself holds only the tab content. The sidebar, laid out like Claude Code's, starts with
+the app mark, New session, the search field and the project switcher, then the project's sessions
+grouped by date (one line each, with a spinner or a raised hand for a running or waiting agent),
+and a footer with
 Settings and which model servers answered (their logos and “Ollama connected”). The inspector
 lists the model (with its provider's logo), the context (usage meter and length) and Git.
 

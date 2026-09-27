@@ -33,10 +33,6 @@ struct SessionService: Sendable {
         try await repository.sessions(forProject: projectID).sorted { $0.updatedAt > $1.updatedAt }
     }
 
-    func recentSessions(limit: Int) async throws -> [Session] {
-        try await repository.recentSessions(limit: limit)
-    }
-
     func session(id: Session.ID) async throws -> Session? {
         try await repository.session(id: id)
     }

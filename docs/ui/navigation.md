@@ -4,12 +4,13 @@
 
 ```
 ┌─ Sidebar ─────────┬─ Main content ──────────────────────────┬─ Inspector ─────┐
-│ ⌘K Search         │ Session · Project  Agent Files …  [▥] │ Model           │
-│ Projects      +   │─────────────────────────────────────────│ Context         │
-│ Sessions      +   │ transcript / tab content                │ Tools           │
-│ Recent            │                                         │ Git             │
-│                   │ composer                                │                 │
-│ ⚙ Settings  [Sim] │                                         │                 │
+│ New session   ⌘N  │ Session · Project  Agent Files …  [▥] │ Model           │
+│ Search        ⌘K  │─────────────────────────────────────────│ Context         │
+│ ▣ project      ⌄  │ transcript / tab content                │ Git             │
+│ Today             │                                         │                 │
+│  Fix the flag   ◌ │ composer                                │                 │
+│ Yesterday         │                                         │                 │
+│ ⚙ Settings  🦙    │                                         │                 │
 └───────────────────┴─────────────────────────────────────────┴─────────────────┘
 ```
 
@@ -17,8 +18,14 @@
   sits flat on the window ground, like Linear's, instead of `NavigationSplitView`'s floating
   glass panel on macOS 26 ([ADR 0025](../decisions/0025-flat-sidebar.md)). Drag its edge to
   resize it (200–320 pt, remembered); the toolbar's sidebar button or the menu hides it.
-- Sidebar rows (`SidebarRow`) have a neutral selection, never the system accent. ↑/↓ move the
-  selection once the list has focus (clicking a row gives it focus).
+- The sidebar follows Claude Code's: **New session** (⌘N), Search (⌘K), the **project switcher**
+  (a menu with every project, Open Project…, Project Settings…, Reveal in Finder and Remove), then
+  the project's sessions as one-line rows **grouped by date** (Today, Yesterday, Previous 7 days,
+  Previous 30 days, Older — `SessionGroup`). A row shows a spinner while its agent runs and a
+  raised hand while it waits for approval (`SessionActivity`), so work in another session is not
+  forgotten; hovering shows when it was updated and its tool calls.
+- Sidebar rows (`SidebarRow`) have a neutral selection, never the system accent. ↑/↓ move
+  through the sessions once the list has focus (clicking a row gives it focus).
 - Minimum window size 900×560. Column widths come from `AppLayout`.
 - The window toolbar is the only header: title and subtitle (session and project), the tabs in
   the center, the inspector toggle on the right (`WorkspaceViewModel.windowTitle/windowSubtitle`).
@@ -40,7 +47,6 @@ never hold navigation state themselves, which makes navigation testable (`Worksp
 Selection rules:
 
 - Selecting a project resumes its most recently updated session.
-- Selecting a recent session from another project switches project first.
 - Creating a session selects it and shows the Agent tab.
 - Each session's `AgentViewModel` is cached, so a run keeps going when the user switches away.
 
