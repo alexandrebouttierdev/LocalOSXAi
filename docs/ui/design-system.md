@@ -28,6 +28,11 @@ context, tools (two columns) and Git.
 Avoided: gradients, large cards, large colored buttons, heavy shadows, decorative “AI startup”
 aesthetics, dashboards of widgets.
 
+One exception, for feedback only: `ActivityIndicator`, shown while the model loads, thinks or
+decides its next step, sweeps a light across its title (text colors, accent highlight). It
+tells the user a slow local model is still working. It never decorates, and with Reduce Motion
+it is still.
+
 ## Glass
 
 Glass is Apple's material for layers that **float** above content. It is used for exactly that,

@@ -51,7 +51,7 @@ struct AgentMessageView: View {
                     header
                 }
                 if !message.reasoning.isEmpty {
-                    ReasoningView(text: message.reasoning, isStreaming: message.state == .streaming && message.text.isEmpty)
+                    ReasoningView(text: message.reasoning, isThinking: activity == .thinking, since: message.createdAt)
                 }
                 if !message.toolCalls.isEmpty || message.preparingToolCall != nil {
                     VStack(alignment: .leading, spacing: AppSpacing.xs) {
@@ -62,6 +62,12 @@ struct AgentMessageView: View {
                             PreparingToolCallView(draft: draft)
                         }
                     }
+                }
+                // Below finished tool calls: the model is deciding what comes next.
+                if let activity, activity != .thinking {
+                    ActivityIndicator(title: activity.title, systemImage: Self.symbol(for: activity),
+                                      since: activity == .waitingForModel ? message.createdAt : nil, hint: activity.hint)
+                        .transition(.opacity)
                 }
                 if !message.text.isEmpty {
                     if message.state == .streaming {
@@ -81,6 +87,17 @@ struct AgentMessageView: View {
         }
     }
 
+    /// What the message is waiting on, shown as a loader in its body.
+    private var activity: StreamingActivity? { StreamingActivity(message) }
+
+    private static func symbol(for activity: StreamingActivity) -> String {
+        switch activity {
+        case .waitingForModel: "hourglass"
+        case .thinking: "brain"
+        case .nextStep: "arrow.triangle.branch"
+        }
+    }
+
     private var header: some View {
         HStack(spacing: AppSpacing.sm) {
             Text("Agent")
@@ -89,8 +106,10 @@ struct AgentMessageView: View {
                 // Headings let VoiceOver users jump between turns with the rotor.
                 .accessibilityAddTraits(.isHeader)
             switch message.state {
-            case .streaming:
+            case .streaming where activity == nil:
                 StreamingStatusView(message: message)
+            case .streaming:
+                EmptyView()
             case .cancelled:
                 StatusBadge(title: "Stopped", systemImage: "stop.circle", tone: .neutral)
             case .failed:
@@ -131,8 +150,9 @@ struct AgentMessageView: View {
     }
 }
 
-/// What the agent is doing while a message streams, with the elapsed time
-/// when nothing has arrived yet (a model may take a while to load).
+/// What the agent is doing while a message streams and output is visible
+/// (text, a tool call being written or run). Waiting and thinking have a
+/// loader of their own (`StreamingActivity`).
 private struct StreamingStatusView: View {
     let message: AgentMessage
 
@@ -147,11 +167,7 @@ private struct StreamingStatusView: View {
 
     private func label(now: Date) -> String {
         let seconds = max(Int(now.timeIntervalSince(message.createdAt)), 0)
-        if message.text.isEmpty, message.reasoning.isEmpty, message.toolCalls.isEmpty, message.preparingToolCall == nil {
-            return seconds < 5 ? "Waiting for the model…" : "Waiting for the model… \(seconds) s (it may be loading)"
-        }
         if message.preparingToolCall != nil { return "Preparing a tool call… \(seconds) s" }
-        if message.text.isEmpty, message.toolCalls.isEmpty { return "Thinking… \(seconds) s" }
         return "Working…"
     }
 }
@@ -239,13 +255,15 @@ private struct ConversationSummaryView: View {
 /// scannable; while it streams, its latest lines show as a live preview.
 private struct ReasoningView: View {
     let text: String
-    let isStreaming: Bool
+    /// The model is still reasoning: the label becomes the thinking loader.
+    let isThinking: Bool
+    let since: Date
     @State private var isExpanded = false
 
     var body: some View {
         VStack(alignment: .leading, spacing: AppSpacing.xs) {
             disclosure
-            if isStreaming, !isExpanded {
+            if isThinking, !isExpanded {
                 Text(Self.tail(of: text))
                     .font(AppTypography.caption)
                     .foregroundStyle(AppColors.textTertiary)
@@ -278,9 +296,13 @@ private struct ReasoningView: View {
                 }
                 .padding(.top, AppSpacing.xs)
         } label: {
-            Label(isStreaming ? "Thinking…" : "Thought process", systemImage: "brain")
-                .font(AppTypography.callout)
-                .foregroundStyle(AppColors.textTertiary)
+            if isThinking {
+                ActivityIndicator(title: "Thinking", systemImage: "brain", since: since)
+            } else {
+                Label("Thought process", systemImage: "brain")
+                    .font(AppTypography.callout)
+                    .foregroundStyle(AppColors.textTertiary)
+            }
         }
      }
 }

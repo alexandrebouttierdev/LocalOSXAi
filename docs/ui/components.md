@@ -24,6 +24,7 @@ Feature views worth knowing:
 |---|---|---|
 | `CommandPaletteView` | CommandPalette | Overlay with keyboard handling. Performs no actions |
 | `AgentMessageView`, `ToolCallView`, `ComposerView`, `ApprovalBanner` | Agent | User bubbles, Markdown answers, human-readable tool rows (`ToolCallPresentation`), floating glass composer |
+| `ActivityIndicator` | Shared | Loader for work without visible output: pulsing symbol, title with a moving highlight, elapsed seconds, optional hint. Used by the agent for `StreamingActivity` (waiting for the model, thinking, next step). Still with Reduce Motion |
 | `AgentView` transcript | Agent | Opens at the bottom and follows a streaming answer while the user is at the bottom. Sending or retrying a message always jumps to the bottom (`AgentViewModel.latestPromptID`), even after scrolling up; the agent's own messages never move a user who scrolled up |
 | `ModelPickerView` | Models | Menu grouped by provider, plus capability badges |
 | `SidebarView`, `MainContentView`, `InspectorView`, `WelcomeView` | Workspace | Window shell |
