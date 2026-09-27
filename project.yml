@@ -49,7 +49,7 @@ targets:
         CFBundleVersion: "1"
         LSApplicationCategoryType: public.app-category.developer-tools
         LSMinimumSystemVersion: "15.0"
-        NSHumanReadableCopyright: ""
+        NSHumanReadableCopyright: "© 2026 Alexandre Bouttier. MIT License."
         # Inter (OFL, App/Resources/Fonts) is copied flat into Contents/Resources.
         ATSApplicationFontsPath: "."
     settings:

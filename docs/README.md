@@ -13,6 +13,9 @@ Each one marks what is *implemented* and what is *planned* (with its phase).
 | Security | [security/permissions.md](security/permissions.md) | [command execution](security/command-execution.md) |
 | Decisions | [decisions/README.md](decisions/README.md) | Architecture Decision Records |
 
+Contributors start with [CONTRIBUTING.md](../CONTRIBUTING.md); security reports follow
+[SECURITY.md](../SECURITY.md). The project is released under the [MIT License](../LICENSE).
+
 ## Keeping docs true
 
 - Change the docs in the same change as the code they describe.

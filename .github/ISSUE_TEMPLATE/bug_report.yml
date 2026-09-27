@@ -1,0 +1,45 @@
+name: Bug report
+description: Something does not work as it should.
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for reporting. Security problems go through private reporting instead (see SECURITY.md).
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened
+      description: What you did, what you expected, and what happened instead. Screenshots help.
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      placeholder: |
+        1. Open a project…
+        2. Send “…”
+        3. …
+    validations:
+      required: true
+  - type: input
+    id: model
+    attributes:
+      label: Provider and model
+      placeholder: Ollama · gemma4:26b, 32K context
+    validations:
+      required: true
+  - type: input
+    id: versions
+    attributes:
+      label: macOS and app version
+      placeholder: macOS 26.0, LocalOSXAi 0.1.0 (commit …)
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs
+      description: Optional. From Console.app, subsystem `dev.localosxai.app`. Remove anything private.
+      render: text
