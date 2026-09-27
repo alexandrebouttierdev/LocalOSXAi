@@ -5,7 +5,9 @@ import SwiftUI
 /// Streaming text is shown as plain text; once a message is complete its
 /// Markdown is rendered (paragraphs, lists, headings, code blocks). Parsing
 /// finished messages only keeps every streamed token cheap to display.
-struct AgentMessageView: View {
+/// Equatable, so the transcript skips messages that did not change while
+/// another one streams.
+struct AgentMessageView: View, Equatable {
     let message: AgentMessage
     /// False for follow-up messages of the same agent turn.
     var showsHeader = true

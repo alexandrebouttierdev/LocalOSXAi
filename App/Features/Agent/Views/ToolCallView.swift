@@ -4,10 +4,15 @@ import SwiftUI
 /// (“Read Makefile”), with its arguments and output available on demand.
 struct ToolCallView: View {
     let call: ToolCallRecord
+    /// Parsed once: the arguments of a `write_file` hold a whole file.
+    private let presentation: ToolCallPresentation
     @State private var isExpanded = false
     @State private var isHovered = false
 
-    private var presentation: ToolCallPresentation { ToolCallPresentation(call) }
+    init(call: ToolCallRecord) {
+        self.call = call
+        presentation = ToolCallPresentation(call)
+    }
     private var isAwaitingApproval: Bool { call.status == .awaitingApproval }
 
     var body: some View {

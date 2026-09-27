@@ -150,13 +150,25 @@ private struct TranscriptView: View {
         }
     }
 
+    // A VStack, not a LazyVStack: lazy rows are placed with estimated heights,
+    // and with the bottom scroll anchor a very tall message (a long prompt, a
+    // whole file in a tool call) left the view on a blank area below the
+    // conversation. Paging (`AgentViewModel.messagePageSize`) keeps the eager
+    // layout cheap, and equatable rows skip messages that did not change.
     private var transcriptContent: some View {
-        LazyVStack(alignment: .leading, spacing: AppSpacing.lg) {
+        VStack(alignment: .leading, spacing: AppSpacing.lg) {
+            let messages = viewModel.messages
             let turnStats = viewModel.turnStats
-            ForEach(Array(viewModel.messages.enumerated()), id: \.element.id) { index, message in
+            let start = viewModel.firstVisibleIndex
+            if start > 0 {
+                earlierMessagesButton(count: start)
+            }
+            ForEach(Array(messages[start...].enumerated()), id: \.element.id) { offset, message in
+                let index = start + offset
                 // Consecutive agent messages (one per tool iteration) share one header.
-                let continuesAgentTurn = index > 0 && viewModel.messages[index - 1].role == .assistant
+                let continuesAgentTurn = index > 0 && messages[index - 1].role == .assistant
                 AgentMessageView(message: message, showsHeader: !continuesAgentTurn, turnStats: turnStats[index])
+                    .equatable()
                     .padding(.top, message.role == .user && index > 0 ? AppSpacing.md : 0)
                     .transition(reduceMotion ? .opacity : .opacity.combined(with: .offset(y: 8)))
             }
@@ -172,6 +184,21 @@ private struct TranscriptView: View {
         .padding(.bottom, AppSpacing.lg)
         .frame(maxWidth: .infinity)
         .appAnimation(AppAnimation.standard, value: viewModel.messages.count)
+    }
+
+    /// Loads the previous page when scrolled into view, like an endless list;
+    /// clicking it does the same for keyboard and VoiceOver users.
+    private func earlierMessagesButton(count: Int) -> some View {
+        Button(action: viewModel.showEarlierMessages) {
+            Label("Show \(count) earlier message\(count == 1 ? "" : "s")", systemImage: "arrow.up")
+                .font(AppTypography.callout)
+        }
+        .appButton()
+        .controlSize(.small)
+        .frame(maxWidth: .infinity)
+        .onScrollVisibilityChange { isVisible in
+            if isVisible { viewModel.showEarlierMessages() }
+        }
     }
 
     private var retryButton: some View {

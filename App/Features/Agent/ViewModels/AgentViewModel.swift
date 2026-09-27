@@ -56,6 +56,21 @@ final class AgentViewModel: ToolApprover {
 
     /// Duration and tokens of each agent turn, keyed by the index of its last message.
     var turnStats: [Int: TurnStats] { TurnStats.turns(in: messages) }
+
+    /// Messages the transcript renders at first; earlier ones load a page at
+    /// a time as the user scrolls up, so a long session stays fast to open and scroll.
+    static let messagePageSize = 30
+    /// Oldest message shown so far. Messages added later are always shown.
+    private var firstShownIndex: Int
+
+    /// Index of the first message the transcript renders. At least a page
+    /// stays visible when messages are removed (a retry drops its failed turn).
+    var firstVisibleIndex: Int { min(firstShownIndex, max(messages.count - Self.messagePageSize, 0)) }
+
+    /// Shows one more page of earlier messages.
+    func showEarlierMessages() {
+        firstShownIndex = max(firstVisibleIndex - Self.messagePageSize, 0)
+    }
     var canSend: Bool {
         !isRunning && (!draft.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || !draftAttachments.isEmpty)
     }
@@ -120,6 +135,7 @@ final class AgentViewModel: ToolApprover {
         self.projectID = projectID
         self.projectRoot = projectRoot
         self.messages = messages
+        firstShownIndex = max(messages.count - Self.messagePageSize, 0)
         self.agentService = agentService
         self.currentModel = currentModel
         self.runOptions = runOptions
