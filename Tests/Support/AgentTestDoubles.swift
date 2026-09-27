@@ -99,6 +99,11 @@ extension Fixtures {
                            history: [AgentMessage] = [], model: AIModel.ID? = toolModel.id) -> AgentRunRequest {
         AgentRunRequest(sessionID: UUID(), projectRoot: root, prompt: prompt, history: history, model: model)
     }
+
+    static func compactRequest(root: URL = URL(fileURLWithPath: "/tmp/Demo"), history: [AgentMessage],
+                               model: AIModel.ID? = toolModel.id) -> AgentCompactRequest {
+        AgentCompactRequest(sessionID: UUID(), projectRoot: root, history: history, model: model)
+    }
 }
 
 /// A `CommandRunner` that replays scripted events and records requests.

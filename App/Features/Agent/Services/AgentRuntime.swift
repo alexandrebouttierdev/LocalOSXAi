@@ -13,6 +13,8 @@ struct AgentLimits: Hashable, Sendable {
     /// Summarize earlier conversation before a run that starts too full
     /// (`HistoryCompaction`); otherwise the oldest messages are only dropped.
     var summarizesHistory = true
+    /// Share of the prompt budget a run may start with before summarizing.
+    var summaryStartRatio = HistoryCompaction.defaultStartRatio
 }
 
 /// The agent loop: model → tool calls → tool results → model, until the
@@ -50,10 +52,21 @@ struct AgentRuntime: AgentService {
     }
 
     func run(_ request: AgentRunRequest, approver: any ToolApprover) -> AsyncThrowingStream<AgentEvent, Error> {
+        events { emit in try await execute(request, approver: approver, emit: emit) }
+    }
+
+    func compact(_ request: AgentCompactRequest) -> AsyncThrowingStream<AgentEvent, Error> {
+        events { emit in try await executeCompaction(request, emit: emit) }
+    }
+
+    /// Runs `body` in a task that the stream's consumer cancels by stopping.
+    private func events(
+        _ body: @escaping @Sendable (_ emit: @escaping @Sendable (AgentEvent) -> Void) async throws -> Void
+    ) -> AsyncThrowingStream<AgentEvent, Error> {
         AsyncThrowingStream { continuation in
             let task = Task {
                 do {
-                    try await execute(request, approver: approver, emit: { continuation.yield($0) })
+                    try await body { continuation.yield($0) }
                     continuation.finish()
                 } catch {
                     continuation.finish(throwing: error)
@@ -79,7 +92,7 @@ struct AgentRuntime: AgentService {
         let system = AgentPrompt.system(projectName: request.projectRoot.lastPathComponent,
                                         instructions: instructions, toolsEnabled: toolsEnabled)
         var context = try await runContext(system: system, request: request, resolved: resolved, contextTokens: contextTokens,
-                                           summarizes: limits.summarizesHistory, emit: emit)
+                                           limits: limits, emit: emit)
         let executor = makeExecutor(commandRules: request.options.commandRules, limits: limits)
         let toolContext = ToolContext(projectRoot: request.projectRoot, changeRecorder: changeRecorder)
         var consecutiveInvalidIterations = 0
@@ -127,11 +140,12 @@ struct AgentRuntime: AgentService {
     /// The run's starting context: system prompt, earlier conversation
     /// (summarized first when needed) and the new request.
     private func runContext(system: String, request: AgentRunRequest, resolved: ResolvedModel, contextTokens: Int,
-                            summarizes: Bool, emit: @Sendable (AgentEvent) -> Void) async throws -> RunContext {
+                            limits: AgentLimits, emit: @Sendable (AgentEvent) -> Void) async throws -> RunContext {
         var history = AgentPrompt.history(from: request.history)
-        if summarizes {
+        if limits.summarizesHistory {
             history = try await summarizedIfNeeded(history, system: system, request: request, resolved: resolved,
-                                                   contextTokens: contextTokens, emit: emit)
+                                                   contextTokens: contextTokens, startRatio: limits.summaryStartRatio,
+                                                   emit: emit)
         }
         return RunContext(contextTokens: contextTokens, systemPrompt: AgentPrompt.system(system, summary: history.summary),
                           history: history.messages, prompt: request.prompt)
@@ -144,36 +158,21 @@ struct AgentRuntime: AgentService {
     /// history unchanged and the context manager drops the oldest messages,
     /// as it did before summaries existed. Only cancellation ends the run.
     private func summarizedIfNeeded(_ history: AgentPrompt.History, system: String, request: AgentRunRequest,
-                                    resolved: ResolvedModel, contextTokens: Int,
+                                    resolved: ResolvedModel, contextTokens: Int, startRatio: Double,
                                     emit: @Sendable (AgentEvent) -> Void) async throws -> AgentPrompt.History {
-        let budget = RunContext.promptBudget(contextTokens: contextTokens)
         let count = HistoryCompaction.messagesToSummarize(
             history: history.messages,
             fixedTokens: TokenEstimator.estimate(messages: [system, request.prompt]),
             currentSummaryTokens: history.summary.map(TokenEstimator.estimate) ?? 0,
-            promptBudget: budget
+            promptBudget: RunContext.promptBudget(contextTokens: contextTokens),
+            startRatio: startRatio
         )
         guard count > 0 else { return history }
-        let summaryTokens = HistoryCompaction.summaryTokens(promptBudget: budget)
         let id = UUID()
         emit(.historySummaryStarted(id: id, afterMessageID: history.entries[count - 1].messageID))
         do {
-            let messages = AgentPrompt.summaryRequest(previousSummary: history.summary,
-                                                      messages: Array(history.messages.prefix(count)),
-                                                      maxInputTokens: budget, maxSummaryTokens: summaryTokens)
-            var options = request.options.generation
-            options.contextLength = contextTokens
-            var text = ""
-            for try await event in resolved.provider.stream(request: LLMRequest(model: resolved.model.name, messages: messages,
-                                                                                 options: options)) {
-                if case .textDelta(let delta) = event { text += delta }
-            }
-            try Task.checkCancellation()
-            text = text.trimmingCharacters(in: .whitespacesAndNewlines)
-            guard !text.isEmpty else { throw AgentError.emptyResponse }
-            // A model that ignores the length asked for must not crowd out the run.
-            let limit = summaryTokens * TokenEstimator.charactersPerToken
-            text = OutputLimiter.limit(text, maxCharacters: limit, note: "summary shortened to save context")
+            let text = try await summary(of: history, count: count, resolved: resolved,
+                                         generation: request.options.generation, contextTokens: contextTokens)
             emit(.historySummaryFinished(id: id, text: text))
             return AgentPrompt.History(summary: text, entries: Array(history.entries.dropFirst(count)))
         } catch {
@@ -182,6 +181,65 @@ struct AgentRuntime: AgentService {
             emit(.historySummaryDiscarded(id: id))
             return history
         }
+    }
+
+    /// Summarizes the whole conversation at the user's request. Unlike the
+    /// summary before a run, a failure is the result: it is reported.
+    private func executeCompaction(_ request: AgentCompactRequest, emit: @Sendable (AgentEvent) -> Void) async throws {
+        let history = AgentPrompt.history(from: request.history)
+        guard let last = history.entries.last,
+              history.entries.count >= HistoryCompaction.minimumSummarizedMessages else { throw AgentError.nothingToCompact }
+        guard let modelID = request.model else { throw AgentError.noModelSelected }
+        guard let resolved = await resolver.resolve(modelID) else { throw AgentError.modelUnavailable(name: modelID.name) }
+
+        let contextTokens = resolved.model.contextWindow.effectiveTokens(choosing: request.options.generation.contextLength)
+        let id = UUID()
+        emit(.historySummaryStarted(id: id, afterMessageID: last.messageID))
+        let text: String
+        do {
+            text = try await summary(of: history, count: history.entries.count, resolved: resolved,
+                                     generation: request.options.generation, contextTokens: contextTokens)
+        } catch {
+            emit(.historySummaryDiscarded(id: id))
+            if error is CancellationError || Task.isCancelled { throw CancellationError() }
+            throw error
+        }
+        emit(.historySummaryFinished(id: id, text: text))
+
+        // What the next run starts from before the new message: the system
+        // prompt with the summary, since no earlier message is replayed.
+        let instructions = await instructionsLoader.instructions(
+            for: request.projectRoot, includingClaudeInstructions: request.options.includesClaudeInstructions
+        )
+        let system = AgentPrompt.system(projectName: request.projectRoot.lastPathComponent, instructions: instructions,
+                                        toolsEnabled: resolved.model.supportsTools && !tools.isEmpty)
+        let used = TokenEstimator.estimate(messages: [AgentPrompt.system(system, summary: text)])
+        emit(.contextUsageUpdated(ContextUsage(usedTokens: used, budgetTokens: contextTokens)))
+    }
+
+    /// The model's summary of the first `count` history messages, folding in
+    /// the summary they follow, shortened to `HistoryCompaction.summaryTokens`.
+    ///
+    /// - Throws: the provider's error, or `AgentError.emptyResponse`.
+    private func summary(of history: AgentPrompt.History, count: Int, resolved: ResolvedModel,
+                         generation: GenerationOptions, contextTokens: Int) async throws -> String {
+        let budget = RunContext.promptBudget(contextTokens: contextTokens)
+        let summaryTokens = HistoryCompaction.summaryTokens(promptBudget: budget)
+        let messages = AgentPrompt.summaryRequest(previousSummary: history.summary,
+                                                  messages: Array(history.messages.prefix(count)),
+                                                  maxInputTokens: budget, maxSummaryTokens: summaryTokens)
+        var text = ""
+        let llmRequest = LLMRequest(model: resolved.model.name, messages: messages,
+                                    options: generationOptions(generation, contextTokens: contextTokens))
+        for try await event in resolved.provider.stream(request: llmRequest) {
+            if case .textDelta(let delta) = event { text += delta }
+        }
+        try Task.checkCancellation()
+        text = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !text.isEmpty else { throw AgentError.emptyResponse }
+        // A model that ignores the length asked for must not crowd out the run.
+        return OutputLimiter.limit(text, maxCharacters: summaryTokens * TokenEstimator.charactersPerToken,
+                                   note: "summary shortened to save context")
     }
 
     /// The tool executor for one run, with the project's command rules.

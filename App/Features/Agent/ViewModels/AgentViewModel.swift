@@ -13,6 +13,8 @@ final class AgentViewModel: ToolApprover {
     enum RunState: Equatable {
         case idle
         case running
+        /// The model is summarizing the session at the user's request.
+        case compacting
     }
 
     let sessionID: UUID
@@ -29,9 +31,20 @@ final class AgentViewModel: ToolApprover {
     private(set) var pendingApproval: ToolApprovalRequest?
     /// Tools the user allowed for the rest of this session.
     private(set) var toolsAllowedForSession: Set<String> = []
+    /// Why the last “Compact session” failed, until the next compaction or run.
+    /// Not a transcript entry: it would make the last message retryable.
+    private(set) var compactionError: UserFacingError?
     var draft = ""
 
-    var isRunning: Bool { runState == .running }
+    /// A run or a compaction is in progress: nothing else can start, and ⌘. stops it.
+    var isRunning: Bool { runState != .idle }
+    var isCompacting: Bool { runState == .compacting }
+
+    /// The conversation since the latest summary holds at least one exchange,
+    /// which is the least a summary is worth a model call for.
+    var canCompact: Bool {
+        !isRunning && AgentPrompt.history(from: messages).entries.count >= HistoryCompaction.minimumSummarizedMessages
+    }
 
     /// The user's latest message. It changes only when the user sends or
     /// retries a message, which is when the transcript jumps to the bottom.
@@ -130,12 +143,27 @@ final class AgentViewModel: ToolApprover {
         messages.append(AgentMessage(role: .user, text: prompt, createdAt: now()))
         runState = .running
         announcement = nil
+        compactionError = nil
         let saved = messages
         runTask = Task { [weak self] in
             // Saved before the run so a crash or quit never loses the prompt;
             // it can be retried from the transcript.
             await self?.persist(saved)
             await self?.consume(request)
+        }
+    }
+
+    /// Summarizes the whole session now, so the next run starts from the
+    /// summary alone: the messages stay visible but are no longer sent.
+    func compact() {
+        guard canCompact else { return }
+        let request = AgentCompactRequest(sessionID: sessionID, projectRoot: projectRoot, history: messages,
+                                          model: currentModel(), options: runOptions())
+        runState = .compacting
+        announcement = nil
+        compactionError = nil
+        runTask = Task { [weak self] in
+            await self?.consumeCompaction(request)
         }
     }
 
@@ -190,6 +218,33 @@ final class AgentViewModel: ToolApprover {
     /// Suspends until the current run, if any, has fully ended.
     func waitUntilIdle() async {
         await runTask?.value
+    }
+
+    private func consumeCompaction(_ request: AgentCompactRequest) async {
+        var spoken = "The session was compacted."
+        do {
+            for try await event in agentService.compact(request) {
+                if case .contextUsageUpdated(let usage) = event { contextUsage = usage }
+                TranscriptReducer.apply(event, to: &messages, now: now())
+            }
+            if Task.isCancelled {
+                TranscriptReducer.cancel(&messages, now: now())
+                spoken = "Compacting was stopped."
+            }
+        } catch is CancellationError {
+            TranscriptReducer.cancel(&messages, now: now())
+            spoken = "Compacting was stopped."
+        } catch {
+            // Removes the unfinished summary; the conversation is unchanged.
+            TranscriptReducer.cancel(&messages, now: now())
+            let presented = UserFacingError(error, title: "Could not compact the session", category: .agent)
+            compactionError = presented
+            spoken = "Could not compact the session: \(presented.message)"
+        }
+        announcement = Announcement(text: spoken)
+        runState = .idle
+        runTask = nil
+        await persist(sessionID, messages)
     }
 
     private func consume(_ request: AgentRunRequest) async {

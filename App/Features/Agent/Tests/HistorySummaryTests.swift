@@ -39,6 +39,15 @@ struct HistoryCompactionTests {
                                                       promptBudget: 6_144) == 2)
     }
 
+    @Test("the start ratio sets how full a run may start before summarizing")
+    func startRatio() {
+        // Four messages of about 500 tokens: 2.1K of a 6K budget, about a third.
+        #expect(HistoryCompaction.messagesToSummarize(history: Self.history(4), fixedTokens: 100, currentSummaryTokens: 0,
+                                                      promptBudget: 6_144, startRatio: 0.5) == 0)
+        #expect(HistoryCompaction.messagesToSummarize(history: Self.history(4), fixedTokens: 100, currentSummaryTokens: 0,
+                                                      promptBudget: 6_144, startRatio: 0.3) == 2)
+    }
+
     @Test("a summary gets an eighth of the budget, at most 1K tokens")
     func summaryTokens() {
         #expect(HistoryCompaction.summaryTokens(promptBudget: 6_144) == 768)
@@ -101,9 +110,11 @@ struct AgentRuntimeSummaryTests {
         }
     }
 
-    private func runtime(_ provider: FakeLLMProvider, summarizes: Bool = true) throws -> AgentRuntime {
+    private func runtime(_ provider: FakeLLMProvider, summarizes: Bool = true,
+                         startRatio: Double = HistoryCompaction.defaultStartRatio) throws -> AgentRuntime {
         var limits = AgentLimits()
         limits.summarizesHistory = summarizes
+        limits.summaryStartRatio = startRatio
         return AgentRuntime(resolver: StubResolver(model: Fixtures.toolModel, provider: provider), tools: try ToolRegistry([EchoTool()]),
                             instructionsLoader: StubInstructionsLoader(instructions: []), limits: limits)
     }
@@ -180,5 +191,88 @@ struct AgentRuntimeSummaryTests {
         #expect(provider.requests.count == 1)
         #expect(run.messages.first?.content.hasSuffix("# Earlier conversation (summary)\n\nEarlier work.") == true)
         #expect(run.messages.count == 4)
+    }
+
+    @Test("a higher start ratio lets the same history start without a summary")
+    func startRatioFromLimits() async throws {
+        let provider = FakeLLMProvider(turns: [.response("Done.")])
+        let result = await collect(try runtime(provider, startRatio: 0.95)
+            .run(Fixtures.runRequest(history: longHistory()), approver: StubApprover()))
+
+        #expect(result.error == nil)
+        #expect(summaryEvents(result.elements).isEmpty)
+        #expect(provider.requests.count == 1)
+    }
+
+    // MARK: Compact session
+
+    @Test("compacting summarizes the whole conversation, placed after its last message")
+    func compactsEverything() async throws {
+        let history = longHistory()
+        let provider = FakeLLMProvider(turns: [.response("Everything so far.")])
+        let result = await collect(try runtime(provider).compact(Fixtures.compactRequest(history: history)))
+
+        #expect(result.error == nil)
+        guard case let .historySummaryStarted(id, afterMessageID) = result.elements.first else {
+            Issue.record("No summary started")
+            return
+        }
+        #expect(afterMessageID == history[9].id)
+        #expect(result.elements.dropFirst().first == .historySummaryFinished(id: id, text: "Everything so far."))
+        guard case .contextUsageUpdated(let usage) = result.elements.last else {
+            Issue.record("No context usage after compacting")
+            return
+        }
+        #expect(usage.budgetTokens == ContextWindow.fallbackTokens)
+        #expect(usage.usedTokens < 1_000)
+
+        let request = try #require(provider.requests.first)
+        #expect(provider.requests.count == 1)
+        #expect(request.tools.isEmpty)
+        #expect(request.messages.last?.content.contains("User: question 0") == true)
+        #expect(request.messages.last?.content.contains("answer 9") == true)
+    }
+
+    @Test("compacting folds in the previous summary and only needs the messages after it")
+    func compactsAfterSummary() async throws {
+        var history = longHistory()
+        history.insert(AgentMessage(role: .summary, text: "Earlier work.", createdAt: Date()), at: 8)
+        let provider = FakeLLMProvider(turns: [.response("All of it.")])
+        let result = await collect(try runtime(provider).compact(Fixtures.compactRequest(history: history)))
+
+        #expect(result.error == nil)
+        let content = try #require(provider.requests.first?.messages.last?.content)
+        #expect(content.contains("Summary of what came before:\nEarlier work."))
+        #expect(!content.contains("question 0"))
+        #expect(content.contains("question 8"))
+    }
+
+    @Test("a failed compaction is discarded and reported, unlike a summary before a run")
+    func failedCompaction() async throws {
+        let provider = FakeLLMProvider(turns: [.failure(.timedOut)])
+        let result = await collect(try runtime(provider).compact(Fixtures.compactRequest(history: longHistory())))
+
+        #expect(result.error as? ProviderError == .timedOut)
+        guard case let .historySummaryStarted(id, _) = result.elements.first else {
+            Issue.record("No summary started")
+            return
+        }
+        #expect(result.elements.last == .historySummaryDiscarded(id: id))
+    }
+
+    @Test("compacting needs at least one exchange since the latest summary, and a model")
+    func nothingToCompact() async throws {
+        let provider = FakeLLMProvider(turns: [.response("Unused.")])
+        let history = [AgentMessage(role: .user, text: "Hi", createdAt: Date()),
+                       AgentMessage(role: .assistant, text: "Hello", createdAt: Date()),
+                       AgentMessage(role: .summary, text: "Greetings.", createdAt: Date()),
+                       AgentMessage(role: .user, text: "Next", createdAt: Date())]
+        let short = await collect(try runtime(provider).compact(Fixtures.compactRequest(history: history)))
+        #expect(short.error as? AgentError == .nothingToCompact)
+        #expect(short.elements.isEmpty)
+
+        let noModel = await collect(try runtime(provider).compact(Fixtures.compactRequest(history: longHistory(), model: nil)))
+        #expect(noModel.error as? AgentError == .noModelSelected)
+        #expect(provider.requests.isEmpty)
     }
 }

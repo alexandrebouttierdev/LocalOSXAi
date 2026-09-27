@@ -25,7 +25,7 @@ Status as of **Phase 8 (conversation summaries)**:
 | Agent with tools: read, list, search files and text, edit and write files | ✅ |
 | Approval of file changes (allow once / for the session / deny), stop anytime | ✅ |
 | Context management: budget, compaction, `AGENTS.md` loading | ✅ |
-| Conversation summaries: long sessions are summarized by the model instead of forgotten (can be turned off) | ✅ |
+| Conversation summaries: long sessions are summarized by the model instead of forgotten (threshold adjustable, can be turned off), or on request with “Compact session” | ✅ |
 | Streaming with reasoning, context meter, duration and tokens of each answer (live while it streams) | ✅ |
 | Ollama and LM Studio providers, model discovery, provider settings | ✅ |
 | Custom OpenAI-compatible servers (llama.cpp, vLLM, Jan…): declared tools and context, API key in the Keychain, warning for servers outside this Mac | ✅ |

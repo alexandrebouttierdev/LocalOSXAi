@@ -47,6 +47,25 @@ struct SimulatedServicesTests {
         #expect(!result.elements.contains(.finished(.completed)))
     }
 
+    @Test("simulated agent compacts a conversation without any model")
+    func compact() async {
+        let history = [AgentMessage(role: .user, text: "Q", createdAt: Date()),
+                       AgentMessage(role: .assistant, text: "A", createdAt: Date())]
+        let result = await collect(SimulatedAgentService(chunkDelay: .zero)
+            .compact(AgentCompactRequest(sessionID: UUID(), projectRoot: request.projectRoot, history: history, model: nil)))
+        #expect(result.error == nil)
+        guard case let .historySummaryStarted(id, afterMessageID) = result.elements.first else {
+            Issue.record("No summary started")
+            return
+        }
+        #expect(afterMessageID == history[1].id)
+        #expect(result.elements.contains { if case .historySummaryFinished(id, _) = $0 { true } else { false } })
+
+        let empty = await collect(SimulatedAgentService(chunkDelay: .zero)
+            .compact(AgentCompactRequest(sessionID: UUID(), projectRoot: request.projectRoot, history: [], model: nil)))
+        #expect(empty.error as? AgentError == .nothingToCompact)
+    }
+
     @Test("simulated provider lists one tool-capable model")
     func simulatedProvider() async throws {
         let models = try await SimulatedLLMProvider().listModels()

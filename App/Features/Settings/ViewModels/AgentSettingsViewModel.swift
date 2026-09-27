@@ -28,6 +28,10 @@ final class AgentSettingsViewModel {
         update { $0.summarizesHistory = value }
     }
 
+    func setCompactThresholdPercent(_ value: Int) {
+        update { $0.compactThresholdPercent = value }
+    }
+
     func resetToDefaults() {
         update { $0 = .defaults }
     }

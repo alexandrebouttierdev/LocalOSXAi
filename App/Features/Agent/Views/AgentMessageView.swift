@@ -231,14 +231,14 @@ private struct ConversationSummaryView: View {
                 ProgressView().controlSize(.mini)
                 TimelineView(.periodic(from: message.createdAt, by: 1)) { context in
                     let seconds = max(Int(context.date.timeIntervalSince(message.createdAt)), 0)
-                    Text("Summarizing earlier messages to fit the context… \(seconds) s")
+                    Text("Summarizing the conversation… \(seconds) s")
                         .font(AppTypography.callout.monospacedDigit())
                         .foregroundStyle(AppColors.textTertiary)
                         .contentTransition(.numericText())
                 }
             }
             .accessibilityElement(children: .ignore)
-            .accessibilityLabel("Summarizing earlier messages to fit the context")
+            .accessibilityLabel("Summarizing the conversation")
         } else {
             DisclosureGroup(isExpanded: $isExpanded) {
                 MarkdownText(message.text)
@@ -249,7 +249,7 @@ private struct ConversationSummaryView: View {
                     }
                     .padding(.top, AppSpacing.xs)
             } label: {
-                Label("Earlier messages summarized: the model now sees this summary instead",
+                Label("Conversation summarized: the model now sees this summary instead of the messages above",
                       systemImage: "text.append")
                     .font(AppTypography.callout)
                     .foregroundStyle(AppColors.textTertiary)

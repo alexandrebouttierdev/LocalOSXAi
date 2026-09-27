@@ -12,6 +12,14 @@ protocol AgentService: Sendable {
     /// - Parameter approver: asked before any tool call that needs the user's
     ///   consent. The run waits for its answer.
     func run(_ request: AgentRunRequest, approver: any ToolApprover) -> AsyncThrowingStream<AgentEvent, Error>
+
+    /// Summarizes the whole conversation now, at the user's request, so the
+    /// next run starts from the summary alone (docs/ai/context.md).
+    ///
+    /// Emits `historySummaryStarted`, then `historySummaryFinished` and the
+    /// new `contextUsageUpdated`. Unlike a summary made before a run, a
+    /// failure is reported: `historySummaryDiscarded`, then the stream throws.
+    func compact(_ request: AgentCompactRequest) -> AsyncThrowingStream<AgentEvent, Error>
 }
 
 /// Loads a project's agent instructions. Implemented in `Infrastructure`.

@@ -34,6 +34,16 @@ struct GeneralSettingsView: View {
                 Toggle("Summarize earlier conversation", isOn: summarizesHistory)
                     .help("When a long session no longer fits the model's context, the model first summarizes "
                           + "its oldest messages. Off: they are dropped without a summary.")
+
+                Picker("Summarize when context is", selection: compactThreshold) {
+                    ForEach(AgentSettings.compactThresholdChoices, id: \.self) { percent in
+                        Text("\(percent) % full").tag(percent)
+                    }
+                }
+                .disabled(!agent.settings.summarizesHistory)
+                .help("How full the model's context may be when a run starts before the oldest messages are "
+                      + "summarized. Lower leaves more room for the run; higher keeps more messages word for word. "
+                      + "Compact session, in the inspector, summarizes everything at any time.")
             } header: {
                 Text("Agent")
             } footer: {
@@ -63,6 +73,10 @@ struct GeneralSettingsView: View {
 
     private var summarizesHistory: Binding<Bool> {
         Binding(get: { agent.settings.summarizesHistory }, set: { agent.setSummarizesHistory($0) })
+    }
+
+    private var compactThreshold: Binding<Int> {
+        Binding(get: { agent.settings.compactThresholdPercent }, set: { agent.setCompactThresholdPercent($0) })
     }
 
     private var toolTimeout: Binding<Int> {

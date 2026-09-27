@@ -54,6 +54,23 @@ struct AgentSettingsTests {
         let json = #"{"maxIterations":40,"toolTimeoutSeconds":60}"#
         let settings = try JSONDecoder().decode(AgentSettings.self, from: Data(json.utf8))
         #expect(settings == AgentSettings(maxIterations: 40, toolTimeoutSeconds: 60, summarizesHistory: true))
+        #expect(settings.compactThresholdPercent == 50)
+    }
+
+    @Test("the summary threshold is saved, kept to its choices and becomes the runtime's start ratio")
+    func compactThreshold() {
+        let store = InMemoryAgentSettingsStore()
+        let viewModel = AgentSettingsViewModel(store: store)
+        #expect(viewModel.settings.compactThresholdPercent == 50)
+
+        viewModel.setCompactThresholdPercent(70)
+        #expect(store.load().compactThresholdPercent == 70)
+        #expect(AppEnvironment.agentLimits(from: store.load()).summaryStartRatio == 0.7)
+
+        viewModel.setCompactThresholdPercent(99)
+        #expect(viewModel.settings.compactThresholdPercent == 80)
+        viewModel.setCompactThresholdPercent(5)
+        #expect(viewModel.settings.compactThresholdPercent == 30)
     }
 
     @Test("a failed save keeps the previous value and reports an error")
@@ -83,5 +100,6 @@ struct AgentSettingsTests {
         let limits = AppEnvironment.agentLimits(from: AgentSettings(maxIterations: 40, toolTimeoutSeconds: 60))
         #expect(limits.maxIterations == 40)
         #expect(limits.toolTimeout == .seconds(60))
+        #expect(limits.summaryStartRatio == HistoryCompaction.defaultStartRatio)
     }
 }

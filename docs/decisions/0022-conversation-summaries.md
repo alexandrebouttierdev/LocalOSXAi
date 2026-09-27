@@ -1,6 +1,7 @@
 # 0022: Summarize old conversation once per run, keep the summary in the transcript
 
-**Status:** Accepted (amends 0008, which planned summaries without deciding how)
+**Status:** Accepted (amends 0008, which planned summaries without deciding how). The threshold
+became a setting and summaries can also be asked for: [ADR 0026](0026-compact-session.md).
 
 ## Context
 Local models often run with 8K–32K tokens of context. A session of a few dozen exchanges fills

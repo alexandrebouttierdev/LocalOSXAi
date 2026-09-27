@@ -38,6 +38,35 @@ struct SimulatedAgentService: AgentService {
         }
     }
 
+    func compact(_ request: AgentCompactRequest) -> AsyncThrowingStream<AgentEvent, Error> {
+        let history = AgentPrompt.history(from: request.history)
+        let delay = chunkDelay
+        let budget = contextBudget
+        return AsyncThrowingStream { continuation in
+            guard let last = history.entries.last,
+                  history.entries.count >= HistoryCompaction.minimumSummarizedMessages else {
+                continuation.finish(throwing: AgentError.nothingToCompact)
+                return
+            }
+            let task = Task {
+                let id = UUID()
+                continuation.yield(.historySummaryStarted(id: id, afterMessageID: last.messageID))
+                do {
+                    try await Task.sleep(for: delay * 20)
+                    let text = "Simulated summary of \(history.entries.count) messages: no model was called."
+                    continuation.yield(.historySummaryFinished(id: id, text: text))
+                    continuation.yield(.contextUsageUpdated(ContextUsage(usedTokens: TokenEstimator.estimate(text),
+                                                                         budgetTokens: budget)))
+                    continuation.finish()
+                } catch {
+                    continuation.yield(.historySummaryDiscarded(id: id))
+                    continuation.finish(throwing: error)
+                }
+            }
+            continuation.onTermination = { _ in task.cancel() }
+        }
+    }
+
     private static func script(for request: AgentRunRequest) -> [AgentEvent] {
         let callID = "simulated-\(UUID().uuidString.prefix(8))"
         var events: [AgentEvent] = [.assistantMessageStarted(id: UUID())]

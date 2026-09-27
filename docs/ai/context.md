@@ -72,19 +72,20 @@ forget decisions made at the start. So, **once, before a run**, `AgentRuntime` a
 to summarize them ([ADR 0022](../decisions/0022-conversation-summaries.md)):
 
 - **When**: the system prompt, the current summary, the earlier conversation and the new request
-  exceed **half** of the prompt budget (`HistoryCompaction.startRatio`). The other half stays
-  free for this run's tool calls and results.
+  exceed **half** of the prompt budget (`HistoryCompaction.defaultStartRatio`, adjustable in
+  Settings › General › “Summarize when context is”: 30–80 % full, `AgentLimits.summaryStartRatio`).
+  The rest stays free for this run's tool calls and results.
 - **What**: the oldest messages, cut before a user message so kept history never starts with an
   answer. The last exchange is always kept verbatim, and at least one exchange must be summarized.
-  The smallest cut that brings the run under half the budget is chosen, else the largest.
+  The smallest cut that brings the run under the threshold is chosen, else the largest.
 - **How**: a separate model call without tools. The request folds in the previous summary, so a
   single summary always covers everything before it. It asks for at most an eighth of the prompt
   budget (1K tokens at most) and a longer answer is shortened.
 - **Where**: the summary is appended to the system prompt (“# Earlier conversation (summary)”),
   not sent as a message: many chat templates reject two user messages in a row.
 - **Kept**: it is saved in the transcript as a `.summary` message, placed right after the last
-  message it covers. The UI shows it there as a collapsible “Earlier messages summarized” row
-  (“Summarizing earlier messages… 12 s” while the model writes it). Later runs start from the
+  message it covers. The UI shows it there as a collapsible “Conversation summarized” row
+  (“Summarizing the conversation… 12 s” while the model writes it). Later runs start from the
   latest summary and never summarize the same messages twice. The original messages stay in
   the session.
 - **Failure**: an error or an empty summary is not a run failure. The summary row disappears, the
@@ -93,7 +94,25 @@ to summarize them ([ADR 0022](../decisions/0022-conversation-summaries.md)):
 - **Off switch**: Settings › General › “Summarize earlier conversation” (on by default). Off, the
   oldest messages are only dropped.
 
+### Compact session
+
+The user can also summarize **the whole conversation now**, like `/compact`: the “Compact
+session” button of the inspector's Context section, or “Compact Session” in the palette and the
+Go menu ([ADR 0026](../decisions/0026-compact-session.md)).
+
+- `AgentService.compact(_:)` summarizes every message since the latest summary (at least one
+  exchange, else `AgentError.nothingToCompact`), with the same request, size limit and
+  placement as above: the summary goes after the last message, and the next run starts from it
+  with no earlier message replayed. It then reports the new, much smaller context usage.
+- It works with summaries turned off in Settings: the switch only concerns automatic summaries.
+- While it runs, the session is busy (`AgentViewModel.isCompacting`): nothing can be sent, and
+  ⌘. stops it, which removes the unfinished summary.
+- **Failure is reported**, unlike an automatic summary: the transcript is left as it was and the
+  inspector shows why under the button (`AgentViewModel.compactionError`), until the next
+  compaction or message. It is not a transcript entry, so it never offers to retry the last run.
+
 ## Required tests
 
-Budget computation, priority ordering, truncation markers, summarization trigger, overflow
-error, instruction precedence, and recalibration from reported usage.
+Budget computation, priority ordering, truncation markers, summarization trigger and threshold,
+manual compaction (success, failure, cancellation, nothing to compact), overflow error,
+instruction precedence, and recalibration from reported usage.

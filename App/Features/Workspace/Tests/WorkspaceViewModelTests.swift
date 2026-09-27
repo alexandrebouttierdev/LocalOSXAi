@@ -54,6 +54,14 @@ struct WorkspaceViewModelTests {
         #expect(!workspace.isEnabled(.changeModel))
     }
 
+    @Test("compact session needs a session with something to summarize")
+    func compactSessionCommand() async {
+        let workspace = makeWorkspace(projects: [Fixtures.project()])
+        await workspace.load()
+        #expect(!workspace.isEnabled(.compactSession))
+        #expect(workspace.disabledReason(for: .compactSession) != nil)
+    }
+
     @Test("navigation and window commands update state")
     func performCommands() async {
         let workspace = makeWorkspace(projects: [Fixtures.project()])

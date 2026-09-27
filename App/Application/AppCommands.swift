@@ -37,6 +37,7 @@ struct AppCommands: Commands {
             Divider()
             button(.searchFiles)
             button(.changeModel)
+            button(.compactSession)
         }
     }
 

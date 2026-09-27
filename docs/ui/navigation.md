@@ -18,7 +18,8 @@
 - `SidebarLayout` (sidebar + detail). The inspector is a **properties column inside the content
   panel**, behind a hairline, like Linear's issue properties (`InspectorView`, 300 pt, toggled from
   the panel header or the menu): label/value rows for the model (model, context, temperature,
-  reasoning, abilities), the context (usage, instruction files, CLAUDE.md switch) and Git
+  reasoning, abilities), the context (usage, instruction files, CLAUDE.md switch, and the
+  “Compact session” button, [ADR 0026](../decisions/0026-compact-session.md)) and Git
   (branch, changes, last commit), every changeable value a menu or switch on its row. The sidebar
   sits flat on the window ground, like Linear's, instead of `NavigationSplitView`'s floating
   glass panel on macOS 26 ([ADR 0025](../decisions/0025-flat-sidebar.md)). Drag its edge to
@@ -81,12 +82,13 @@ never disagree.
 | ⌘N | New Session |
 | ⌘P | Search Files… |
 | ⌘L | Change Model… |
+| — | Compact Session (palette, Go menu, inspector button) |
 | ⌘1 – ⌘4 | Agent / Files / Changes / Terminal |
 | ⌃⌘S | Toggle sidebar |
 | ⌥⌘I | Toggle inspector |
 | ⌘, | Settings screen (General, Providers); Esc or “Back to app” returns |
 | ↩ / ⌥↩ | Send / new line in the composer |
-| ⌘. | Stop the running agent |
+| ⌘. | Stop the running agent or compaction |
 | ⌃C / ↑↓ | Stop the running command / browse history (Terminal) |
 
 ## Command palette

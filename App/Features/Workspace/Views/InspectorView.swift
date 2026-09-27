@@ -43,6 +43,9 @@ struct InspectorView: View {
                             .help("Give the agent this project's CLAUDE.md after AGENTS.md. Applies to the next run.")
                         }
                     }
+                    if let agent = viewModel.activeAgent {
+                        compactButton(agent)
+                    }
                 }
                 section("Git") {
                     if let git = viewModel.activePanels?.git {
@@ -58,6 +61,39 @@ struct InspectorView: View {
             .frame(maxWidth: .infinity, alignment: .leading)
         }
         .scrollIndicators(.never)
+    }
+
+    /// Summarizes the session now, like /compact: the messages stay in the
+    /// transcript, the model sees only the summary from the next run on.
+    private func compactButton(_ agent: AgentViewModel) -> some View {
+        VStack(alignment: .leading, spacing: AppSpacing.xs) {
+            Button(action: agent.compact) {
+                HStack(spacing: AppSpacing.xs + AppSpacing.xxs) {
+                    if agent.isCompacting {
+                        ProgressView().controlSize(.mini)
+                    } else {
+                        Image(systemName: "arrow.down.right.and.arrow.up.left")
+                    }
+                    Text(agent.isCompacting ? "Compacting…" : "Compact session")
+                }
+                .frame(maxWidth: .infinity)
+            }
+            .buttonStyle(.secondary)
+            .disabled(!agent.canCompact)
+            .help(agent.isCompacting
+                  ? "The model is summarizing the session. ⌘. stops it."
+                  : "Summarize the whole conversation now, so the next message starts with a nearly empty context. "
+                    + "The messages stay visible.")
+            .accessibilityLabel(agent.isCompacting ? "Compacting session" : "Compact session")
+            if let error = agent.compactionError {
+                Label([error.message, error.recoverySuggestion].compactMap { $0 }.joined(separator: " "),
+                      systemImage: "exclamationmark.triangle.fill")
+                    .font(AppTypography.caption)
+                    .foregroundStyle(AppColors.danger)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+        }
+        .padding(.top, AppSpacing.sm)
     }
 
     private func section(_ title: String, @ViewBuilder content: () -> some View) -> some View {

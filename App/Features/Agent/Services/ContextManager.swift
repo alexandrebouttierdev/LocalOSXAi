@@ -94,12 +94,14 @@ struct RunContext: Sendable {
 /// Decides how much earlier conversation to summarize before a run.
 ///
 /// Summarizing costs a model call, so it happens once, before the run, and
-/// only when the conversation already fills half of the prompt budget: the
-/// other half stays free for this run's tool calls and results, which would
-/// otherwise push history out one iteration at a time.
+/// only when the conversation already fills a share of the prompt budget
+/// (half by default, Settings › General): the rest stays free for this run's
+/// tool calls and results, which would otherwise push history out one
+/// iteration at a time. The user can also summarize everything at once
+/// (“Compact session”), which `AgentRuntime` does without this type.
 enum HistoryCompaction {
-    /// Share of the prompt budget the run may start with before summarizing.
-    static let startRatio = 0.5
+    /// Default share of the prompt budget a run may start with before summarizing.
+    static let defaultStartRatio = 0.5
     /// Latest history messages always kept verbatim: the last exchange.
     static let keptRecentMessages = 2
     /// A summary is not worth a model call for less than one exchange.
@@ -120,8 +122,9 @@ enum HistoryCompaction {
     /// - Parameters:
     ///   - fixedTokens: the system prompt without any summary, plus the new request.
     ///   - currentSummaryTokens: the summary already in use, which a new one replaces.
+    ///   - startRatio: share of `promptBudget` the run may start with.
     static func messagesToSummarize(history: [LLMMessage], fixedTokens: Int, currentSummaryTokens: Int,
-                                    promptBudget: Int) -> Int {
+                                    promptBudget: Int, startRatio: Double = defaultStartRatio) -> Int {
         let target = Int(Double(promptBudget) * startRatio)
         let sizes = history.map { TokenEstimator.estimate(messages: [$0.content]) }
         guard fixedTokens + currentSummaryTokens + sizes.reduce(0, +) > target,

@@ -10,6 +10,7 @@ enum WorkspaceCommand: String, CaseIterable, Identifiable, Sendable {
     case projectSettings
     case searchFiles
     case changeModel
+    case compactSession
     case showAgent
     case showFiles
     case showChanges
@@ -27,6 +28,7 @@ enum WorkspaceCommand: String, CaseIterable, Identifiable, Sendable {
         case .projectSettings: "Project Settings…"
         case .searchFiles: "Search Files…"
         case .changeModel: "Change Model…"
+        case .compactSession: "Compact Session"
         case .showAgent: "Show Agent"
         case .showFiles: "Show Files"
         case .showChanges: "Show Changes"
@@ -44,6 +46,7 @@ enum WorkspaceCommand: String, CaseIterable, Identifiable, Sendable {
         case .projectSettings: "slider.horizontal.3"
         case .searchFiles: "doc.text.magnifyingglass"
         case .changeModel: "cpu"
+        case .compactSession: "arrow.down.right.and.arrow.up.left"
         case .showAgent: MainTab.agent.systemImage
         case .showFiles: MainTab.files.systemImage
         case .showChanges: MainTab.changes.systemImage
@@ -61,6 +64,7 @@ enum WorkspaceCommand: String, CaseIterable, Identifiable, Sendable {
         case .projectSettings: CommandShortcut(",", modifiers: [.option, .command])
         case .searchFiles: CommandShortcut("p")
         case .changeModel: CommandShortcut("l")
+        case .compactSession: nil
         case .showAgent: CommandShortcut("1")
         case .showFiles: CommandShortcut("2")
         case .showChanges: CommandShortcut("3")
@@ -74,7 +78,7 @@ enum WorkspaceCommand: String, CaseIterable, Identifiable, Sendable {
     var section: String {
         switch self {
         case .openProject, .newSession, .projectSettings, .searchFiles: "Project"
-        case .changeModel: "Agent"
+        case .changeModel, .compactSession: "Agent"
         case .showAgent, .showFiles, .showChanges, .openTerminal: "Navigation"
         case .toggleSidebar, .toggleInspector, .openSettings: "Window"
         }
@@ -87,6 +91,7 @@ enum WorkspaceCommand: String, CaseIterable, Identifiable, Sendable {
         case .projectSettings: ["commands", "permissions", "rules", "claude.md", "allow"]
         case .searchFiles: ["find", "file", "go to"]
         case .changeModel: ["llm", "provider", "ollama", "lm studio"]
+        case .compactSession: ["/compact", "summarize", "summary", "context", "tokens"]
         case .showAgent: ["chat", "conversation"]
         case .showFiles: ["browse", "tree"]
         case .showChanges: ["diff", "review", "edits"]

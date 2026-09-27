@@ -17,19 +17,25 @@ final class StubAgentService: AgentService {
 
     /// One behavior per run, in order; the last one repeats.
     private let behaviors: [Behavior]
+    /// Used by `compact`; `askApproval` is not meaningful there.
+    private let compaction: Behavior
     private let recordedRequests = Mutex<[AgentRunRequest]>([])
+    private let recordedCompactions = Mutex<[AgentCompactRequest]>([])
     private let cancellations = Mutex(0)
 
-    init(_ behavior: Behavior) {
+    init(_ behavior: Behavior, compaction: Behavior = .events([])) {
         behaviors = [behavior]
+        self.compaction = compaction
     }
 
-    init(sequence: [Behavior]) {
+    init(sequence: [Behavior], compaction: Behavior = .events([])) {
         precondition(!sequence.isEmpty, "A stub needs at least one behavior")
         behaviors = sequence
+        self.compaction = compaction
     }
 
     var requests: [AgentRunRequest] { recordedRequests.withLock { $0 } }
+    var compactions: [AgentCompactRequest] { recordedCompactions.withLock { $0 } }
     var cancellationCount: Int { cancellations.withLock { $0 } }
 
     func run(_ request: AgentRunRequest, approver: any ToolApprover) -> AsyncThrowingStream<AgentEvent, Error> {
@@ -37,8 +43,16 @@ final class StubAgentService: AgentService {
             requests.append(request)
             return requests.count - 1
         }
-        let behavior = behaviors[min(runIndex, behaviors.count - 1)]
-        return AsyncThrowingStream { continuation in
+        return stream(behaviors[min(runIndex, behaviors.count - 1)], approver: approver)
+    }
+
+    func compact(_ request: AgentCompactRequest) -> AsyncThrowingStream<AgentEvent, Error> {
+        recordedCompactions.withLock { $0.append(request) }
+        return stream(compaction, approver: nil)
+    }
+
+    private func stream(_ behavior: Behavior, approver: (any ToolApprover)?) -> AsyncThrowingStream<AgentEvent, Error> {
+        AsyncThrowingStream { continuation in
             let task = Task {
                 switch behavior {
                 case .events(let events):
@@ -48,7 +62,7 @@ final class StubAgentService: AgentService {
                     events.forEach { continuation.yield($0) }
                     continuation.finish(throwing: error)
                 case let .askApproval(request, decisions):
-                    let decision = await approver.decide(request)
+                    let decision = await approver?.decide(request) ?? .deny
                     decisions.record(decision)
                     continuation.yield(.finished(.completed))
                     continuation.finish()

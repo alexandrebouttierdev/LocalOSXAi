@@ -254,7 +254,14 @@ final class WorkspaceViewModel {
             selectedProjectID == nil ? "Open a project first" : nil
         case .changeModel:
             models.allModels.isEmpty ? "No models available" : nil
+        case .compactSession:
+            compactDisabledReason
         }
+    }
+
+    private var compactDisabledReason: String? {
+        guard let agent = activeAgent, !agent.canCompact else { return activeAgent == nil ? "Open a session first" : nil }
+        return agent.isRunning ? "Wait for the agent to finish" : "Nothing to summarize yet"
     }
 
     func perform(_ command: WorkspaceCommand) {
@@ -275,6 +282,7 @@ final class WorkspaceViewModel {
             selectedTab = .files
             activePanels?.files.requestSearchFocus()
         case .changeModel: showModelPalette()
+        case .compactSession: activeAgent?.compact()
         case .toggleSidebar: isSidebarVisible.toggle()
         case .toggleInspector: isInspectorPresented.toggle()
         case .openSettings: showSettings()

@@ -16,6 +16,8 @@ enum AgentError: Error, Hashable, Sendable {
     /// The model hit its limit while writing a tool call. The call was not
     /// run: its arguments are cut (a `write_file` would write half a file).
     case toolCallCutOff(contextTokens: Int)
+    /// Compaction was asked for a conversation with nothing new to summarize.
+    case nothingToCompact
 }
 
 extension AgentError: LocalizedError {
@@ -37,6 +39,8 @@ extension AgentError: LocalizedError {
         case .toolCallCutOff(let tokens):
             "The model ran out of room while writing a tool call, so the call was not run "
                 + "(context: \(TokenCountFormatter.string(for: tokens)) tokens)."
+        case .nothingToCompact:
+            "There is nothing new to summarize in this session."
         }
     }
 
@@ -58,6 +62,8 @@ extension AgentError: LocalizedError {
         case .toolCallCutOff:
             "Give the model a larger context (inspector › Model Settings for Ollama, or when loading it in "
                 + "LM Studio), then retry. Asking for smaller steps, such as one section of a file at a time, also helps."
+        case .nothingToCompact:
+            "Compact the session after at least one more exchange with the agent."
         }
     }
 }

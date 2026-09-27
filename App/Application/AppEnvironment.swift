@@ -77,7 +77,8 @@ struct AppEnvironment {
 
     nonisolated static func agentLimits(from settings: AgentSettings) -> AgentLimits {
         AgentLimits(maxIterations: settings.maxIterations, toolTimeout: .seconds(settings.toolTimeoutSeconds),
-                    summarizesHistory: settings.summarizesHistory)
+                    summarizesHistory: settings.summarizesHistory,
+                    summaryStartRatio: Double(settings.compactThresholdPercent) / 100)
     }
 
     /// Scripted agent and a fixed simulated model: for UI work and demos.

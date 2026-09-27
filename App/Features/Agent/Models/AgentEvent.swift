@@ -53,6 +53,16 @@ struct AgentRunRequest: Sendable, Hashable {
     var options = AgentRunOptions()
 }
 
+/// Everything an `AgentService` needs to summarize a session on request.
+struct AgentCompactRequest: Sendable, Hashable {
+    let sessionID: UUID
+    let projectRoot: URL
+    /// The whole transcript, oldest first.
+    let history: [AgentMessage]
+    let model: AIModel.ID?
+    var options = AgentRunOptions()
+}
+
 /// Per-project and per-model settings applied to one run, read when the user
 /// sends a message so a change applies to the next run.
 struct AgentRunOptions: Sendable, Hashable {

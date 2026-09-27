@@ -11,19 +11,31 @@ struct AgentSettings: Hashable, Sendable, Codable {
     /// Summarize earlier conversation with the model when it outgrows the
     /// context, instead of only dropping the oldest messages.
     var summarizesHistory = true
+    /// Share of the model's prompt budget, in percent, a run may start with
+    /// before earlier conversation is summarized (`HistoryCompaction`).
+    var compactThresholdPercent = 50
 
     static let defaults = AgentSettings(maxIterations: 25, toolTimeoutSeconds: 30)
     static let maxIterationsRange = 5...100
     static let toolTimeoutChoices = [15, 30, 60, 120, 300]
+    /// Lower summarizes more often, keeping more room for each run; higher
+    /// keeps more messages verbatim. Above 80 %, a run would start with too
+    /// little room for its own tool results.
+    static let compactThresholdChoices = [30, 40, 50, 60, 70, 80]
 
     /// Brings values edited elsewhere (or saved by an older version) back in range.
     var clamped: AgentSettings {
         AgentSettings(
             maxIterations: min(max(maxIterations, Self.maxIterationsRange.lowerBound), Self.maxIterationsRange.upperBound),
-            toolTimeoutSeconds: Self.toolTimeoutChoices.min { abs($0 - toolTimeoutSeconds) < abs($1 - toolTimeoutSeconds) }
-                ?? Self.defaults.toolTimeoutSeconds,
-            summarizesHistory: summarizesHistory
+            toolTimeoutSeconds: Self.nearest(toolTimeoutSeconds, in: Self.toolTimeoutChoices) ?? Self.defaults.toolTimeoutSeconds,
+            summarizesHistory: summarizesHistory,
+            compactThresholdPercent: Self.nearest(compactThresholdPercent, in: Self.compactThresholdChoices)
+                ?? Self.defaults.compactThresholdPercent
         )
+    }
+
+    private static func nearest(_ value: Int, in choices: [Int]) -> Int? {
+        choices.min { abs($0 - value) < abs($1 - value) }
     }
 }
 
@@ -35,5 +47,7 @@ extension AgentSettings {
         maxIterations = try container.decode(Int.self, forKey: .maxIterations)
         toolTimeoutSeconds = try container.decode(Int.self, forKey: .toolTimeoutSeconds)
         summarizesHistory = try container.decodeIfPresent(Bool.self, forKey: .summarizesHistory) ?? true
+        compactThresholdPercent = try container.decodeIfPresent(Int.self, forKey: .compactThresholdPercent)
+            ?? Self.defaults.compactThresholdPercent
     }
 }
