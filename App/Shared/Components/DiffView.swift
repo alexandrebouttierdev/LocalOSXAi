@@ -78,7 +78,8 @@ struct DiffView: View {
         let showsHeaders = diff.hunks.count > 1
             || diff.hunks.first?.lines.first.map { ($0.newNumber ?? $0.oldNumber ?? 1) > 1 } == true
         return diff.hunks.enumerated().flatMap { index, hunk in
-            (showsHeaders ? [Row.hunk(index, hunk.header)] : []) + hunk.lines.enumerated().map { offset, line in Row.line(index, offset, line) }
+            let lines = hunk.lines.enumerated().map { offset, line in Row.line(index, offset, line) }
+            return (showsHeaders ? [Row.hunk(index, hunk.header)] : []) + lines
         }
     }
 
