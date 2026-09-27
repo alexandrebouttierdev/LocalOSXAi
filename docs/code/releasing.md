@@ -50,12 +50,25 @@ The landing page in `site/` is published to GitHub Pages by `.github/workflows/p
 it changes on `dev` ([site/README.md](../../site/README.md)). Its download buttons point to the
 latest release, so a new release needs no change to the site.
 
-## Signing
+## Signing and notarization
 
-The app is signed **ad hoc**, not with a Developer ID, and not notarized: macOS refuses the first
-launch outright, with no “Open Anyway” on the dialog itself. Users allow it once in System
-Settings › Privacy & Security, or remove the quarantine attribute (`xattr -dr
-com.apple.quarantine`). The release
-notes say so. Notarizing needs an Apple Developer account; when one exists, add the certificate
-and an App Store Connect API key as repository secrets and sign with `codesign` and
-`notarytool` in `build-release.sh` (planned).
+`build-release.sh` signs with a Developer ID and notarizes when these repository secrets exist
+(Settings › Secrets and variables › Actions), ad hoc and un-notarized otherwise — no other
+change needed, and the release notes reflect whichever happened. See
+[ADR 0031](../decisions/0031-code-signing-notarization.md).
+
+| Secret | What |
+|---|---|
+| `MACOS_CERTIFICATE_P12_BASE64` | A **Developer ID Application** certificate and its private key, exported from Keychain Access as `.p12` (right-click the identity › Export…, set an export password), then `base64 -i Certificate.p12 \| pbcopy`. |
+| `MACOS_CERTIFICATE_PASSWORD` | The export password chosen above. |
+| `ASC_API_KEY_P8_BASE64` | An App Store Connect API key: [appstoreconnect.apple.com](https://appstoreconnect.apple.com) › Users and Access › Integrations › Keys, **Generate API Key** with Developer access. Downloads once as `AuthKey_<key ID>.p8`; `base64 -i AuthKey_….p8 \| pbcopy`. |
+| `ASC_API_KEY_ID` | The Key ID shown next to it. |
+| `ASC_API_ISSUER_ID` | The Issuer ID at the top of that page (shared by every key). |
+
+The certificate needs a Developer ID Application identity from an enrolled Apple Developer
+account (Certificates, Identifiers & Profiles › Certificates). The signing identity itself
+(`SIGNING_IDENTITY`) is read from the imported certificate at build time, not stored as a secret.
+
+Once the secrets are set, the next push to `main` (or a “replace files” run) signs and
+notarizes; the release notes and README stop mentioning the Gatekeeper warning automatically
+once a notarized release is published — update them by hand at that point.
