@@ -80,7 +80,8 @@ struct AppEnvironment {
     nonisolated static func agentLimits(from settings: AgentSettings) -> AgentLimits {
         AgentLimits(maxIterations: settings.maxIterations, toolTimeout: .seconds(settings.toolTimeoutSeconds),
                     summarizesHistory: settings.summarizesHistory,
-                    summaryStartRatio: Double(settings.compactThresholdPercent) / 100)
+                    summaryStartRatio: Double(settings.compactThresholdPercent) / 100,
+                    customInstructions: settings.customInstructions)
     }
 
     nonisolated static func notificationPreferences(from settings: AgentSettings) -> NotificationPreferences {
@@ -135,7 +136,8 @@ struct AppEnvironment {
     }
 
     func makeAgentSettingsViewModel() -> AgentSettingsViewModel {
-        AgentSettingsViewModel(store: agentSettingsStore, notifier: services.notifier)
+        AgentSettingsViewModel(store: agentSettingsStore, notifier: services.notifier,
+                               builtInPrompt: AgentPrompt.system(projectName: "Project", instructions: [], toolsEnabled: true))
     }
 
     func makeProviderSettingsViewModel(models: ModelsViewModel) -> ProviderSettingsViewModel {

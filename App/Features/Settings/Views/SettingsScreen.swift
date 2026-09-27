@@ -93,6 +93,7 @@ struct SettingsScreen: View {
     private var content: some View {
         switch section {
         case .general: GeneralSettingsView(agent: agent)
+        case .systemPrompt: SystemPromptSettingsView(agent: agent)
         case .providers: ProvidersSettingsView(viewModel: providers, models: models)
         }
     }

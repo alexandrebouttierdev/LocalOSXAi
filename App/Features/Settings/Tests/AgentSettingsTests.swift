@@ -57,6 +57,21 @@ struct AgentSettingsTests {
         #expect(settings.compactThresholdPercent == 50)
         #expect(settings.showsNotifications)
         #expect(settings.playsSound)
+        #expect(settings.customInstructions.isEmpty)
+    }
+
+    @Test("custom instructions are saved as typed, capped, and reach the runtime")
+    func customInstructions() {
+        let store = InMemoryAgentSettingsStore()
+        let viewModel = AgentSettingsViewModel(store: store, builtInPrompt: "Built in")
+        #expect(viewModel.builtInPrompt == "Built in")
+
+        viewModel.setCustomInstructions("Answer in French.")
+        #expect(store.load().customInstructions == "Answer in French.")
+        #expect(AppEnvironment.agentLimits(from: store.load()).customInstructions == "Answer in French.")
+
+        viewModel.setCustomInstructions(String(repeating: "x", count: AgentSettings.maxCustomInstructionsCharacters + 10))
+        #expect(viewModel.settings.customInstructions.count == AgentSettings.maxCustomInstructionsCharacters)
     }
 
     @Test("notifications and sound are on by default, saved when changed and passed to the workspace")

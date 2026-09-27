@@ -152,7 +152,10 @@ enum AgentPrompt {
         var messages: [LLMMessage] { entries.map(\.message) }
     }
 
-    static func system(projectName: String, instructions: [ProjectInstruction], toolsEnabled: Bool) -> String {
+    /// - Parameter customInstructions: the user's own, from Settings: after the
+    ///   built-in rules they refine, before the project's, which are more specific.
+    static func system(projectName: String, instructions: [ProjectInstruction], toolsEnabled: Bool,
+                       customInstructions: String = "") -> String {
         var prompt = """
             You are a careful software engineering agent working in the project “\(projectName)”. \
             Paths are relative to the project root. Today is \(Date().formatted(date: .complete, time: .omitted)).
@@ -175,6 +178,10 @@ enum AgentPrompt {
                 You cannot read or modify files with this model: answer from the conversation only, \
                 and say when you would need to inspect code.
                 """
+        }
+        let custom = customInstructions.trimmingCharacters(in: .whitespacesAndNewlines)
+        if !custom.isEmpty {
+            prompt += "\n\n# Instructions from the user\n\n\(custom)"
         }
         for instruction in instructions {
             prompt += "\n\n# Project instructions (\(instruction.source))\n\n\(instruction.content)"

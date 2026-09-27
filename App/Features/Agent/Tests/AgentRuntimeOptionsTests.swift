@@ -102,4 +102,19 @@ struct AgentRuntimeOptionsTests {
         let result = await collect(try runtime(provider).run(Fixtures.runRequest(), approver: StubApprover()))
         #expect(result.elements.contains(.usage(TokenUsage(promptTokens: 50, completionTokens: 3))))
     }
+
+    @Test("the user's instructions from Settings reach the model's system prompt")
+    func customInstructions() async throws {
+        let provider = FakeLLMProvider(turns: [.response("ok")])
+        var limits = AgentLimits()
+        limits.customInstructions = "Answer in French."
+        let runtime = AgentRuntime(resolver: StubResolver(model: Fixtures.toolModel, provider: provider),
+                                   tools: try ToolRegistry(), instructionsLoader: StubInstructionsLoader(), limits: limits)
+
+        _ = await collect(runtime.run(Fixtures.runRequest(), approver: StubApprover()))
+
+        let system = try #require(provider.requests.first?.messages.first)
+        #expect(system.role == .system)
+        #expect(system.content.contains("# Instructions from the user\n\nAnswer in French."))
+    }
 }

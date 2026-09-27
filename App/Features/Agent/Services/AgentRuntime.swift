@@ -15,6 +15,9 @@ struct AgentLimits: Hashable, Sendable {
     var summarizesHistory = true
     /// Share of the prompt budget a run may start with before summarizing.
     var summaryStartRatio = HistoryCompaction.defaultStartRatio
+    /// The user's instructions from Settings, read with the limits at the
+    /// start of each run so an edit applies to the next message.
+    var customInstructions = ""
 }
 
 /// The agent loop: model → tool calls → tool results → model, until the
@@ -89,8 +92,8 @@ struct AgentRuntime: AgentService {
         if !instructions.isEmpty { emit(.instructionsLoaded(instructions.map(\.source))) }
 
         let contextTokens = resolved.model.contextWindow.effectiveTokens(choosing: request.options.generation.contextLength)
-        let system = AgentPrompt.system(projectName: request.projectRoot.lastPathComponent,
-                                        instructions: instructions, toolsEnabled: toolsEnabled)
+        let system = AgentPrompt.system(projectName: request.projectRoot.lastPathComponent, instructions: instructions,
+                                        toolsEnabled: toolsEnabled, customInstructions: limits.customInstructions)
         var context = try await runContext(system: system, request: request, resolved: resolved, contextTokens: contextTokens,
                                            limits: limits, emit: emit)
         let executor = makeExecutor(commandRules: request.options.commandRules, limits: limits)
@@ -214,7 +217,8 @@ struct AgentRuntime: AgentService {
             for: request.projectRoot, includingClaudeInstructions: request.options.includesClaudeInstructions
         )
         let system = AgentPrompt.system(projectName: request.projectRoot.lastPathComponent, instructions: instructions,
-                                        toolsEnabled: resolved.model.supportsTools && !tools.isEmpty)
+                                        toolsEnabled: resolved.model.supportsTools && !tools.isEmpty,
+                                        customInstructions: limits().customInstructions)
         let used = TokenEstimator.estimate(messages: [AgentPrompt.system(system, summary: text)])
         emit(.contextUsageUpdated(ContextUsage(usedTokens: used, budgetTokens: contextTokens)))
     }
