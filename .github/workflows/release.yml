@@ -1,0 +1,87 @@
+# Every push to main publishes a GitHub release with the built app.
+#
+# The version comes from project.yml (CFBundleShortVersionString). The first
+# push of a version creates the release “v<version>”; later pushes of the
+# same version create pre-releases “v<version>-build.<run>”, so a push never
+# fails. Bump the version in project.yml to publish the next release.
+# Details: docs/code/releasing.md.
+name: Release
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+jobs:
+  release:
+    runs-on: macos-15
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Select Xcode 26
+        run: |
+          xcode=$(ls -d /Applications/Xcode_26*.app | sort -V | tail -1)
+          echo "Using $xcode"
+          sudo xcode-select -s "$xcode"
+          xcodebuild -version
+
+      - name: Install XcodeGen and SwiftLint
+        run: brew install xcodegen swiftlint
+
+      - name: make check
+        run: make check
+
+      - name: Choose the tag
+        id: version
+        run: |
+          version=$(scripts/app-version.sh)
+          if git rev-parse -q --verify "refs/tags/v$version" >/dev/null; then
+            tag="v$version-build.$GITHUB_RUN_NUMBER"
+            prerelease=true
+          else
+            tag="v$version"
+            prerelease=false
+          fi
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          echo "tag=$tag" >> "$GITHUB_OUTPUT"
+          echo "prerelease=$prerelease" >> "$GITHUB_OUTPUT"
+          echo "Releasing $tag (pre-release: $prerelease)"
+
+      - name: Build the app
+        run: scripts/build-release.sh "$GITHUB_RUN_NUMBER"
+
+      - name: Publish the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ steps.version.outputs.tag }}
+          VERSION: ${{ steps.version.outputs.version }}
+          PRERELEASE: ${{ steps.version.outputs.prerelease }}
+        run: |
+          cat > notes.md <<NOTES
+          ## Install
+
+          1. Download **LocalOSXAi-$VERSION.zip** below and unzip it.
+          2. Move **LocalOSXAi.app** to your Applications folder.
+          3. The app is not notarized yet: the first time, right-click it and choose **Open**, then
+             **Open** again (or run \`xattr -dr com.apple.quarantine /Applications/LocalOSXAi.app\`).
+
+          Requires macOS 15 or later, and Ollama, LM Studio or another local model server.
+          NOTES
+          flags=()
+          [[ "$PRERELEASE" == "true" ]] && flags+=(--prerelease)
+          gh release create "$TAG" "dist/LocalOSXAi-$VERSION.zip" \
+            --target "$GITHUB_SHA" \
+            --title "LocalOSXAi $TAG" \
+            --notes-file notes.md \
+            --generate-notes \
+            "${flags[@]}"

@@ -64,6 +64,11 @@ instead of literal colors and spacing, comments that explain *why*.
 - Screenshots or a short video for any visible change, in light and dark mode.
 - CI must be green: it runs `make check` on macOS.
 
+## Releases
+
+Work lands on `dev`. Merging into `main` publishes a GitHub release automatically; bump the
+version in `project.yml` first for a new version number ([docs/code/releasing.md](docs/code/releasing.md)).
+
 ## Security-sensitive areas
 
 Changes to tools, the project boundary, the command policy, approvals or secret storage get a

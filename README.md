@@ -7,12 +7,13 @@
 Ollama · LM Studio · llama.cpp · any OpenAI-compatible server
 
 [![CI](https://github.com/alexandrebouttierdev/LocalOSXAi/actions/workflows/ci.yml/badge.svg?branch=dev)](https://github.com/alexandrebouttierdev/LocalOSXAi/actions/workflows/ci.yml)
+[![Release](https://img.shields.io/github/v/release/alexandrebouttierdev/LocalOSXAi?include_prereleases&color=5E6AD2)](https://github.com/alexandrebouttierdev/LocalOSXAi/releases)
 [![License: MIT](https://img.shields.io/badge/license-MIT-5E6AD2.svg)](LICENSE)
 ![macOS 15+](https://img.shields.io/badge/macOS-15%2B-black?logo=apple)
 ![Swift 6](https://img.shields.io/badge/Swift-6-F05138?logo=swift&logoColor=white)
 ![SwiftUI](https://img.shields.io/badge/UI-SwiftUI-0A84FF)
 
-[Features](#features) · [Quick start](#quick-start) · [Connect a model](#connect-a-model) ·
+[Features](#features) · [Download](#download) · [Quick start](#quick-start) · [Connect a model](#connect-a-model) ·
 [How it works](#how-it-works) · [Contributing](#contributing) · [Docs](docs/README.md)
 
 </div>
@@ -69,9 +70,16 @@ clone of Cline or OpenCode.
   Jan, LocalAI…) in a few fields, with an optional API key stored in the Keychain.
 - Per-model context length, temperature and reasoning effort, right from the inspector.
 
+## Download
+
+Get the latest **LocalOSXAi.zip** from the
+[Releases page](https://github.com/alexandrebouttierdev/LocalOSXAi/releases), unzip it and move
+the app to Applications. The app is not notarized yet: the first time, right-click it and
+choose **Open**. Requires macOS 15 or later.
+
 ## Quick start
 
-LocalOSXAi is built from source for now.
+To build from source instead:
 
 **Requirements**: macOS 15 or later, Xcode 26 (Swift 6.2 toolchain), and
 [Homebrew](https://brew.sh) for the two build tools.
@@ -172,6 +180,7 @@ docs/                 architecture, conventions, AI, UI, security, decisions (AD
 - [x] Long sessions: summaries and Compact session
 - [x] Attachments, notifications, your own system prompt
 - [ ] Images for vision models
+- [x] Automatic releases on every push to `main`
 - [ ] Signed and notarized releases
 - [ ] Full manual VoiceOver pass
 
