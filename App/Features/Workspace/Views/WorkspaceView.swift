@@ -49,6 +49,14 @@ struct WorkspaceView: View {
             Text([error.message, error.recoverySuggestion].compactMap { $0 }.joined(separator: "\n\n"))
         }
         .task { await viewModel.load() }
+        // Whether the user can see the window decides between a notification
+        // and a sound when a session needs them.
+        .onReceive(NotificationCenter.default.publisher(for: NSApplication.didBecomeActiveNotification)) { _ in
+            viewModel.isAppActive = true
+        }
+        .onReceive(NotificationCenter.default.publisher(for: NSApplication.didResignActiveNotification)) { _ in
+            viewModel.isAppActive = false
+        }
     }
 
     private var workspace: some View {

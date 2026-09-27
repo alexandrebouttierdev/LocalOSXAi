@@ -1,8 +1,10 @@
 import Foundation
 
-/// User-adjustable limits of an agent run (Settings › General).
+/// User-adjustable limits of an agent run and how it reports back
+/// (Settings › General).
 ///
-/// Read at the start of every run, so a change applies to the next run.
+/// Read at the start of every run, so a change applies to the next run;
+/// notification choices are read each time a session needs the user.
 struct AgentSettings: Hashable, Sendable, Codable {
     /// Model calls per run before the run stops and asks the user to continue.
     var maxIterations: Int
@@ -14,6 +16,11 @@ struct AgentSettings: Hashable, Sendable, Codable {
     /// Share of the model's prompt budget, in percent, a run may start with
     /// before earlier conversation is summarized (`HistoryCompaction`).
     var compactThresholdPercent = 50
+    /// Post a notification when the agent answers or needs an approval while
+    /// the user is not looking at the session.
+    var showsNotifications = true
+    /// Play a sound at the same moments, even while looking at the session.
+    var playsSound = true
 
     static let defaults = AgentSettings(maxIterations: 25, toolTimeoutSeconds: 30)
     static let maxIterationsRange = 5...100
@@ -30,7 +37,9 @@ struct AgentSettings: Hashable, Sendable, Codable {
             toolTimeoutSeconds: Self.nearest(toolTimeoutSeconds, in: Self.toolTimeoutChoices) ?? Self.defaults.toolTimeoutSeconds,
             summarizesHistory: summarizesHistory,
             compactThresholdPercent: Self.nearest(compactThresholdPercent, in: Self.compactThresholdChoices)
-                ?? Self.defaults.compactThresholdPercent
+                ?? Self.defaults.compactThresholdPercent,
+            showsNotifications: showsNotifications,
+            playsSound: playsSound
         )
     }
 
@@ -49,5 +58,7 @@ extension AgentSettings {
         summarizesHistory = try container.decodeIfPresent(Bool.self, forKey: .summarizesHistory) ?? true
         compactThresholdPercent = try container.decodeIfPresent(Int.self, forKey: .compactThresholdPercent)
             ?? Self.defaults.compactThresholdPercent
+        showsNotifications = try container.decodeIfPresent(Bool.self, forKey: .showsNotifications) ?? true
+        playsSound = try container.decodeIfPresent(Bool.self, forKey: .playsSound) ?? true
     }
 }

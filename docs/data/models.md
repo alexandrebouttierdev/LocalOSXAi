@@ -23,7 +23,7 @@
 | `CommandRules` | Core | `mode` (standard / ask for everything), `allowedPrefixes` | Stored as JSON with the project ([ADR 0020](../decisions/0020-per-project-command-rules.md)) |
 | `TrackedOriginal` | Changes | `file`, `projectRoot`, `content` (`nil` = created by the agent) | SQLite `changeOriginal` |
 | `AgentRunOptions` | Agent | `includesClaudeInstructions`, `commandRules`, `generation` | Read when a message is sent; not stored |
-| `AgentSettings` | Settings | `maxIterations` (5–100), `toolTimeoutSeconds` (15 s–5 min), `summarizesHistory` (on) and `compactThresholdPercent` (30–80 %, default 50), both optional when decoding | `UserDefaults` (`agent.v1`); read at the start of each run |
+| `AgentSettings` | Settings | `maxIterations` (5–100), `toolTimeoutSeconds` (15 s–5 min), `summarizesHistory` (on) and `compactThresholdPercent` (30–80 %, default 50), `showsNotifications` and `playsSound` (on), all optional when decoding | `UserDefaults` (`agent.v1`); read at the start of each run |
 
 ## Planned
 

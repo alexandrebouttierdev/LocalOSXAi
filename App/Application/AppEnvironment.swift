@@ -49,7 +49,8 @@ struct AppEnvironment {
             registry: registry,
             services: WorkspaceServices(agentService: agent, commandRunner: runner, git: git, changeTracker: tracker,
                                         fileBrowser: LocalFileBrowser(), isSimulated: false,
-                                        storageError: storage.error),
+                                        storageError: storage.error, notifier: SystemUserNotifier(),
+                                        notificationPreferences: { notificationPreferences(from: agentSettings.load()) }),
             makeProviders: { ProviderFactory.providers(for: $0, secrets: secrets) }
         )
     }
@@ -79,6 +80,10 @@ struct AppEnvironment {
         AgentLimits(maxIterations: settings.maxIterations, toolTimeout: .seconds(settings.toolTimeoutSeconds),
                     summarizesHistory: settings.summarizesHistory,
                     summaryStartRatio: Double(settings.compactThresholdPercent) / 100)
+    }
+
+    nonisolated static func notificationPreferences(from settings: AgentSettings) -> NotificationPreferences {
+        NotificationPreferences(showsNotifications: settings.showsNotifications, playsSound: settings.playsSound)
     }
 
     /// Scripted agent and a fixed simulated model: for UI work and demos.

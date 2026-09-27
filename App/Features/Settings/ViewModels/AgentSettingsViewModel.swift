@@ -32,6 +32,14 @@ final class AgentSettingsViewModel {
         update { $0.compactThresholdPercent = value }
     }
 
+    func setShowsNotifications(_ value: Bool) {
+        update { $0.showsNotifications = value }
+    }
+
+    func setPlaysSound(_ value: Bool) {
+        update { $0.playsSound = value }
+    }
+
     func resetToDefaults() {
         update { $0 = .defaults }
     }

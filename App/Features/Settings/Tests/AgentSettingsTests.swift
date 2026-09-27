@@ -55,6 +55,22 @@ struct AgentSettingsTests {
         let settings = try JSONDecoder().decode(AgentSettings.self, from: Data(json.utf8))
         #expect(settings == AgentSettings(maxIterations: 40, toolTimeoutSeconds: 60, summarizesHistory: true))
         #expect(settings.compactThresholdPercent == 50)
+        #expect(settings.showsNotifications)
+        #expect(settings.playsSound)
+    }
+
+    @Test("notifications and sound are on by default, saved when changed and passed to the workspace")
+    func notificationChoices() {
+        let store = InMemoryAgentSettingsStore()
+        let viewModel = AgentSettingsViewModel(store: store)
+        #expect(AppEnvironment.notificationPreferences(from: store.load()) == NotificationPreferences())
+
+        viewModel.setShowsNotifications(false)
+        viewModel.setPlaysSound(false)
+
+        #expect(AppEnvironment.notificationPreferences(from: store.load())
+                == NotificationPreferences(showsNotifications: false, playsSound: false))
+        #expect(store.load().clamped == store.load())
     }
 
     @Test("the summary threshold is saved, kept to its choices and becomes the runtime's start ratio")

@@ -14,6 +14,10 @@ struct WorkspaceServices {
     let isSimulated: Bool
     /// Why history could not be opened, when the app fell back to memory.
     var storageError: (any Error)?
+    /// Tells the user a session needs them; `nil` posts nothing.
+    var notifier: (any UserNotifying)?
+    /// Read each time a session needs the user, so a Settings change applies at once.
+    var notificationPreferences: @Sendable () -> NotificationPreferences = { NotificationPreferences() }
 }
 
 /// The per-project view models behind the Files, Changes and Terminal tabs

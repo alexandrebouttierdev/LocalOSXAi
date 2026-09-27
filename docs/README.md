@@ -9,7 +9,7 @@ Each one marks what is *implemented* and what is *planned* (with its phase).
 | Code | [code/rules.md](code/rules.md) | [naming](code/naming.md), [Swift style](code/swift-style.md), [documentation](code/documentation.md), [testing](code/testing.md) |
 | Data | [data/overview.md](data/overview.md) | [models](data/models.md), [persistence](data/persistence.md), [migrations](data/migrations.md) |
 | AI | [ai/overview.md](ai/overview.md) | [providers](ai/providers.md), [agent](ai/agent.md), [tools](ai/tools.md), [context](ai/context.md), [streaming](ai/streaming.md), [errors](ai/errors.md), [model capabilities](ai/model-capabilities.md) |
-| UI | [ui/design-system.md](ui/design-system.md) | [navigation](ui/navigation.md), [components](ui/components.md), [accessibility](ui/accessibility.md) |
+| UI | [ui/design-system.md](ui/design-system.md) | [navigation](ui/navigation.md), [components](ui/components.md), [accessibility](ui/accessibility.md), [notifications](ui/notifications.md) |
 | Security | [security/permissions.md](security/permissions.md) | [command execution](security/command-execution.md) |
 | Decisions | [decisions/README.md](decisions/README.md) | Architecture Decision Records |
 

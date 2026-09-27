@@ -57,6 +57,21 @@ struct GeneralSettingsView: View {
                 }
                 .font(AppTypography.caption)
             }
+
+            Section {
+                Toggle("Show notifications", isOn: showsNotifications)
+                    .help("When the agent answers, fails, pauses or waits for an approval while you are in another "
+                          + "app, session or tab. Click the notification to open the session.")
+                Toggle("Play a sound", isOn: playsSound)
+                    .help("At the same moments, also while you are looking at the session.")
+            } header: {
+                Text("Notifications")
+            } footer: {
+                Text("macOS asks for permission with the first notification. You can change it later in "
+                     + "System Settings › Notifications.")
+                    .font(AppTypography.caption)
+                    .foregroundStyle(.secondary)
+            }
         }
         .formStyle(.grouped)
         .scrollContentBackground(.hidden)
@@ -77,6 +92,14 @@ struct GeneralSettingsView: View {
 
     private var compactThreshold: Binding<Int> {
         Binding(get: { agent.settings.compactThresholdPercent }, set: { agent.setCompactThresholdPercent($0) })
+    }
+
+    private var showsNotifications: Binding<Bool> {
+        Binding(get: { agent.settings.showsNotifications }, set: { agent.setShowsNotifications($0) })
+    }
+
+    private var playsSound: Binding<Bool> {
+        Binding(get: { agent.settings.playsSound }, set: { agent.setPlaysSound($0) })
     }
 
     private var toolTimeout: Binding<Int> {

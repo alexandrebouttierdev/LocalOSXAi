@@ -30,6 +30,9 @@ final class WorkspaceViewModel {
     var isProjectSettingsPresented = false
     /// The settings screen replaces the workspace in the main window.
     private(set) var isSettingsPresented = false
+    /// The app is frontmost. Set by the window; a session is only “seen”
+    /// while it is, so notifications are posted otherwise.
+    var isAppActive = true
     var settingsSection: SettingsSection = .general
 
     /// Set when history could not be opened and the app runs on memory only.
@@ -46,6 +49,9 @@ final class WorkspaceViewModel {
         self.services = services
         storageError = services.storageError.map {
             UserFacingError($0, title: "History is not being saved", category: .persistence)
+        }
+        services.notifier?.setOpenHandler { [weak self] sessionID in
+            Task { await self?.openSession(sessionID) }
         }
     }
 
@@ -210,6 +216,9 @@ final class WorkspaceViewModel {
             },
             persist: { [weak self] sessionID, messages in
                 await self?.persist(messages, in: sessionID)
+            },
+            onAttention: { [weak self, title = session.title] attention in
+                self?.notify(attention, sessionID: sessionID, projectID: projectID, fallbackTitle: title)
             }
         )
         agents[sessionID] = agent

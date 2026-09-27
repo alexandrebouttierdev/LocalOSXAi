@@ -80,6 +80,7 @@ final class AgentViewModel: ToolApprover {
     /// honored at once, before the next run reads the saved project rules.
     private var commandPrefixesAllowed: [String] = []
     private let persist: @Sendable (UUID, [AgentMessage]) async -> Void
+    private let onAttention: @MainActor (AgentAttention) -> Void
     private let now: @Sendable () -> Date
     private var runTask: Task<Void, Never>?
     private var approvalContinuation: CheckedContinuation<ToolApprovalDecision, Never>?
@@ -89,6 +90,8 @@ final class AgentViewModel: ToolApprover {
     ///   - runOptions: per-project and per-model settings, also read at send time.
     ///   - addCommandRule: saves a command prefix the user always allows in the project.
     ///   - persist: called with the full transcript after each run ends.
+    ///   - onAttention: called when a run ends or waits for an approval, to
+    ///     notify the user; not for a run they stopped.
     init(
         sessionID: UUID,
         projectID: UUID? = nil,
@@ -99,6 +102,7 @@ final class AgentViewModel: ToolApprover {
         runOptions: @escaping @MainActor () -> AgentRunOptions = { AgentRunOptions() },
         addCommandRule: @escaping @MainActor (String) async -> Void = { _ in },
         persist: @escaping @Sendable (UUID, [AgentMessage]) async -> Void,
+        onAttention: @escaping @MainActor (AgentAttention) -> Void = { _ in },
         now: @escaping @Sendable () -> Date = { Date() }
     ) {
         self.sessionID = sessionID
@@ -110,6 +114,7 @@ final class AgentViewModel: ToolApprover {
         self.runOptions = runOptions
         self.addCommandRule = addCommandRule
         self.persist = persist
+        self.onAttention = onAttention
         self.now = now
     }
 
@@ -192,6 +197,7 @@ final class AgentViewModel: ToolApprover {
                 approvalContinuation = continuation
                 pendingApproval = request
                 announcement = Announcement(text: "Approval needed: \(request.summary)")
+                onAttention(.approvalNeeded(summary: request.summary))
             }
         } onCancel: {
             Task { @MainActor [weak self] in self?.resolveApproval(.deny) }
@@ -249,12 +255,14 @@ final class AgentViewModel: ToolApprover {
 
     private func consume(_ request: AgentRunRequest) async {
         var spoken = "The agent finished."
+        var attention: AgentAttention?
         do {
+            var outcome: AgentRunOutcome?
             for try await event in agentService.run(request, approver: self) {
                 switch event {
                 case .contextUsageUpdated(let usage): contextUsage = usage
                 case .instructionsLoaded(let sources): instructionSources = sources
-                case .finished(.reachedIterationLimit): spoken = "The agent paused after its step limit."
+                case .finished(let finished): outcome = finished
                 default: break
                 }
                 TranscriptReducer.apply(event, to: &messages, now: now())
@@ -263,6 +271,11 @@ final class AgentViewModel: ToolApprover {
             if Task.isCancelled {
                 TranscriptReducer.cancel(&messages, now: now())
                 spoken = "The agent was stopped."
+            } else if outcome == .reachedIterationLimit {
+                spoken = "The agent paused after its step limit."
+                attention = .pausedAtStepLimit
+            } else {
+                attention = .answered(preview: messages.last { $0.role == .assistant }?.text ?? "")
             }
         } catch is CancellationError {
             TranscriptReducer.cancel(&messages, now: now())
@@ -271,8 +284,10 @@ final class AgentViewModel: ToolApprover {
             let presented = UserFacingError(error, title: "The agent run failed", category: .agent)
             TranscriptReducer.fail(&messages, error: presented, now: now())
             spoken = "The agent run failed: \(presented.message)"
+            attention = .failed(message: presented.message)
         }
         announcement = Announcement(text: spoken)
+        if let attention { onAttention(attention) }
         // A run cannot end while waiting for the user, but never leave a request dangling.
         resolveApproval(.deny)
         runState = .idle

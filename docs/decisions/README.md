@@ -45,3 +45,4 @@ Accepted ADRs are not edited to change their decision. Write a new ADR that supe
 | [0024](0024-settings-screen.md) | Settings as a screen of the main window, not a Settings window | Accepted |
 | [0025](0025-flat-sidebar.md) | A flat sidebar with custom rows instead of `NavigationSplitView` and `List` | Accepted |
 | [0026](0026-compact-session.md) | “Compact session” summarizes everything on request; the automatic threshold is a setting | Accepted |
+| [0027](0027-notifications.md) | Notify only when the user is not looking; the sound follows its own switch | Accepted |
