@@ -41,7 +41,7 @@ struct SettingsScreen: View {
             SectionHeader(title: "Settings")
                 .padding(.horizontal, AppSpacing.sm)
             ForEach(SettingsSection.allCases) { item in
-                SidebarRow(isSelected: item == section, action: { section = item }) {
+                SidebarRow(isSelected: item == section, action: { section = item }, label: {
                     HStack(spacing: AppSpacing.sm) {
                         Image(systemName: item.systemImage)
                             .foregroundStyle(AppColors.textSecondary)
@@ -49,7 +49,7 @@ struct SettingsScreen: View {
                             .accessibilityHidden(true)
                         Text(item.title)
                     }
-                }
+                })
             }
             Spacer(minLength: 0)
         }

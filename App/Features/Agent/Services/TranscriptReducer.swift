@@ -25,28 +25,12 @@ enum TranscriptReducer {
                 message.preparingToolCall = nil
                 message.toolCalls.append(record)
             }
-        case let .toolCallStatusChanged(id, status):
-            updateToolCall(id: id, in: &messages) { $0.status = status }
-        case let .toolCallFinished(id, status, summary, output):
-            updateToolCall(id: id, in: &messages) { record in
-                record.status = status
-                record.summary = summary
-                record.output = output
-            }
+        case .toolCallStatusChanged, .toolCallFinished:
+            applyToolCallUpdate(event, to: &messages)
         case .usage(let usage):
             updateStreaming(&messages, now: now) { $0.outputTokens = usage.completionTokens }
-        case let .historySummaryStarted(id, afterMessageID):
-            // Placed right after the last message it covers: everything above
-            // it is what the model no longer sees verbatim.
-            guard let index = messages.firstIndex(where: { $0.id == afterMessageID }) else { return }
-            messages.insert(AgentMessage(id: id, role: .summary, text: "", state: .streaming, createdAt: now), at: index + 1)
-        case let .historySummaryFinished(id, text):
-            guard let index = messages.firstIndex(where: { $0.id == id }) else { return }
-            messages[index].text = text
-            messages[index].state = .complete
-            messages[index].finishedAt = now
-        case .historySummaryDiscarded(let id):
-            messages.removeAll { $0.id == id }
+        case .historySummaryStarted, .historySummaryFinished, .historySummaryDiscarded:
+            applySummary(event, to: &messages, now: now)
         case .contextUsageUpdated, .instructionsLoaded:
             break
         case .finished:
@@ -68,6 +52,40 @@ enum TranscriptReducer {
     }
 
     // MARK: Helpers
+
+    private static func applyToolCallUpdate(_ event: AgentEvent, to messages: inout [AgentMessage]) {
+        switch event {
+        case let .toolCallStatusChanged(id, status):
+            updateToolCall(id: id, in: &messages) { $0.status = status }
+        case let .toolCallFinished(id, status, summary, output):
+            updateToolCall(id: id, in: &messages) { record in
+                record.status = status
+                record.summary = summary
+                record.output = output
+            }
+        default:
+            break
+        }
+    }
+
+    private static func applySummary(_ event: AgentEvent, to messages: inout [AgentMessage], now: Date) {
+        switch event {
+        case let .historySummaryStarted(id, afterMessageID):
+            // Placed right after the last message it covers: everything above
+            // it is what the model no longer sees verbatim.
+            guard let index = messages.firstIndex(where: { $0.id == afterMessageID }) else { return }
+            messages.insert(AgentMessage(id: id, role: .summary, text: "", state: .streaming, createdAt: now), at: index + 1)
+        case let .historySummaryFinished(id, text):
+            guard let index = messages.firstIndex(where: { $0.id == id }) else { return }
+            messages[index].text = text
+            messages[index].state = .complete
+            messages[index].finishedAt = now
+        case .historySummaryDiscarded(let id):
+            messages.removeAll { $0.id == id }
+        default:
+            break
+        }
+    }
 
     private static func updateStreaming(_ messages: inout [AgentMessage], now: Date,
                                         _ update: (inout AgentMessage) -> Void) {

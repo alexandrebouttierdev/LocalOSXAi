@@ -94,8 +94,8 @@ struct AgentRuntime: AgentService {
         let contextTokens = resolved.model.contextWindow.effectiveTokens(choosing: request.options.generation.contextLength)
         let system = AgentPrompt.system(projectName: request.projectRoot.lastPathComponent, instructions: instructions,
                                         toolsEnabled: toolsEnabled, customInstructions: limits.customInstructions)
-        var context = try await runContext(system: system, request: request, resolved: resolved, contextTokens: contextTokens,
-                                           limits: limits, emit: emit)
+        let setup = RunSetup(request: request, resolved: resolved, contextTokens: contextTokens, limits: limits)
+        var context = try await runContext(system: system, setup: setup, emit: emit)
         let executor = makeExecutor(commandRules: request.options.commandRules, limits: limits)
         let toolContext = ToolContext(projectRoot: request.projectRoot, changeRecorder: changeRecorder)
         var consecutiveInvalidIterations = 0
@@ -140,18 +140,23 @@ struct AgentRuntime: AgentService {
         emit(.finished(.reachedIterationLimit))
     }
 
+    /// What a run was started with, resolved once at its start.
+    private struct RunSetup {
+        let request: AgentRunRequest
+        let resolved: ResolvedModel
+        let contextTokens: Int
+        let limits: AgentLimits
+    }
+
     /// The run's starting context: system prompt, earlier conversation
     /// (summarized first when needed) and the new request.
-    private func runContext(system: String, request: AgentRunRequest, resolved: ResolvedModel, contextTokens: Int,
-                            limits: AgentLimits, emit: @Sendable (AgentEvent) -> Void) async throws -> RunContext {
-        var history = AgentPrompt.history(from: request.history)
-        let prompt = AgentPrompt.userContent(request.prompt, attachments: request.attachments)
-        if limits.summarizesHistory {
-            history = try await summarizedIfNeeded(history, system: system, prompt: prompt, request: request,
-                                                   resolved: resolved, contextTokens: contextTokens,
-                                                   startRatio: limits.summaryStartRatio, emit: emit)
+    private func runContext(system: String, setup: RunSetup, emit: @Sendable (AgentEvent) -> Void) async throws -> RunContext {
+        var history = AgentPrompt.history(from: setup.request.history)
+        let prompt = AgentPrompt.userContent(setup.request.prompt, attachments: setup.request.attachments)
+        if setup.limits.summarizesHistory {
+            history = try await summarizedIfNeeded(history, system: system, prompt: prompt, setup: setup, emit: emit)
         }
-        return RunContext(contextTokens: contextTokens, systemPrompt: AgentPrompt.system(system, summary: history.summary),
+        return RunContext(contextTokens: setup.contextTokens, systemPrompt: AgentPrompt.system(system, summary: history.summary),
                           history: history.messages, prompt: prompt)
     }
 
@@ -162,22 +167,21 @@ struct AgentRuntime: AgentService {
     /// history unchanged and the context manager drops the oldest messages,
     /// as it did before summaries existed. Only cancellation ends the run.
     /// - Parameter prompt: the new message as sent, with its attachments.
-    private func summarizedIfNeeded(_ history: AgentPrompt.History, system: String, prompt: String, request: AgentRunRequest,
-                                    resolved: ResolvedModel, contextTokens: Int, startRatio: Double,
+    private func summarizedIfNeeded(_ history: AgentPrompt.History, system: String, prompt: String, setup: RunSetup,
                                     emit: @Sendable (AgentEvent) -> Void) async throws -> AgentPrompt.History {
         let count = HistoryCompaction.messagesToSummarize(
             history: history.messages,
             fixedTokens: TokenEstimator.estimate(messages: [system, prompt]),
             currentSummaryTokens: history.summary.map(TokenEstimator.estimate) ?? 0,
-            promptBudget: RunContext.promptBudget(contextTokens: contextTokens),
-            startRatio: startRatio
+            promptBudget: RunContext.promptBudget(contextTokens: setup.contextTokens),
+            startRatio: setup.limits.summaryStartRatio
         )
         guard count > 0 else { return history }
         let id = UUID()
         emit(.historySummaryStarted(id: id, afterMessageID: history.entries[count - 1].messageID))
         do {
-            let text = try await summary(of: history, count: count, resolved: resolved,
-                                         generation: request.options.generation, contextTokens: contextTokens)
+            let text = try await summary(of: history, count: count, resolved: setup.resolved,
+                                         generation: setup.request.options.generation, contextTokens: setup.contextTokens)
             emit(.historySummaryFinished(id: id, text: text))
             return AgentPrompt.History(summary: text, entries: Array(history.entries.dropFirst(count)))
         } catch {

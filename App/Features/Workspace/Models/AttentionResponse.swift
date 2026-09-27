@@ -1,5 +1,12 @@
 import Foundation
 
+/// The session a notification is about.
+struct NotifiedSession: Hashable, Sendable {
+    let id: UUID
+    let title: String
+    let projectName: String
+}
+
 /// How the app tells the user that a session needs them.
 enum AttentionResponse: Hashable, Sendable {
     case none
@@ -10,10 +17,10 @@ enum AttentionResponse: Hashable, Sendable {
     /// A notification only when the user is not looking at the session (the
     /// app is in the background, or another session, tab or settings is
     /// shown); otherwise, at most a sound.
-    static func response(to attention: AgentAttention, sessionID: UUID, sessionTitle: String, projectName: String,
-                         isSessionVisible: Bool, preferences: NotificationPreferences) -> AttentionResponse {
+    static func response(to attention: AgentAttention, session: NotifiedSession, isSessionVisible: Bool,
+                         preferences: NotificationPreferences) -> AttentionResponse {
         if !isSessionVisible, preferences.showsNotifications {
-            return .notification(UserNotification(sessionID: sessionID, title: sessionTitle, subtitle: projectName,
+            return .notification(UserNotification(sessionID: session.id, title: session.title, subtitle: session.projectName,
                                                   body: body(for: attention), playsSound: preferences.playsSound))
         }
         return preferences.playsSound ? .sound : .none

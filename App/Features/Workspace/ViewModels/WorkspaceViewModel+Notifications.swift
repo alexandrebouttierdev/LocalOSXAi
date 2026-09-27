@@ -19,11 +19,9 @@ extension WorkspaceViewModel {
     func notify(_ attention: AgentAttention, sessionID: Session.ID, projectID: Project.ID, fallbackTitle: String) {
         guard let notifier = services.notifier else { return }
         let title = sessions.session(id: sessionID)?.title ?? fallbackTitle
-        let response = AttentionResponse.response(
-            to: attention, sessionID: sessionID, sessionTitle: title,
-            projectName: projects.project(id: projectID)?.name ?? "",
-            isSessionVisible: isVisible(sessionID), preferences: services.notificationPreferences()
-        )
+        let session = NotifiedSession(id: sessionID, title: title, projectName: projects.project(id: projectID)?.name ?? "")
+        let response = AttentionResponse.response(to: attention, session: session, isSessionVisible: isVisible(sessionID),
+                                                  preferences: services.notificationPreferences())
         switch response {
         case .none: break
         case .sound: notifier.playSound()

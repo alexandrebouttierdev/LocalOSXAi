@@ -15,7 +15,7 @@ import UserNotifications
 /// Sendable value (the session id) before hopping to the main actor.
 @MainActor
 final class SystemUserNotifier: NSObject, UserNotifying, UNUserNotificationCenterDelegate {
-    private nonisolated static let sessionIDKey = "sessionID"
+    nonisolated private static let sessionIDKey = "sessionID"
     /// A short system sound, quieter than the alert sound.
     private static let soundName = NSSound.Name("Tink")
     private var openHandler: (@MainActor (UUID) -> Void)?
@@ -55,7 +55,7 @@ final class SystemUserNotifier: NSObject, UserNotifying, UNUserNotificationCente
 
     /// Nonisolated, so the non-Sendable settings object never crosses to the
     /// main actor: only the status does.
-    private nonisolated static func authorizationStatus() async -> UNAuthorizationStatus {
+    nonisolated private static func authorizationStatus() async -> UNAuthorizationStatus {
         await UNUserNotificationCenter.current().notificationSettings().authorizationStatus
     }
 

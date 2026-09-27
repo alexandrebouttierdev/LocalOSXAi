@@ -166,7 +166,7 @@ struct SidebarView: View {
     private var viewRows: some View {
         VStack(alignment: .leading, spacing: 1) {
             ForEach(Self.views) { tab in
-                SidebarRow(isSelected: viewModel.selectedTab == tab, action: { viewModel.selectedTab = tab }) {
+                SidebarRow(isSelected: viewModel.selectedTab == tab, action: { viewModel.selectedTab = tab }, label: {
                     HStack(spacing: AppSpacing.sm) {
                         SidebarIcon(systemImage: tab.systemImage, tint: Self.tint(for: tab))
                         Text(tab.title)
@@ -178,7 +178,7 @@ struct SidebarView: View {
                                 .accessibilityLabel("\(viewModel.pendingChangesCount) pending")
                         }
                     }
-                }
+                })
             }
         }
     }
@@ -217,9 +217,9 @@ struct SidebarView: View {
         return SidebarRow(isSelected: isSelected, action: {
             isListFocused = true
             Task { await viewModel.selectSession(session.id) }
-        }) {
+        }, label: {
             SessionRowLabel(session: session, activity: viewModel.activity(of: session.id))
-        }
+        })
         .contextMenu {
             Button("Delete Session", role: .destructive) {
                 Task { await viewModel.sessions.delete(session.id) }

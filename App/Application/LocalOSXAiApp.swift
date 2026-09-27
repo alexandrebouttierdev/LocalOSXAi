@@ -40,6 +40,5 @@ struct LocalOSXAiApp: App {
         .commands {
             AppCommands(workspace: workspace)
         }
-
     }
 }

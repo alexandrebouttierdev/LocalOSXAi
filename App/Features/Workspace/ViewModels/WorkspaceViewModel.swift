@@ -296,11 +296,19 @@ final class WorkspaceViewModel {
             activePanels?.files.requestSearchFocus()
         case .changeModel: showModelPalette()
         case .compactSession: activeAgent?.compact()
+        case .toggleSidebar, .toggleInspector, .openSettings, .about: performWindowCommand(command)
+        case .showAgent, .showFiles, .showChanges, .openTerminal: break
+        }
+    }
+
+    /// Commands that only change what the window shows.
+    private func performWindowCommand(_ command: WorkspaceCommand) {
+        switch command {
         case .toggleSidebar: isSidebarVisible.toggle()
         case .toggleInspector: isInspectorPresented.toggle()
         case .openSettings: showSettings()
         case .about: isAboutPresented = true
-        case .showAgent, .showFiles, .showChanges, .openTerminal: break
+        default: break
         }
     }
 
