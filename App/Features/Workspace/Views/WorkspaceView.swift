@@ -22,6 +22,7 @@ struct WorkspaceView: View {
                             min: AppLayout.inspectorMinWidth, ideal: AppLayout.inspectorIdealWidth, max: AppLayout.inspectorMaxWidth
                         )
                 }
+                .toolbarBackground(AppColors.background, for: .windowToolbar)
                 .navigationTitle(viewModel.windowTitle)
                 .navigationSubtitle(viewModel.windowSubtitle)
                 .toolbar {

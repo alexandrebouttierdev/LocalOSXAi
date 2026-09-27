@@ -22,8 +22,7 @@ struct CommandPaletteView: View {
             footer
         }
         .frame(width: AppLayout.commandPaletteWidth)
-        .appGlass(in: RoundedRectangle(cornerRadius: AppRadius.overlay, style: .continuous))
-        .appShadow(.overlay)
+        .appFloating(in: RoundedRectangle(cornerRadius: AppRadius.overlay, style: .continuous))
         .defaultFocus($isSearchFocused, true)
         // Also after the first layout pass: focus requested during onAppear
         // alone is sometimes dropped when the overlay is inserted.

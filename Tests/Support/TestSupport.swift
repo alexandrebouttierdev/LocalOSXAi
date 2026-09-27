@@ -163,3 +163,33 @@ actor MemoryChangeOriginalsStore: ChangeOriginalsStore {
         originals[file] = nil
     }
 }
+
+/// A secret store whose reads or writes fail, for Keychain error paths.
+final class FailingProviderSecretStore: ProviderSecretStore {
+    struct Failure: Error {}
+
+    private let stored: InMemoryProviderSecretStore
+    private let failsReads: Bool
+    private let failsWrites: Bool
+
+    init(_ keys: [ProviderID: String] = [:], failsReads: Bool = false, failsWrites: Bool = false) {
+        stored = InMemoryProviderSecretStore(keys)
+        self.failsReads = failsReads
+        self.failsWrites = failsWrites
+    }
+
+    func apiKey(for provider: ProviderID) throws -> String? {
+        if failsReads { throw Failure() }
+        return stored.apiKey(for: provider)
+    }
+
+    func setAPIKey(_ key: String?, for provider: ProviderID) throws {
+        if failsWrites { throw Failure() }
+        stored.setAPIKey(key, for: provider)
+    }
+
+    /// The stored key, bypassing the configured failures.
+    func storedKey(for provider: ProviderID) -> String? {
+        stored.apiKey(for: provider)
+    }
+}

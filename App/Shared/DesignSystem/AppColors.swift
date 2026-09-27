@@ -3,6 +3,10 @@ import SwiftUI
 
 /// Semantic color tokens. Views use these names only, never literal colors.
 ///
+/// The palette is Linear's: a near-black, neutral ground (no tint from the
+/// desktop: every surface is opaque), text from #F7F8F8 down to grey, borders
+/// that are barely there, and a single indigo accent (#5E6AD2).
+///
 /// Every token resolves dynamically for light, dark and Increase Contrast
 /// appearances through `NSColor(name:dynamicProvider:)`, so a token keeps
 /// working when the user switches appearance while the app runs. Text tokens
@@ -11,39 +15,42 @@ import SwiftUI
 enum AppColors {
     // MARK: Surfaces
     /// The window ground, behind the sidebar and around the content panel.
-    static let background = dynamic(light: 0xF4F4F5, dark: 0x0B0C0D)
+    static let background = dynamic(light: 0xF5F5F7, dark: 0x08090A)
     /// The content panel inset on the ground (Linear's layout).
-    static let surface = dynamic(light: 0xFFFFFF, dark: 0x111214)
-    static let surfaceRaised = dynamic(light: 0xFFFFFF, dark: 0x1C1D21)
-    static let hover = dynamic(light: 0x000000, lightAlpha: 0.04, dark: 0xFFFFFF, darkAlpha: 0.045)
-    static let selection = dynamic(light: 0x000000, lightAlpha: 0.07, dark: 0xFFFFFF, darkAlpha: 0.08)
-    static let scrim = dynamic(light: 0x000000, lightAlpha: 0.12, dark: 0x000000, darkAlpha: 0.32)
+    static let surface = dynamic(light: 0xFFFFFF, dark: 0x0F1011)
+    /// Floating layers: composer, menus, palette, cards, secondary buttons.
+    static let surfaceRaised = dynamic(light: 0xFFFFFF, dark: 0x18191C)
+    static let hover = dynamic(light: 0x000000, lightAlpha: 0.04, dark: 0xFFFFFF, darkAlpha: 0.04)
+    static let selection = dynamic(light: 0x000000, lightAlpha: 0.06, dark: 0xFFFFFF, darkAlpha: 0.07)
+    static let scrim = dynamic(light: 0x000000, lightAlpha: 0.12, dark: 0x000000, darkAlpha: 0.45)
+    /// Soft shadow under floating layers: deep in the dark, faint in the light.
+    static let shadow = dynamic(light: 0x000000, lightAlpha: 0.08, dark: 0x000000, darkAlpha: 0.5)
 
     // MARK: Borders
     /// Separators and panel outlines.
-    static let hairline = dynamic(light: 0x000000, lightAlpha: 0.07, dark: 0xFFFFFF, darkAlpha: 0.06,
+    static let hairline = dynamic(light: 0x000000, lightAlpha: 0.06, dark: 0xFFFFFF, darkAlpha: 0.05,
                                   highContrastAlpha: 0.35)
-    static let border = dynamic(light: 0x000000, lightAlpha: 0.08, dark: 0xFFFFFF, darkAlpha: 0.08,
+    static let border = dynamic(light: 0x000000, lightAlpha: 0.09, dark: 0xFFFFFF, darkAlpha: 0.08,
                                 highContrastAlpha: 0.35)
-    static let borderStrong = dynamic(light: 0x000000, lightAlpha: 0.14, dark: 0xFFFFFF, darkAlpha: 0.14,
+    static let borderStrong = dynamic(light: 0x000000, lightAlpha: 0.15, dark: 0xFFFFFF, darkAlpha: 0.13,
                                       highContrastAlpha: 0.5)
 
     // MARK: Text
-    static let textPrimary = dynamic(light: 0x1B1C1F, dark: 0xE6E7EA)
-    static let textSecondary = dynamic(light: 0x5A5D66, dark: 0x9A9CA5)
+    static let textPrimary = dynamic(light: 0x1B1C1F, dark: 0xF7F8F8)
+    static let textSecondary = dynamic(light: 0x5A5D66, dark: 0x8A8F98)
     /// Lowest-emphasis text still readable at body size (≥ 4.5:1).
-    static let textTertiary = dynamic(light: 0x696C75, dark: 0x7C7F89)
+    static let textTertiary = dynamic(light: 0x6B6F76, dark: 0x7C7F89)
 
     // MARK: Accent and status
     /// Fills carrying white text or marks: primary button, badges, meters.
-    static let accent = dynamic(light: 0x5E67D1, dark: 0x5B64CF)
+    static let accent = dynamic(light: 0x5E6AD2, dark: 0x5E6AD2)
     /// The accent as text or a thin glyph: readable (≥ 4.5:1) on dark surfaces,
     /// where the fill color would be too dim.
-    static let accentText = dynamic(light: 0x4F58C4, dark: 0xAAB0F5)
-    static let accentSubtle = dynamic(light: 0x5E67D1, lightAlpha: 0.12, dark: 0x7C84E6, darkAlpha: 0.16)
+    static let accentText = dynamic(light: 0x4F58C4, dark: 0x828FFF)
+    static let accentSubtle = dynamic(light: 0x5E6AD2, lightAlpha: 0.10, dark: 0x5E6AD2, darkAlpha: 0.18)
     static let success = dynamic(light: 0x2E8A5B, dark: 0x4CB782)
-    static let warning = dynamic(light: 0xA26A12, dark: 0xE0A43B)
-    static let danger = dynamic(light: 0xC62F35, dark: 0xEB5A5F)
+    static let warning = dynamic(light: 0xA26A12, dark: 0xF2994A)
+    static let danger = dynamic(light: 0xC62F35, dark: 0xEB5757)
 
     /// Stable hues identifying projects (badge fill). Muted so badges never
     /// compete with the accent or status colors.
@@ -55,7 +62,7 @@ enum AppColors {
     ]
 
     /// Code blocks: slightly recessed from the surface they sit on.
-    static let codeBackground = dynamic(light: 0x000000, lightAlpha: 0.035, dark: 0x000000, darkAlpha: 0.28)
+    static let codeBackground = dynamic(light: 0x000000, lightAlpha: 0.035, dark: 0xFFFFFF, darkAlpha: 0.025)
 
     // MARK: Factory
 

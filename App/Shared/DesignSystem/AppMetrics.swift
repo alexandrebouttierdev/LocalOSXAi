@@ -22,11 +22,11 @@ enum AppRadius {
     /// The content panel inset on the window ground.
     static let panel: CGFloat = 12
     /// Floating overlays such as the command palette.
-    static let overlay: CGFloat = 14
+    static let overlay: CGFloat = 12
     /// User message bubbles.
-    static let bubble: CGFloat = 16
+    static let bubble: CGFloat = 10
     /// The floating composer and the approval banner.
-    static let composer: CGFloat = 20
+    static let composer: CGFloat = 12
 }
 
 /// Border widths.
@@ -46,19 +46,6 @@ enum AppLayout {
     static let readableWidth: CGFloat = 760
     static let commandPaletteWidth: CGFloat = 560
     static let rowHeight: CGFloat = 28
-}
-
-/// Shadow tokens. Shadows are reserved for floating layers (palette, popovers).
-struct AppShadow: Sendable {
-    let opacity: Double
-    let radius: CGFloat
-    let y: CGFloat
-
-    static let overlay = AppShadow(opacity: 0.28, radius: 24, y: 12)
-}
-
-extension View {
-    func appShadow(_ shadow: AppShadow) -> some View {
-        self.shadow(color: .black.opacity(shadow.opacity), radius: shadow.radius, x: 0, y: shadow.y)
-    }
+    /// Buttons and icon buttons (Linear's compact 28 pt controls).
+    static let buttonHeight: CGFloat = 28
 }

@@ -1,7 +1,7 @@
 import SwiftUI
 
-/// Floating glass composer: prompt field, model label and a round send/stop
-/// button.
+/// Floating composer: prompt field, model label and a square send/stop
+/// button, on a raised opaque surface.
 ///
 /// ↩ sends, ⌥↩ inserts a new line (standard behavior of a vertical
 /// `TextField` on macOS), ⌘. stops a running agent.
@@ -40,10 +40,11 @@ struct ComposerView: View {
                 actionButton
             }
         }
-        .padding(.leading, AppSpacing.lg)
-        .padding(.trailing, AppSpacing.sm + AppSpacing.xxs)
-        .padding(.vertical, AppSpacing.md)
-        .appGlass(in: RoundedRectangle(cornerRadius: AppRadius.composer, style: .continuous))
+        .padding(.leading, AppSpacing.md + AppSpacing.xxs)
+        .padding(.trailing, AppSpacing.sm)
+        .padding(.top, AppSpacing.md)
+        .padding(.bottom, AppSpacing.sm)
+        .appFloating(in: RoundedRectangle(cornerRadius: AppRadius.composer, style: .continuous))
         .onAppear { isFocused = true }
     }
 
@@ -52,22 +53,16 @@ struct ComposerView: View {
         if isRunning {
             Button(action: onStop) {
                 Image(systemName: "stop.fill")
-                    .font(.system(size: 11, weight: .bold))
-                    .frame(width: 18, height: 18)
             }
-            .appGlassButton()
-            .buttonBorderShape(.circle)
+            .buttonStyle(.icon())
             .keyboardShortcut(".", modifiers: .command)
             .help("Stop (⌘.)")
             .accessibilityLabel("Stop")
         } else {
             Button(action: onSend) {
                 Image(systemName: "arrow.up")
-                    .font(.system(size: 13, weight: .bold))
-                    .frame(width: 18, height: 18)
             }
-            .appGlassButton(prominent: true)
-            .buttonBorderShape(.circle)
+            .buttonStyle(.icon(prominent: true))
             .disabled(!canSend)
             .help("Send (↩)")
             .accessibilityLabel("Send")

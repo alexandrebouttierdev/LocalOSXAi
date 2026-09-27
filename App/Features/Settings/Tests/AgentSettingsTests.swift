@@ -36,6 +36,26 @@ struct AgentSettingsTests {
         #expect(store.load() == .defaults)
     }
 
+    @Test("summarizing history is on by default, can be turned off, and survives clamping")
+    func summarizesHistory() {
+        let store = InMemoryAgentSettingsStore()
+        let viewModel = AgentSettingsViewModel(store: store)
+        #expect(viewModel.settings.summarizesHistory)
+
+        viewModel.setSummarizesHistory(false)
+
+        #expect(!store.load().summarizesHistory)
+        #expect(!store.load().clamped.summarizesHistory)
+        #expect(!AppEnvironment.agentLimits(from: store.load()).summarizesHistory)
+    }
+
+    @Test("settings saved before the summary option existed turn it on")
+    func legacySettings() throws {
+        let json = #"{"maxIterations":40,"toolTimeoutSeconds":60}"#
+        let settings = try JSONDecoder().decode(AgentSettings.self, from: Data(json.utf8))
+        #expect(settings == AgentSettings(maxIterations: 40, toolTimeoutSeconds: 60, summarizesHistory: true))
+    }
+
     @Test("a failed save keeps the previous value and reports an error")
     func failedSave() {
         let viewModel = AgentSettingsViewModel(store: FailingStore())

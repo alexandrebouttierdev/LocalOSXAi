@@ -21,6 +21,14 @@ enum AgentEvent: Sendable, Hashable {
     case usage(TokenUsage)
     /// Instruction files loaded into the context, by relative path.
     case instructionsLoaded([String])
+    /// The model is summarizing the conversation up to and including
+    /// `afterMessageID`, because it no longer fits comfortably in the context.
+    case historySummaryStarted(id: UUID, afterMessageID: UUID)
+    /// From now on, the model sees this summary instead of those messages.
+    case historySummaryFinished(id: UUID, text: String)
+    /// The summary could not be written: the oldest messages are dropped
+    /// instead, as when summarizing is turned off.
+    case historySummaryDiscarded(id: UUID)
     /// Last event of a run that was not cancelled and did not throw.
     case finished(AgentRunOutcome)
 }

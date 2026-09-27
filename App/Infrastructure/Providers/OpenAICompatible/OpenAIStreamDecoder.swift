@@ -100,7 +100,8 @@ struct OpenAIStreamDecoder: LLMStreamDecoder, Sendable {
         let events = partialCalls.sorted { $0.key < $1.key }.map { _, call in
             LLMEvent.toolCall(LLMToolCall(id: call.id ?? makeID(), name: call.name, rawArguments: call.arguments))
         }
-        if !events.isEmpty { finishReason = .toolCalls }
+        // A call cut by the length limit keeps `.length`, so it is never run.
+        if !events.isEmpty, finishReason != .length { finishReason = .toolCalls }
         partialCalls = [:]
         reportedCharacters = [:]
         return events

@@ -63,13 +63,14 @@ struct ChangesView: View {
                 .tag(change.file)
             }
             .listStyle(.sidebar)
+            .scrollContentBackground(.hidden)
             Divider().overlay(AppColors.border)
             HStack(spacing: AppSpacing.sm) {
                 Button("Reject All", role: .destructive) { isConfirmingRevertAll = true }
-                    .appGlassButton()
+                    .appButton()
                 Spacer()
                 Button("Accept All") { Task { await viewModel.acceptAll() } }
-                    .appGlassButton(prominent: true)
+                    .appButton(prominent: true)
             }
             .padding(AppSpacing.sm)
         }
@@ -88,10 +89,10 @@ struct ChangesView: View {
                                 tone: change.status == .deleted ? .danger : change.status == .created ? .success : .warning)
                     Spacer()
                     Button("Revert", systemImage: "arrow.uturn.backward") { Task { await viewModel.revert(change) } }
-                        .appGlassButton()
+                        .appButton()
                         .help("Restore the file as it was before the agent changed it")
                     Button("Accept", systemImage: "checkmark") { Task { await viewModel.accept(change) } }
-                        .appGlassButton(prominent: true)
+                        .appButton(prominent: true)
                         .help("Keep this change and remove it from the list")
                 }
                 .padding(.horizontal, AppSpacing.md)

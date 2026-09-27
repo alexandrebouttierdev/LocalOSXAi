@@ -46,6 +46,17 @@ struct ToolExecutorTests {
         #expect(outcome.output.hasPrefix("Error:"))
     }
 
+    @Test("very long invalid arguments tell the model they may have been cut, and how to write in parts")
+    func longInvalidArguments() async throws {
+        let content = String(repeating: "x", count: ToolExecutor.longArgumentsCharacters)
+        let long = await execute(try executor([EchoTool()]), Fixtures.call("echo", #"{"content":"\#(content)"}"#))
+        #expect(long.isInvalidCall)
+        #expect(long.output.contains("may have been cut off"))
+
+        let short = await execute(try executor([EchoTool()]), Fixtures.call("echo", "{}"))
+        #expect(!short.output.contains("cut off"))
+    }
+
     @Test("a write asks for approval, then runs when allowed")
     func approvedWrite() async throws {
         let tool = RecordingWriteTool()

@@ -1,8 +1,8 @@
 import SwiftUI
 
-/// The view switcher in the window toolbar: text-only tabs whose selection is
-/// a capsule that slides from one tab to the next, with a pending-count badge
-/// on Changes. The toolbar provides the glass around it.
+/// The view switcher in the window toolbar: Linear's text-only tabs, whose
+/// selection is a raised rounded rectangle that slides from one tab to the
+/// next, with a pending-count badge on Changes.
 struct TabSwitcher: View {
     @Binding var selectedTab: MainTab
     let changesCount: Int
@@ -17,9 +17,12 @@ struct TabSwitcher: View {
                     }
                 }
             }
-            .padding(AppSpacing.xxs + 1)
-            .background(AppColors.hover, in: Capsule())
-            .overlay(Capsule().strokeBorder(AppColors.hairline, lineWidth: AppBorders.hairline))
+            .padding(AppSpacing.xxs)
+            .background(AppColors.hover, in: RoundedRectangle(cornerRadius: AppRadius.large, style: .continuous))
+            .overlay(
+                RoundedRectangle(cornerRadius: AppRadius.large, style: .continuous)
+                    .strokeBorder(AppColors.hairline, lineWidth: AppBorders.hairline)
+            )
         }
         .appAnimation(AppAnimation.overlay, value: selectedTab)
         .accessibilityElement(children: .contain)
@@ -47,22 +50,23 @@ private struct TabButton: View {
                         .foregroundStyle(.white)
                         .padding(.horizontal, AppSpacing.xs + 1)
                         .frame(minWidth: 16, minHeight: 16)
-                        .background(AppColors.accent, in: Capsule())
+                        .background(AppColors.accent, in: RoundedRectangle(cornerRadius: AppRadius.small, style: .continuous))
                         .accessibilityLabel("\(badge) pending")
                 }
             }
-                .font(AppTypography.callout.weight(isSelected ? .semibold : .regular))
+                .font(AppTypography.callout.weight(.medium))
                 .foregroundStyle(isSelected ? AppColors.textPrimary : (isHovered ? AppColors.textPrimary : AppColors.textSecondary))
                 .padding(.horizontal, AppSpacing.md)
-                .frame(height: 26)
-                .contentShape(Capsule())
+                .frame(height: 24)
+                .contentShape(RoundedRectangle(cornerRadius: AppRadius.medium, style: .continuous))
                 .background {
                     if isSelected {
-                        // A plain fill: the toolbar already puts the switcher on
-                        // glass, and glass on glass blurs the selected label.
-                        Capsule()
-                            .fill(AppColors.selection)
-                            .overlay(Capsule().strokeBorder(AppColors.border, lineWidth: AppBorders.hairline))
+                        RoundedRectangle(cornerRadius: AppRadius.medium, style: .continuous)
+                            .fill(AppColors.surfaceRaised)
+                            .overlay(
+                                RoundedRectangle(cornerRadius: AppRadius.medium, style: .continuous)
+                                    .strokeBorder(AppColors.border, lineWidth: AppBorders.hairline)
+                            )
                             .matchedGeometryEffect(id: "selectedTab", in: namespace)
                     }
                 }

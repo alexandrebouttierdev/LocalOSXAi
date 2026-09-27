@@ -50,34 +50,54 @@ struct AgentView: View {
         }
     }
 
+    /// Marks the end of the transcript, where sending a message scrolls to.
+    private static let bottomID = "transcript-bottom"
+
     private var transcript: some View {
-        ScrollView {
-            LazyVStack(alignment: .leading, spacing: AppSpacing.lg) {
-                let turnStats = viewModel.turnStats
-                ForEach(Array(viewModel.messages.enumerated()), id: \.element.id) { index, message in
-                    // Consecutive agent messages (one per tool iteration) share one header.
-                    let continuesAgentTurn = index > 0 && viewModel.messages[index - 1].role == .assistant
-                    AgentMessageView(message: message, showsHeader: !continuesAgentTurn, turnStats: turnStats[index])
-                        .padding(.top, message.role == .user && index > 0 ? AppSpacing.md : 0)
-                        .transition(reduceMotion ? .opacity : .opacity.combined(with: .offset(y: 8)))
-                }
-                if viewModel.canRetry {
-                    retryButton
-                        .padding(.leading, 22 + AppSpacing.md)
-                        .transition(.opacity)
+        ScrollViewReader { proxy in
+            ScrollView {
+                VStack(spacing: 0) {
+                    transcriptContent
+                    Color.clear
+                        .frame(height: 1)
+                        .id(Self.bottomID)
+                        .accessibilityHidden(true)
                 }
             }
-            .frame(maxWidth: AppLayout.readableWidth, alignment: .leading)
-            .padding(.horizontal, AppSpacing.xl)
-            .padding(.top, AppSpacing.xl)
-            .padding(.bottom, AppSpacing.lg)
-            .frame(maxWidth: .infinity)
-            .appAnimation(AppAnimation.standard, value: viewModel.messages.count)
+            // Keeps the newest content visible while the answer streams in,
+            // without scrolling code that would fight the user's own scrolling.
+            .defaultScrollAnchor(.bottom)
+            .defaultScrollAnchor(.bottom, for: .sizeChanges)
+            // Sending a message always shows it, even after the user scrolled
+            // up to read: it is the user's own action, so it cannot fight them.
+            .onChange(of: viewModel.latestPromptID) {
+                proxy.scrollTo(Self.bottomID, anchor: .bottom)
+            }
         }
-        // Keeps the newest content visible while the answer streams in,
-        // without scrolling code that would fight the user's own scrolling.
-        .defaultScrollAnchor(.bottom)
-        .defaultScrollAnchor(.bottom, for: .sizeChanges)
+    }
+
+    private var transcriptContent: some View {
+        LazyVStack(alignment: .leading, spacing: AppSpacing.lg) {
+            let turnStats = viewModel.turnStats
+            ForEach(Array(viewModel.messages.enumerated()), id: \.element.id) { index, message in
+                // Consecutive agent messages (one per tool iteration) share one header.
+                let continuesAgentTurn = index > 0 && viewModel.messages[index - 1].role == .assistant
+                AgentMessageView(message: message, showsHeader: !continuesAgentTurn, turnStats: turnStats[index])
+                    .padding(.top, message.role == .user && index > 0 ? AppSpacing.md : 0)
+                    .transition(reduceMotion ? .opacity : .opacity.combined(with: .offset(y: 8)))
+            }
+            if viewModel.canRetry {
+                retryButton
+                    .padding(.leading, 22 + AppSpacing.md)
+                    .transition(.opacity)
+            }
+        }
+        .frame(maxWidth: AppLayout.readableWidth, alignment: .leading)
+        .padding(.horizontal, AppSpacing.xl)
+        .padding(.top, AppSpacing.xl)
+        .padding(.bottom, AppSpacing.lg)
+        .frame(maxWidth: .infinity)
+        .appAnimation(AppAnimation.standard, value: viewModel.messages.count)
     }
 
     private var retryButton: some View {
@@ -85,7 +105,7 @@ struct AgentView: View {
             Label("Retry", systemImage: "arrow.clockwise")
                 .font(AppTypography.callout)
         }
-        .appGlassButton()
+        .appButton()
         .controlSize(.small)
         .help("Run the last message again")
         .accessibilityHint("Runs your last message again, replacing the failed or stopped answer.")
@@ -103,7 +123,7 @@ struct AgentView: View {
                     .foregroundStyle(AppColors.textSecondary)
                     .multilineTextAlignment(.center)
             }
-            AppGlassContainer {
+            Group {
                 VStack(spacing: AppSpacing.sm) {
                     ForEach(Self.suggestions, id: \.self) { suggestion in
                         Button {
@@ -117,12 +137,13 @@ struct AgentView: View {
                             }
                             .font(AppTypography.callout)
                             .padding(.horizontal, AppSpacing.md)
-                            .frame(height: 30)
-                            .contentShape(Capsule())
+                            .frame(height: AppLayout.buttonHeight)
+                            .contentShape(RoundedRectangle(cornerRadius: AppRadius.medium, style: .continuous))
                         }
                         .buttonStyle(.plain)
                         .foregroundStyle(AppColors.textSecondary)
-                        .appGlass(in: Capsule(), interactive: true)
+                        .appFloating(in: RoundedRectangle(cornerRadius: AppRadius.medium, style: .continuous),
+                                     interactive: true, elevated: false)
                     }
                 }
             }

@@ -15,6 +15,13 @@ struct UserFacingErrorTests {
         #expect(error.recoverySuggestion != nil)
     }
 
+    @Test("a rejected API key points to the provider settings")
+    func unauthorized() {
+        #expect(ProviderError.httpStatus(code: 401, message: nil).recoverySuggestion?.contains("API key") == true)
+        #expect(ProviderError.httpStatus(code: 403, message: "forbidden").recoverySuggestion?.contains("API key") == true)
+        #expect(ProviderError.httpStatus(code: 500, message: nil).recoverySuggestion == nil)
+    }
+
     @Test("never exposes internal details of unknown errors")
     func opaqueError() {
         let error = UserFacingError(OpaqueError(), title: "Failed", category: .ui)

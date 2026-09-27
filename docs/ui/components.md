@@ -12,8 +12,10 @@ in that feature's `Components/` or `Views/` folder.
 | `EmptyStateView` | Empty or not-yet-available content | One icon, a title, a sentence, and at most a couple of actions |
 | `ContextMeterView` | “38.4K / 100K context” with a gauge | Spoken value for VoiceOver; “Over budget” in text |
 | `SubtleButtonStyle` (`.subtle`) | Default low-emphasis button | Hover background |
-| `PrimaryButtonStyle` (`.primary`) | Fallback for prominent glass buttons before macOS 26 | Accent fill; dimmed when disabled |
-| `appGlass(in:)`, `appGlassButton(prominent:)`, `AppGlassContainer`, `appGlassID` | Glass surfaces and buttons | Liquid Glass on macOS 26, material fallback |
+| `PrimaryButtonStyle` (`.primary`) | The one main action of an area | Indigo fill, faint inner edge; dimmed when disabled |
+| `SecondaryButtonStyle` (`.secondary`) | Other actions (Deny, Retry, Revert) | Raised neutral fill, hairline border that strengthens on hover |
+| `IconButtonStyle` (`.icon(prominent:)`) | Square symbol buttons (send, stop) | 28 pt, primary or secondary look |
+| `appFloating(in:interactive:elevated:)`, `appButton(prominent:)` | Opaque raised surfaces and the primary/secondary choice | `surfaceRaised`, border, optional hover and shadow ([ADR 0023](../decisions/0023-opaque-linear-surfaces.md)) |
 | `ProjectBadge` | Colored initial identifying a project | Stable hue from the name |
 | `AgentAvatar` | The agent's mark | Sparkles animate while working |
 | `MarkdownText`, `CodeBlockView` | Model answers | Paragraphs, headings, lists, fenced code with a Copy button. Parsed only once a message is complete |
@@ -23,7 +25,9 @@ Feature views worth knowing:
 | View | Feature | Notes |
 |---|---|---|
 | `CommandPaletteView` | CommandPalette | Overlay with keyboard handling. Performs no actions |
-| `AgentMessageView`, `ToolCallView`, `ComposerView`, `ApprovalBanner` | Agent | User bubbles, Markdown answers, human-readable tool rows (`ToolCallPresentation`), floating glass composer |
+| `AgentMessageView`, `ToolCallView`, `ComposerView`, `ApprovalBanner` | Agent | User bubbles, Markdown answers, human-readable tool rows (`ToolCallPresentation`), floating composer |
+| `ActivityIndicator` | Shared | Loader for work without visible output: pulsing symbol, title with a moving highlight, elapsed seconds, optional hint. Used by the agent for `StreamingActivity` (waiting for the model, thinking, next step). Still with Reduce Motion |
+| `AgentView` transcript | Agent | Opens at the bottom and follows a streaming answer while the user is at the bottom. Sending or retrying a message always jumps to the bottom (`AgentViewModel.latestPromptID`), even after scrolling up; the agent's own messages never move a user who scrolled up |
 | `ModelPickerView` | Models | Menu grouped by provider, plus capability badges |
 | `SidebarView`, `MainContentView`, `InspectorView`, `WelcomeView` | Workspace | Window shell |
 

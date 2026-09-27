@@ -1,6 +1,7 @@
 import SwiftUI
 
-/// Configuration of Ollama and LM Studio, with the live status of each.
+/// Configuration of Ollama, LM Studio and custom OpenAI-compatible servers,
+/// with the live status of each.
 struct ProvidersSettingsView: View {
     @Bindable var viewModel: ProviderSettingsViewModel
     let models: ModelsViewModel
@@ -12,9 +13,7 @@ struct ProvidersSettingsView: View {
                 urlField("Server URL", text: $viewModel.ollamaURL, error: viewModel.validationErrors[.ollamaURL])
                 Picker("Context length", selection: $viewModel.ollamaContextTokens) {
                     Text("Automatic").tag(Int?.none)
-                    ForEach(ProviderSettings.contextPresets, id: \.self) { tokens in
-                        Text("\(TokenCountFormatter.string(for: tokens)) tokens").tag(Int?.some(tokens))
-                    }
+                    contextPresets
                 }
                 .help("Automatic reuses the size of an already loaded model, otherwise 8K. "
                       + "A different size makes Ollama reload the model.")
@@ -30,6 +29,19 @@ struct ProvidersSettingsView: View {
                     .foregroundStyle(.secondary)
             } header: {
                 providerHeader("LM Studio", id: ProviderSettings.lmStudioID)
+            }
+
+            ForEach($viewModel.customServers) { $server in
+                customServerSection($server)
+            }
+
+            Section {
+                Button("Add OpenAI-Compatible Server…", systemImage: "plus", action: viewModel.addServer)
+            } footer: {
+                Text("For llama.cpp, vLLM, Jan, LocalAI and other servers implementing /v1/chat/completions. "
+                     + "They list model names only, so declare what their models support.")
+                    .font(AppTypography.caption)
+                    .foregroundStyle(.secondary)
             }
 
             Section("Network") {
@@ -55,18 +67,71 @@ struct ProvidersSettingsView: View {
         }
         .formStyle(.grouped)
         .padding(AppSpacing.sm)
+        .alert(viewModel.error?.title ?? "", isPresented: Binding(get: { viewModel.error != nil },
+                                                                  set: { if !$0 { viewModel.error = nil } })) {
+            Button("OK", role: .cancel) { viewModel.error = nil }
+        } message: {
+            Text([viewModel.error?.message, viewModel.error?.recoverySuggestion].compactMap { $0 }.joined(separator: "\n\n"))
+        }
     }
 
-    private func urlField(_ title: String, text: Binding<String>, error: String?) -> some View {
+    private func customServerSection(_ server: Binding<ProviderSettingsViewModel.ServerDraft>) -> some View {
+        let draft = server.wrappedValue
+        return Section {
+            Toggle("Enabled", isOn: server.isEnabled)
+            VStack(alignment: .leading, spacing: AppSpacing.xs) {
+                TextField("Name", text: server.name)
+                    .autocorrectionDisabled()
+                fieldError(viewModel.validationErrors[.serverName(draft.id)])
+            }
+            urlField("Server URL", text: server.url, error: viewModel.validationErrors[.serverURL(draft.id)],
+                     apiKey: draft.apiKey)
+            SecureField("API key", text: server.apiKey, prompt: Text("Optional"))
+                .help("Sent as a bearer token. Stored in your Keychain only.")
+            Toggle("Models support tool calling", isOn: server.supportsTools)
+                .help("Turn off for servers that reject requests with tools. Tool calls are validated either way.")
+            Picker("Context length", selection: server.contextTokens) {
+                Text("Unknown (use 8K)").tag(Int?.none)
+                contextPresets
+            }
+            .help("The context size the server was started with, such as llama-server -c.")
+            HStack {
+                Spacer()
+                Button("Remove Server", role: .destructive) { viewModel.removeServer(id: draft.id) }
+                    .accessibilityLabel("Remove \(draft.name)")
+            }
+        } header: {
+            providerHeader(draft.name.isEmpty ? "Custom Server" : draft.name, id: draft.providerID)
+        }
+    }
+
+    private var contextPresets: some View {
+        ForEach(ProviderSettings.contextPresets, id: \.self) { tokens in
+            Text("\(TokenCountFormatter.string(for: tokens)) tokens").tag(Int?.some(tokens))
+        }
+    }
+
+    private func urlField(_ title: String, text: Binding<String>, error: String?, apiKey: String = "") -> some View {
         VStack(alignment: .leading, spacing: AppSpacing.xs) {
             TextField(title, text: text)
                 .textContentType(.URL)
                 .autocorrectionDisabled()
             if let error {
-                Label(error, systemImage: "exclamationmark.triangle.fill")
+                fieldError(error)
+            } else if let warning = viewModel.privacyWarning(forURL: text.wrappedValue, apiKey: apiKey) {
+                Label(warning, systemImage: "network")
                     .font(AppTypography.caption)
-                    .foregroundStyle(AppColors.danger)
+                    .foregroundStyle(AppColors.warning)
             }
+        }
+    }
+
+    @ViewBuilder
+    private func fieldError(_ error: String?) -> some View {
+        if let error {
+            Label(error, systemImage: "exclamationmark.triangle.fill")
+                .font(AppTypography.caption)
+                .foregroundStyle(AppColors.danger)
         }
     }
 

@@ -46,7 +46,7 @@ struct ToolExecutor: Sendable {
             arguments = try ToolArguments.parse(call.rawArguments)
             try tool.parameters.validate(arguments)
         } catch {
-            return invalid(error, toolName: call.name)
+            return invalid(error, toolName: call.name, rawArguments: call.rawArguments)
         }
 
         // For file writes, compute the change first: an edit that cannot apply
@@ -121,13 +121,23 @@ struct ToolExecutor: Sendable {
         Outcome(status: .cancelled, summary: "Cancelled", output: "Cancelled by the user.", isInvalidCall: false)
     }
 
-    private func invalid(_ error: any Error, toolName: String) -> Outcome {
+    private func invalid(_ error: any Error, toolName: String, rawArguments: String) -> Outcome {
         var message = (error as? LocalizedError)?.errorDescription ?? "Invalid tool call."
         if case ToolError.unknownTool = error {
             message += " Available tools: \(registry.names.joined(separator: ", "))."
         }
-        return Outcome(status: .failed, summary: message, output: "Error: \(message) Fix the call and try again.", isInvalidCall: true)
+        var output = "Error: \(message) Fix the call and try again."
+        if rawArguments.count >= Self.longArgumentsCharacters {
+            output += " Your arguments were very long and may have been cut off by your output limit: give short "
+                + "arguments such as \"path\" first, and write a large file in several steps (create it with a first "
+                + "part, then add the rest with edit_file)."
+        }
+        return Outcome(status: .failed, summary: message, output: output, isInvalidCall: true)
     }
+
+    /// Arguments this long, when invalid, were probably cut by the model's
+    /// output limit rather than mistyped.
+    static let longArgumentsCharacters = 4_000
 
     private static func isArgumentError(_ error: ToolError) -> Bool {
         switch error {

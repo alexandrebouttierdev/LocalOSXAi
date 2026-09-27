@@ -34,8 +34,11 @@ Accepted ADRs are not edited to change their decision. Write a new ADR that supe
 | [0013](0013-direct-chat-before-agent-runtime.md) | Ship a direct streaming chat in Phase 2, before the tool runtime | Accepted |
 | [0014](0014-trust-loaded-context-size.md) | Trust the runtime's loaded context size (amends 0008) | Accepted |
 | [0015](0015-sequential-tools-with-in-loop-approval.md) | Sequential tool execution with in-loop approval | Accepted |
-| [0016](0016-liquid-glass-with-fallback.md) | Liquid Glass for floating layers, with a material fallback | Accepted |
+| [0016](0016-liquid-glass-with-fallback.md) | Liquid Glass for floating layers, with a material fallback | Superseded by 0023 |
 | [0017](0017-posix-spawn-process-groups.md) | Run commands with posix_spawn in their own process group | Accepted |
 | [0018](0018-change-review-before-and-after.md) | Review file changes before approval and after writing | Accepted |
 | [0019](0019-session-storage-shape.md) | Session storage shape: summaries for lists, tool calls as JSON | Accepted |
 | [0020](0020-per-project-command-rules.md) | Per-project command rules only move commands between “allowed” and “ask” | Accepted |
+| [0021](0021-custom-openai-compatible-servers.md) | Custom OpenAI-compatible servers declare what they cannot report | Accepted |
+| [0022](0022-conversation-summaries.md) | Summarize old conversation once per run, keep the summary in the transcript | Accepted |
+| [0023](0023-opaque-linear-surfaces.md) | Linear's visual language: Inter, Linear's palette, opaque surfaces | Accepted |

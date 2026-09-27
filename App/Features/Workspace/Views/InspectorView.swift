@@ -65,7 +65,8 @@ struct InspectorView: View {
             .padding(AppSpacing.lg)
             .frame(maxWidth: .infinity, alignment: .leading)
         }
-        // No background: the inspector uses the native (glass) material.
+        // Linear's opaque ground, like the sidebar: no desktop tint.
+        .background(AppColors.background)
     }
 
     private static let toolColumns = [

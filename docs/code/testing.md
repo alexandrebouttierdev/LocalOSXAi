@@ -24,7 +24,8 @@ Run with `make test`. The full gate is `make check`.
 | `TemporaryDirectory` | Filesystem tests | Real, isolated folder, removed in `defer` |
 | `TestClock` | Anything with timestamps | Manually advanced `now` |
 | `Recorder` | Capturing values from `@Sendable` callbacks | Thread-safe append-only log |
-| `StubURLProtocol` | Testing providers over real `URLSession` requests | Per-test host routing, chunked/delayed/hanging responses, `URLError`s, captured requests, `stopLoading` count |
+| `StubURLProtocol` | Testing providers over real `URLSession` requests | Per-test host routing, chunked/delayed/hanging responses, `URLError`s, captured requests (path, body, `Authorization`), `stopLoading` count |
+| `InMemoryProviderSecretStore`, `FailingProviderSecretStore` | Provider settings and factory tests | API keys without the Keychain; failing reads or writes |
 | `OllamaFixtures`, `OpenAIFixtures` | Decoder and provider tests | Recorded (Ollama text stream) and documented wire payloads |
 | `StubApprover` | Tool execution and runtime tests | Fixed approval decision, records requests |
 | `StubResolver`, `StubInstructionsLoader` | Runtime tests | Fixed model/provider resolution, fixed AGENTS.md |

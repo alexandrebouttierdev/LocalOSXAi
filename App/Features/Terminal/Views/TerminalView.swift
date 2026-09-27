@@ -61,7 +61,7 @@ struct TerminalView: View {
             if viewModel.isRunning {
                 Button("Stop", systemImage: "stop.fill", action: viewModel.stop)
                     .labelStyle(.iconOnly)
-                    .appGlassButton()
+                    .appButton()
                     .keyboardShortcut("c", modifiers: .control)
                     .help("Stop (⌃C)")
             }

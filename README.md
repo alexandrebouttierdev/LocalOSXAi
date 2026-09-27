@@ -1,7 +1,7 @@
 # LocalOSXAi
 
-A native macOS coding agent for **local models**: Ollama, LM Studio and, later, any
-OpenAI-compatible server.
+A native macOS coding agent for **local models**: Ollama, LM Studio and any
+OpenAI-compatible server (llama.cpp, vLLM, Jan…).
 
 ## What is the project?
 
@@ -12,12 +12,12 @@ prototype, and it is not meant to be a clone of Cline or OpenCode.
 
 ## Features
 
-Status as of **Phase 6 (polish, accessibility, error recovery)**:
+Status as of **Phase 8 (conversation summaries)**:
 
 | Area | Status |
 |---|---|
 | Native window, sidebar / content / inspector layout | ✅ |
-| Linear-like design system with Liquid Glass on macOS 26 (tokens, components, light/dark, Increase Contrast) | ✅ |
+| Linear's visual language: Inter, Linear's palette, opaque surfaces, compact controls (tokens, components, light/dark, Increase Contrast) | ✅ |
 | Markdown answers with copyable code blocks, human-readable tool activity | ✅ |
 | Command palette (⌘K), menu commands and shortcuts | ✅ |
 | Project selection (open folder, recent projects, remove with confirmation) | ✅ |
@@ -25,8 +25,10 @@ Status as of **Phase 6 (polish, accessibility, error recovery)**:
 | Agent with tools: read, list, search files and text, edit and write files | ✅ |
 | Approval of file changes (allow once / for the session / deny), stop anytime | ✅ |
 | Context management: budget, compaction, `AGENTS.md` loading | ✅ |
+| Conversation summaries: long sessions are summarized by the model instead of forgotten (can be turned off) | ✅ |
 | Streaming with reasoning, context meter, duration and tokens of each answer (live while it streams) | ✅ |
 | Ollama and LM Studio providers, model discovery, provider settings | ✅ |
+| Custom OpenAI-compatible servers (llama.cpp, vLLM, Jan…): declared tools and context, API key in the Keychain, warning for servers outside this Mac | ✅ |
 | Model selection grouped by provider (inspector, ⌘L) | ✅ |
 | Core contracts: `LLMProvider`, `AgentTool`, `ToolRegistry`, schema validation | ✅ |
 | Terminal tab (streamed output, stop, history) and agent `run_command` with a command policy | ✅ |
@@ -109,7 +111,7 @@ scripts/              validation scripts
 |---|---|---|
 | Ollama | `http://localhost:11434` (native API) | ✅ |
 | LM Studio | `http://localhost:1234` (OpenAI-compatible + `/api/v0`) | ✅ |
-| Other OpenAI-compatible servers | configurable | provider ready, settings after Phase 2 |
+| Other OpenAI-compatible servers (llama.cpp, vLLM, Jan, LocalAI…) | added in Settings › Providers | ✅ |
 
 ## Security
 
@@ -132,5 +134,8 @@ first.
 3. **Agent runtime** ✅: agent loop, context manager (AGENTS.md loading, budgeting, compaction),
    tool executor with approvals, filesystem tools.
 4. **Execution** ✅: terminal, Git service, changes/diff review, command permission policy, Files tab.
-5. **Persistence**: SQLite store with migrations, session history, settings.
-6. **Polish**: animations, accessibility audit, performance, error recovery.
+5. **Persistence** ✅: SQLite store with migrations, session history, settings.
+6. **Polish** ✅: animations, accessibility audit, performance, error recovery
+   (manual VoiceOver pass still to do).
+7. **More providers** ✅: custom OpenAI-compatible servers with optional API keys.
+8. **Long sessions** ✅: conversation summaries written by the model when history outgrows the context.

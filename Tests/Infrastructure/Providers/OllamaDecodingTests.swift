@@ -43,6 +43,15 @@ struct OllamaStreamDecoderTests {
         #expect(try decoder.decode(line: #"{"message":{"content":""},"done":true,"done_reason":"length"}"#) == [.finished(.length)])
     }
 
+    @Test("a tool call cut by the length limit still reports length, not tool calls")
+    func lengthAfterToolCall() throws {
+        var decoder = OllamaStreamDecoder()
+        let call = #"{"message":{"content":"","tool_calls":[{"function":{"name":"write_file","arguments":{"content":"<h"}}}]}"#
+            + #","done":false}"#
+        _ = try decoder.decode(line: call)
+        #expect(try decoder.decode(line: #"{"message":{"content":""},"done":true,"done_reason":"length"}"#) == [.finished(.length)])
+    }
+
     @Test("error lines are classified")
     func errorLine() {
         var decoder = OllamaStreamDecoder()

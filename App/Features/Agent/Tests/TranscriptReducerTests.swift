@@ -125,4 +125,48 @@ struct TranscriptReducerTests {
         let messages = reduce([.contextUsageUpdated(ContextUsage(usedTokens: 1, budgetTokens: 2))])
         #expect(messages.isEmpty)
     }
+
+    // MARK: History summaries
+
+    @Test("a summary is inserted after the last message it covers, then completed")
+    func summaryLifecycle() {
+        let first = AgentMessage(role: .user, text: "Q1", createdAt: now)
+        let answer = AgentMessage(role: .assistant, text: "A1", createdAt: now)
+        let prompt = AgentMessage(role: .user, text: "Q2", createdAt: now)
+        let id = UUID()
+
+        let started = reduce([.historySummaryStarted(id: id, afterMessageID: answer.id)], into: [first, answer, prompt])
+        #expect(started.map(\.role) == [.user, .assistant, .summary, .user])
+        #expect(started[2].state == .streaming)
+
+        let finished = reduce([.historySummaryFinished(id: id, text: "They asked Q1."), .assistantMessageStarted(id: UUID()),
+                               .textDelta("Hi")], into: started)
+        #expect(finished[2].text == "They asked Q1.")
+        #expect(finished[2].state == .complete)
+        #expect(finished.last?.role == .assistant)
+        #expect(finished.last?.text == "Hi")
+    }
+
+    @Test("a discarded, stopped or failed summary leaves no trace")
+    func unfinishedSummaries() {
+        let answer = AgentMessage(role: .assistant, text: "A1", createdAt: now)
+        let id = UUID()
+        let started = reduce([.historySummaryStarted(id: id, afterMessageID: answer.id)], into: [answer])
+
+        #expect(reduce([.historySummaryDiscarded(id: id)], into: started).map(\.role) == [.assistant])
+
+        var cancelled = started
+        TranscriptReducer.cancel(&cancelled, now: now)
+        #expect(cancelled.map(\.role) == [.assistant])
+        #expect(cancelled[0].state == .complete)
+
+        var failed = started
+        TranscriptReducer.fail(&failed, error: UserFacingError(title: "Failed", message: "boom"), now: now)
+        #expect(failed.map(\.role) == [.assistant, .error])
+    }
+
+    @Test("a summary for an unknown message is ignored")
+    func summaryForUnknownMessage() {
+        #expect(reduce([.historySummaryStarted(id: UUID(), afterMessageID: UUID())]).isEmpty)
+    }
 }

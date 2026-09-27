@@ -33,6 +33,10 @@ final class AgentViewModel: ToolApprover {
 
     var isRunning: Bool { runState == .running }
 
+    /// The user's latest message. It changes only when the user sends or
+    /// retries a message, which is when the transcript jumps to the bottom.
+    var latestPromptID: UUID? { messages.last { $0.role == .user }?.id }
+
     /// Duration and tokens of each agent turn, keyed by the index of its last message.
     var turnStats: [Int: TurnStats] { TurnStats.turns(in: messages) }
     var canSend: Bool { !isRunning && !draft.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }
@@ -44,6 +48,7 @@ final class AgentViewModel: ToolApprover {
         switch last.role {
         case .error, .user: return true
         case .assistant: return last.state == .cancelled || last.state == .failed
+        case .summary: return false
         }
     }
 

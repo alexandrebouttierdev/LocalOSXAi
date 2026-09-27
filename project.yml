@@ -50,6 +50,8 @@ targets:
         LSApplicationCategoryType: public.app-category.developer-tools
         LSMinimumSystemVersion: "15.0"
         NSHumanReadableCopyright: ""
+        # Inter (OFL, App/Resources/Fonts) is copied flat into Contents/Resources.
+        ATSApplicationFontsPath: "."
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: dev.localosxai.app

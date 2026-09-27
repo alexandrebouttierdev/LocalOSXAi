@@ -4,7 +4,8 @@ import Foundation
 ///
 /// LM Studio is this provider with the `.lmStudio` flavor, which lists models
 /// through LM Studio's native endpoint to learn their type, load state and
-/// context sizes — information the OpenAI `/v1/models` endpoint lacks.
+/// context sizes — information the OpenAI `/v1/models` endpoint lacks. For
+/// other servers, the user declares it (`declaredCapabilities`, `contextTokens`).
 struct OpenAICompatibleProvider: LLMProvider {
     enum Flavor: Sendable {
         case generic
@@ -18,6 +19,13 @@ struct OpenAICompatibleProvider: LLMProvider {
         var baseURL: URL
         var flavor: Flavor
         var idleTimeout: TimeInterval
+        /// Sent as a bearer token. Never logged, never part of the descriptor.
+        var apiKey: String?
+        /// Capabilities of every model of a `.generic` server, which cannot
+        /// report them; `.streaming` is always added.
+        var declaredCapabilities: ModelCapabilities = []
+        /// Context length the `.generic` server was started with, if known.
+        var contextTokens: Int?
     }
 
     let descriptor: ProviderDescriptor
@@ -38,11 +46,13 @@ struct OpenAICompatibleProvider: LLMProvider {
         }
         let data = try await ProviderHTTP.data(for: request("v1/models"), session: session)
         let response = try decode(OpenAIWire.ModelsResponse.self, from: data)
-        // The OpenAI listing says nothing about capabilities or context:
-        // only streaming is assumed, and embedding models are skipped by name.
+        // The OpenAI listing says nothing about capabilities or context: what
+        // the user declared is used, and embedding models are skipped by name.
+        let capabilities = configuration.declaredCapabilities.union(.streaming)
+        let contextWindow = ContextWindow(configuredTokens: configuration.contextTokens)
         return response.data
             .filter { !$0.id.lowercased().contains("embed") }
-            .map { model(named: $0.id, contextWindow: ContextWindow(), capabilities: [.streaming]) }
+            .map { model(named: $0.id, contextWindow: contextWindow, capabilities: capabilities) }
     }
 
     /// LM Studio's native listing, or `nil` when the server does not provide
@@ -85,7 +95,8 @@ struct OpenAICompatibleProvider: LLMProvider {
     // MARK: Helpers
 
     private func request(_ path: String, method: String = "GET", body: JSONValue? = nil) -> URLRequest {
-        ProviderHTTP.request(configuration.baseURL.appending(path: path), method: method, body: body)
+        ProviderHTTP.request(configuration.baseURL.appending(path: path), method: method, body: body,
+                             bearerToken: configuration.apiKey)
     }
 
     private func decode<Value: Decodable>(_ type: Value.Type, from data: Data) throws -> Value {

@@ -15,7 +15,7 @@ Accessibility is a requirement from the first phase, not a polish item.
 | Headings | Each agent turn's “Agent” header is a heading, so the rotor jumps between turns |
 | Modal palette | While the command palette is open, the rest of the window is hidden from VoiceOver and the palette has the modal trait |
 | Reduce Motion | `.appAnimation(_:value:)` disables animations when Reduce Motion is on. Message transitions fall back to a plain fade. Symbol effects honor the setting natively |
-| Reduce Transparency | Liquid Glass and the fallback materials become opaque automatically |
+| Reduce Transparency | Nothing to do: every surface is opaque ([ADR 0023](../decisions/0023-opaque-linear-surfaces.md)) |
 | Text size | Typography tokens use system text styles instead of fixed sizes |
 
 ## Rules for new UI

@@ -11,6 +11,10 @@ struct AgentMessage: Identifiable, Hashable, Sendable, Codable {
         case assistant
         /// A run failure shown inline in the transcript.
         case error
+        /// What the model is told instead of every message before this one
+        /// (docs/ai/context.md). Written by the model when history outgrew
+        /// the context; the original messages stay in the transcript.
+        case summary
     }
 
     enum State: String, Hashable, Sendable, Codable {

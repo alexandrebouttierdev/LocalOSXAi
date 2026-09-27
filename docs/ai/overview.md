@@ -23,12 +23,12 @@ AgentViewModel ──▶ AgentService (protocol)            ◀── AgentRunti
 
 | Component | Contract | Status |
 |---|---|---|
-| Provider | `LLMProvider`: `listModels()`, `stream(request:)` | ✅ Ollama, LM Studio, generic OpenAI-compatible |
+| Provider | `LLMProvider`: `listModels()`, `stream(request:)` | ✅ Ollama, LM Studio, custom OpenAI-compatible servers |
 | Model resolution | `ModelResolving` → `ProviderRegistry` (discovery, per-provider isolation) | ✅ |
 | Model | `AIModel` + `ModelCapabilities` + `ContextWindow` | ✅ |
 | Agent service | `AgentService.run(_:approver:)` | ✅ `AgentRuntime` (tool loop), simulated ✅ |
 | Tools | `AgentTool`, `ToolRegistry`, `ToolParameterSchema`, `ToolArguments`, `ToolResult` | ✅ 10 tools: filesystem, `run_command`, Git |
-| Context | `ContextUsage`, `TokenEstimator`, `AgentPrompt`, `RunContext` | ✅ (summarization planned) |
+| Context | `ContextUsage`, `TokenEstimator`, `AgentPrompt`, `RunContext` | ✅ (with conversation summaries, `HistoryCompaction`) |
 | Tool executor, permissions, approvals | `ToolExecutor`, `ToolPermissionPolicy`, `CommandPolicy`, `ToolApprover`, `FileChangeRecording` | ✅ |
 
 ## Documents

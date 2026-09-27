@@ -18,8 +18,8 @@ struct FilesView: View {
                 }
                 .font(AppTypography.body)
                 .padding(.horizontal, AppSpacing.md)
-                .frame(height: 30)
-                .appGlass(in: Capsule())
+                .frame(height: AppLayout.buttonHeight)
+                .appFloating(in: RoundedRectangle(cornerRadius: AppRadius.medium, style: .continuous), elevated: false)
                 .padding(AppSpacing.sm)
 
                 List(viewModel.results, id: \.self, selection: Binding(
@@ -41,6 +41,7 @@ struct FilesView: View {
                     .tag(path)
                 }
                 .listStyle(.sidebar)
+                .scrollContentBackground(.hidden)
                 .overlay {
                     if viewModel.isLoading { ProgressView() }
                 }

@@ -26,7 +26,8 @@ Capabilities are *declared* by providers and are often wrong for local models:
 effective = min(configured ?? loaded ?? 8_192, advertised ?? ∞)
 ```
 
-- **Configured**: the user's choice (Settings → Providers → Ollama context length).
+- **Configured**: the user's choice (Settings → Providers → Ollama context length, or the
+  context length declared for a custom server).
 - **Loaded**: what the runtime reports as actually allocated for a loaded model (LM Studio
   `loaded_context_length`, Ollama `/api/ps`). It is reliable, and reusing it avoids an Ollama
   model reload ([ADR 0014](../decisions/0014-trust-loaded-context-size.md)).
@@ -47,6 +48,9 @@ effective = min(configured ?? loaded ?? 8_192, advertised ?? ∞)
 
 - Phase 2: provider endpoints and enablement, Ollama context length (Automatic or 8K–128K),
   and the network idle timeout. Model selection is in the inspector or with ⌘L.
+- Phase 7: custom OpenAI-compatible servers, whose tool support and context length are
+  declared by the user because `/v1/models` reports neither
+  ([ADR 0021](../decisions/0021-custom-openai-compatible-servers.md)).
 - Per-model settings (inspector › Model Settings, saved in SQLite): temperature (0–2),
   reasoning effort (default/off/low/medium/high, only for models with `.reasoning`) and the
   context length (only when the provider can set it per request, `ProviderDescriptor.supportsContextLength`:

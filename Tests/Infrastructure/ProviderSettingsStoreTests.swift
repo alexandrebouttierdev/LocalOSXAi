@@ -19,6 +19,9 @@ struct ProviderSettingsStoreTests {
             var settings = ProviderSettings.defaults
             settings.ollamaContextTokens = 16_384
             settings.lmStudio.isEnabled = false
+            settings.customServers = [.init(id: UUID(), name: "vLLM", isEnabled: true,
+                                            baseURL: ProviderSettings.customServerDefaultURL,
+                                            supportsTools: false, contextTokens: 65_536)]
             try store.save(settings)
 
             #expect(UserDefaultsProviderSettingsStore(suiteName: suite).load() == settings)

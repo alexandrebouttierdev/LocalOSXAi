@@ -1,7 +1,8 @@
 # Providers
 
 **Status:** implemented in Phase 2. Ollama and LM Studio were verified against real servers
-(Ollama 0.34, LM Studio with `/api/v0`) with `make test-live`.
+(Ollama 0.34, LM Studio with `/api/v0`) with `make test-live`. Custom OpenAI-compatible servers
+were added in Phase 7.
 
 ## Contract
 
@@ -47,8 +48,9 @@ Infrastructure/Providers/
 **Decoders are pure** (`LLMStreamDecoder`: `decode(line:)`, `finish()`), with no I/O. They are
 tested directly from recorded fixtures, and the HTTP layer is tested separately.
 
-Providers are built from `ProviderSettings` by `ProviderFactory` in the composition root, and
-rebuilt when the user applies new settings (`ModelsViewModel.reconfigure`).
+Providers are built from `ProviderSettings` (and API keys from `ProviderSecretStore`) by
+`ProviderFactory` in the composition root, and rebuilt when the user applies new settings
+(`ModelsViewModel.reconfigure`).
 
 ## Ollama (`http://localhost:11434`, native API)
 
@@ -79,8 +81,24 @@ API exposes capabilities, the loaded context and `num_ctx`.
 | Tool calls | **Streamed in fragments** by `index`. They are buffered and emitted once, complete, when the choice finishes, with `toolCallProgress` events in between. Results are sent back with `tool_call_id` |
 | Errors | `{"error": {"message": "..."}}` in the body or as a stream event |
 
-The `.generic` flavor (any OpenAI-compatible server) uses only `/v1/models`, with no capability
-information. API keys (Keychain) will be added with remote servers, after Phase 2.
+## Custom OpenAI-compatible servers (Settings › Providers › Add OpenAI-Compatible Server…)
+
+llama.cpp (`llama-server`), vLLM, Jan, LocalAI and any other server implementing
+`/v1/chat/completions` use the `.generic` flavor: `/v1/models` for the list and the same chat
+and streaming code as LM Studio. That listing gives names only, so the user declares the rest
+([ADR 0021](../decisions/0021-custom-openai-compatible-servers.md)):
+
+| Setting | Effect |
+|---|---|
+| Name | Shown next to every model of the server. Required, unique, not “Ollama” or “LM Studio” |
+| Server URL | Server root; `/v1` and a trailing slash are removed. Defaults to `http://localhost:8080` (llama.cpp) |
+| API key | Optional. Keychain only, sent as `Authorization: Bearer`. A 401/403 suggests checking it |
+| Models support tool calling | On by default: every model gets `.tools`. Turn off for servers that reject `tools` |
+| Context length | Unknown (8K fallback) or the size the server was started with (`llama-server -c`, `vllm --max-model-len`) → `configuredTokens` |
+
+Each server gets a `ProviderID` `server-<uuid>` fixed when it is added, so renaming it keeps its
+per-model settings and its key. A URL that is not on this Mac shows a warning: prompts and the
+file contents they quote go to that host.
 
 ## Timeouts
 
