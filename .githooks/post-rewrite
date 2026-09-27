@@ -1,0 +1,4 @@
+#!/usr/bin/env bash
+# After `git pull --rebase` / `git rebase` (post-merge does not run then).
+[ "${1:-}" = "rebase" ] || exit 0
+exec "$(git rev-parse --show-toplevel)/scripts/regenerate-project.sh"

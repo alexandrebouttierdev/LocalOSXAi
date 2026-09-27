@@ -70,13 +70,16 @@ Read [docs/architecture.md](docs/architecture.md).
 ## Development
 
 ```bash
+make hooks      # once per clone: regenerate the Xcode project after every pull
 make generate   # create LocalOSXAi.xcodeproj from project.yml
 make open       # open in Xcode
 make build
 ```
 
-The Xcode project is generated from `project.yml` and is not committed. Run `make generate`
-after adding, moving or removing files.
+The Xcode project is generated from `project.yml` and is not committed. After `make hooks`,
+git regenerates it after every pull, rebase or branch switch (`scripts/regenerate-project.sh`),
+so Xcode never looks for a file that was renamed or removed. Without the hooks, run
+`make generate` after any change that adds, moves or removes files.
 
 ## Testing
 

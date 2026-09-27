@@ -31,6 +31,7 @@ passes and the docs describe it.
 ## 3. Validation commands
 
 ```bash
+make hooks         # once per clone: git regenerates the project after pulls and branch switches
 make generate      # regenerate LocalOSXAi.xcodeproj from project.yml (after adding/moving files)
 make build         # build the app (warnings are errors)
 make test          # unit + integration tests (Swift Testing)

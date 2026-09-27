@@ -18,5 +18,7 @@ target only. Build settings enforce Swift 6, complete strict concurrency and war
 - **Tuist**: more powerful, but heavier than needed today.
 
 ## Consequences
-- Contributors need `brew install xcodegen`, and must regenerate after adding files.
+- Contributors need `brew install xcodegen`, and must regenerate after adding files. Since
+  `make hooks` (tracked hooks in `.githooks`), git does it after every pull, rebase or branch
+  switch; `xcodegen --use-cache` makes it free when no file was added or removed.
 - Project configuration is reviewable text.

@@ -7,10 +7,16 @@ DESTINATION  := platform=macOS,arch=$(shell uname -m)
 DERIVED_DATA := .build/DerivedData
 XCODEBUILD   := xcodebuild -project $(PROJECT) -scheme $(SCHEME) -destination '$(DESTINATION)' -derivedDataPath $(DERIVED_DATA)
 
-.PHONY: generate build test test-live ui-snapshots lint architecture docs check open clean
+.PHONY: generate hooks build test test-live ui-snapshots lint architecture docs check open clean
 
 generate:
 	xcodegen generate --quiet
+
+# Once per clone: regenerate the Xcode project automatically after every
+# pull, rebase or branch switch (scripts/regenerate-project.sh).
+hooks:
+	git config core.hooksPath .githooks
+	@echo "Git hooks enabled: the Xcode project now regenerates itself after pulls and branch switches."
 
 build: generate
 	$(XCODEBUILD) build -quiet
