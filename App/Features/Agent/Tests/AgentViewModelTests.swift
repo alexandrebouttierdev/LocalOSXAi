@@ -162,6 +162,28 @@ struct AgentViewModelTests {
         #expect(viewModel.announcement?.text == "The agent finished.")
     }
 
+    @Test("the latest prompt changes when a message is sent or retried, not while the agent answers")
+    func latestPrompt() async throws {
+        let service = StubAgentService(sequence: [
+            .failAfter([.assistantMessageStarted(id: UUID())], ProviderError.timedOut),
+            .events([.assistantMessageStarted(id: UUID()), .textDelta("Recovered"), .finished(.completed)])
+        ])
+        let viewModel = makeViewModel(service)
+        #expect(viewModel.latestPromptID == nil)
+
+        viewModel.draft = "Go"
+        viewModel.send()
+        let sent = try #require(viewModel.latestPromptID)
+        #expect(sent == viewModel.messages.first?.id)
+        await viewModel.waitUntilIdle()
+        #expect(viewModel.latestPromptID == sent)
+
+        viewModel.retry()
+        #expect(viewModel.latestPromptID != sent)
+        #expect(viewModel.latestPromptID == viewModel.messages.last { $0.role == .user }?.id)
+        await viewModel.waitUntilIdle()
+    }
+
     @Test("retry is offered only when the last run did not complete")
     func retryAvailability() {
         func canRetry(_ messages: [AgentMessage]) -> Bool {
