@@ -326,9 +326,14 @@ private struct ReasoningView: View {
             if isThinking {
                 ActivityIndicator(title: "Thinking", systemImage: "brain", since: since)
             } else {
-                Label("Thought process", systemImage: "brain")
-                    .font(AppTypography.callout)
-                    .foregroundStyle(AppColors.textTertiary)
+                Label {
+                    Text("Thought process")
+                        .foregroundStyle(AppColors.textTertiary)
+                } icon: {
+                    Image(systemName: "brain")
+                        .foregroundStyle(AppColors.Hue.purple)
+                }
+                .font(AppTypography.callout)
             }
         }
      }

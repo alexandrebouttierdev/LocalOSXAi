@@ -7,6 +7,10 @@ struct ToolCallView: View {
     @State private var isExpanded = false
     @State private var isHovered = false
 
+    /// The action's icon on a faint square of its hue, like Linear's issue icons.
+    private static let iconSize: CGFloat = 22
+    private static let iconTintOpacity = 0.14
+
     private var presentation: ToolCallPresentation { ToolCallPresentation(call) }
     private var isAwaitingApproval: Bool { call.status == .awaitingApproval }
 
@@ -41,9 +45,11 @@ struct ToolCallView: View {
     private var header: some View {
         HStack(spacing: AppSpacing.sm) {
             Image(systemName: presentation.systemImage)
-                .font(AppTypography.callout)
-                .foregroundStyle(AppColors.textSecondary)
-                .frame(width: 16)
+                .font(AppTypography.callout.weight(.medium))
+                .foregroundStyle(Self.color(for: presentation.kind))
+                .frame(width: Self.iconSize, height: Self.iconSize)
+                .background(Self.color(for: presentation.kind).opacity(Self.iconTintOpacity),
+                            in: RoundedRectangle(cornerRadius: AppRadius.small, style: .continuous))
                 .accessibilityHidden(true)
             Text(presentation.title)
                 .font(AppTypography.callout.weight(.medium))
@@ -90,22 +96,57 @@ struct ToolCallView: View {
     private var detail: some View {
         VStack(alignment: .leading, spacing: AppSpacing.sm) {
             if let summary = call.summary {
-                Text(summary)
+                Label(summary, systemImage: call.status == .succeeded ? "checkmark" : "info.circle")
                     .font(AppTypography.caption)
-                    .foregroundStyle(AppColors.textSecondary)
+                    .foregroundStyle(call.status == .succeeded ? AppColors.success : AppColors.textSecondary)
             }
-            labeled("Arguments", call.argumentsJSON)
+            labeled("Arguments", systemImage: "curlybraces", Self.highlightedJSON(call.argumentsJSON))
             if let output = call.output {
-                labeled("Output", output)
+                labeled("Output", systemImage: "text.alignleft", AttributedString(output))
             }
         }
         .padding(AppSpacing.sm + AppSpacing.xxs)
     }
 
-    private func labeled(_ title: String, _ value: String) -> some View {
+    /// Arguments, one key per line, colored like code (strings green,
+    /// numbers yellow, booleans orange).
+    private static func highlightedJSON(_ json: String) -> AttributedString {
+        let pretty = (try? JSONSerialization.jsonObject(with: Data(json.utf8)))
+            .flatMap { try? JSONSerialization.data(withJSONObject: $0, options: [.prettyPrinted, .sortedKeys, .withoutEscapingSlashes]) }
+            .flatMap { String(data: $0, encoding: .utf8) } ?? json
+        var result = AttributedString()
+        for (index, line) in pretty.split(separator: "\n", omittingEmptySubsequences: false).enumerated() {
+            if index > 0 { result += AttributedString("\n") }
+            for token in SyntaxHighlighter.tokens(in: String(line), language: .cLike) {
+                var part = AttributedString(token.text)
+                part.foregroundColor = switch token.kind {
+                case .string: AppColors.Hue.green
+                case .number: AppColors.Hue.yellow
+                case .keyword: AppColors.Hue.orange
+                default: AppColors.textSecondary
+                }
+                result += part
+            }
+        }
+        return result
+    }
+
+    private static func color(for kind: ToolCallPresentation.Kind) -> Color {
+        switch kind {
+        case .read: AppColors.Hue.blue
+        case .search: AppColors.Hue.purple
+        case .edit: AppColors.Hue.orange
+        case .write: AppColors.Hue.green
+        case .command: AppColors.Hue.yellow
+        case .git: AppColors.Hue.pink
+        case .other: AppColors.textSecondary
+        }
+    }
+
+    private func labeled(_ title: String, systemImage: String, _ value: AttributedString) -> some View {
         VStack(alignment: .leading, spacing: AppSpacing.xs) {
-            Text(title)
-                .font(AppTypography.caption)
+            Label(title, systemImage: systemImage)
+                .font(AppTypography.caption.weight(.medium))
                 .foregroundStyle(AppColors.textTertiary)
             ScrollView {
                 Text(value)

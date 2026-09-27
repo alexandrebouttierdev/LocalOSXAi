@@ -185,7 +185,7 @@ private struct TranscriptView: View {
         .frame(maxWidth: AppLayout.readableWidth, alignment: .leading)
         .padding(.horizontal, AppSpacing.xl)
         .padding(.top, AppSpacing.xl)
-        .padding(.bottom, AppSpacing.lg)
+        .padding(.bottom, AppSpacing.xl)
         .frame(maxWidth: .infinity)
         .appAnimation(AppAnimation.standard, value: viewModel.messages.count)
     }
