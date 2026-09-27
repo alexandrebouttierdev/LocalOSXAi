@@ -36,9 +36,10 @@ SF Symbols. The composition root sets them on `ProviderDescriptor.logo`; custom 
 Avoided: gradients, large cards, large colored buttons, heavy shadows, decorative “AI startup”
 aesthetics, dashboards of widgets.
 
-One exception, for feedback only: `ActivityIndicator`, shown while the model loads, thinks or
-decides its next step, sweeps a light across its title (text colors, accent highlight). It
-tells the user a slow local model is still working. It never decorates, and with Reduce Motion
+One exception, for feedback only: `SweepingText` sweeps a light across a title (text colors,
+accent highlight) in `ActivityIndicator`, shown while the model loads, thinks or decides its
+next step, and on the sidebar title of a session at work. It tells the user a slow local model
+is still working. It never decorates, and with Reduce Motion
 it is still.
 
 ## Surfaces

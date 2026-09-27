@@ -168,13 +168,13 @@ struct SidebarView: View {
             ForEach(Self.views) { tab in
                 SidebarRow(isSelected: viewModel.selectedTab == tab, action: { viewModel.selectedTab = tab }) {
                     HStack(spacing: AppSpacing.sm) {
-                        SidebarIcon(systemImage: tab.systemImage)
+                        SidebarIcon(systemImage: tab.systemImage, tint: Self.tint(for: tab))
                         Text(tab.title)
                         Spacer(minLength: AppSpacing.xs)
                         if tab == .changes, viewModel.pendingChangesCount > 0 {
                             Text("\(viewModel.pendingChangesCount)")
-                                .font(AppTypography.caption.monospacedDigit())
-                                .foregroundStyle(AppColors.textSecondary)
+                                .font(AppTypography.caption.monospacedDigit().weight(.medium))
+                                .foregroundStyle(AppColors.Hue.orange)
                                 .accessibilityLabel("\(viewModel.pendingChangesCount) pending")
                         }
                     }
@@ -227,6 +227,16 @@ struct SidebarView: View {
         }
     }
 
+    /// Each view keeps its hue, like Linear's colored sidebar icons.
+    private static func tint(for tab: MainTab) -> Color {
+        switch tab {
+        case .files: AppColors.Hue.blue
+        case .changes: AppColors.Hue.orange
+        case .terminal: AppColors.Hue.teal
+        default: AppColors.textSecondary
+        }
+    }
+
     private func placeholder(_ text: String) -> some View {
         Text(text)
             .font(AppTypography.callout)
@@ -258,19 +268,15 @@ struct SidebarView: View {
         .padding(.vertical, AppSpacing.sm)
     }
 
-    /// Which model servers answered, in words; the logos and the red dot are
-    /// decoration only.
+    /// Which model servers answered, in words; the logos and the dot (green
+    /// when one answered, red otherwise) are decoration only.
     @ViewBuilder
     private var connectionStatus: some View {
         let connected = viewModel.models.connectedProviders
         if !viewModel.models.catalog.isEmpty {
             HStack(spacing: AppSpacing.xs + AppSpacing.xxs) {
-                if connected.isEmpty {
-                    Circle()
-                        .fill(AppColors.danger)
-                        .frame(width: 6, height: 6)
-                        .accessibilityHidden(true)
-                } else {
+                StatusDot(color: connected.isEmpty ? AppColors.danger : AppColors.success)
+                if !connected.isEmpty {
                     HStack(spacing: AppSpacing.xxs + 1) {
                         ForEach(connected) { provider in
                             ProviderLogo(asset: provider.logo, size: 12)
@@ -286,89 +292,5 @@ struct SidebarView: View {
             .foregroundStyle(AppColors.textTertiary)
             .help(connected.isEmpty ? "Start Ollama or LM Studio, then refresh the models." : "Model servers that answered.")
         }
-    }
-}
-
-/// A row's leading symbol, in the sidebar's quieter icon tone.
-private struct SidebarIcon: View {
-    let systemImage: String
-
-    var body: some View {
-        Image(systemName: systemImage)
-            .font(AppTypography.body)
-            .foregroundStyle(AppColors.textSecondary)
-            .frame(width: AppLayout.rowIconWidth)
-            .accessibilityHidden(true)
-    }
-}
-
-/// Linear's collapsible section title: “Today ▾”.
-private struct SidebarSectionHeader: View {
-    let title: String
-    let isCollapsed: Bool
-    let toggle: () -> Void
-
-    var body: some View {
-        Button(action: toggle) {
-            HStack(spacing: AppSpacing.xs) {
-                Text(title)
-                Image(systemName: "arrowtriangle.down.fill")
-                    .imageScale(.small)
-                    .scaleEffect(0.6)
-                    .rotationEffect(.degrees(isCollapsed ? -90 : 0))
-                    .accessibilityHidden(true)
-            }
-            .font(AppTypography.callout.weight(.medium))
-            .foregroundStyle(AppColors.textTertiary)
-            .padding(.horizontal, AppSpacing.sm)
-            .frame(height: AppLayout.rowHeight - AppSpacing.xs, alignment: .leading)
-            .contentShape(Rectangle())
-        }
-        .buttonStyle(.plain)
-        .appAnimation(AppAnimation.quick, value: isCollapsed)
-        .accessibilityLabel(title)
-        .accessibilityValue(isCollapsed ? "Collapsed" : "Expanded")
-        .accessibilityAddTraits(.isHeader)
-    }
-}
-
-/// One session: an icon for what its agent is doing, then its title on one
-/// line. The state is also spoken, never color alone.
-private struct SessionRowLabel: View {
-    let session: Session
-    let activity: SessionActivity?
-
-    var body: some View {
-        HStack(spacing: AppSpacing.sm) {
-            Group {
-                switch activity {
-                case .running:
-                    ProgressView()
-                        .controlSize(.mini)
-                        .accessibilityLabel("Running")
-                case .awaitingApproval:
-                    Image(systemName: "hand.raised.fill")
-                        .font(AppTypography.callout)
-                        .foregroundStyle(AppColors.warning)
-                        .accessibilityLabel("Waiting for your approval")
-                case nil:
-                    SidebarIcon(systemImage: "bubble.left")
-                }
-            }
-            .frame(width: 16)
-            Text(session.title)
-                .lineLimit(1)
-                .truncationMode(.tail)
-        }
-        .help(details)
-        .accessibilityElement(children: .combine)
-    }
-
-    /// Shown on hover: the row itself stays on one line.
-    private var details: String {
-        let updated = session.updatedAt.formatted(.relative(presentation: .named, unitsStyle: .wide))
-        guard session.toolCallCount > 0 else { return "Updated \(updated)" }
-        let calls = session.toolCallCount == 1 ? "1 tool call" : "\(session.toolCallCount) tool calls"
-        return "Updated \(updated) · \(calls)"
     }
 }

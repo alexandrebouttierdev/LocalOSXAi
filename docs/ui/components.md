@@ -34,6 +34,7 @@ Feature views worth knowing:
 | `PropertyRow`, `PropertyValue`, `PropertyLabel` | Shared | Linear's property rows: a quiet 84 pt label column; values with a tinted icon (`AppColors.Hue`: context teal, temperature blue → orange → red, reasoning and branch purple, instructions green), highlighted on hover when they open a menu (`propertyMenuStyle()`); labels as a colored dot and a word on a hairline pill (abilities: tools orange, reasoning purple, vision blue) |
 | `ProviderLogo` | Shared | A provider's logo as a template image, or `server.rack` |
 | `SidebarView`, `MainContentView`, `InspectorView`, `WelcomeView` | Workspace | Window shell |
+| `SidebarRows` (`SidebarIcon`, `SessionRowLabel`, `RunningIcon`, `StatusDot`) | Workspace | Sidebar marks: view icons in their hue (Files blue, Changes orange with its count, Terminal teal); a running session shows a turning accent arc and a light sweeping its title (`SweepingText`), one awaiting approval an orange hand; the footer's server status has a green dot when a server answered, red otherwise, always with words |
 
 ## Adding a component
 
