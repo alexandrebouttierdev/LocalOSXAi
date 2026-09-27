@@ -24,5 +24,8 @@
 
 **One-time setup**: repository Settings › Pages › Build and deployment › Source: *GitHub
 Actions*. Then run the “Pages” workflow once (Actions tab) or change a file in `site/`.
+Until then, GitHub's own “pages build and deployment” publishes the README on every push; the
+workflow also runs when that build ends (`page_build`), so the landing page is published again
+right after it.
 
 To preview locally, open `index.html` in a browser.

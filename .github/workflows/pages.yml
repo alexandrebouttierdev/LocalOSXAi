@@ -1,12 +1,18 @@
 # Publishes the landing page (site/) to GitHub Pages whenever it changes on
 # the default branch. One-time setup: repository Settings › Pages › Source:
 # “GitHub Actions”. Details: site/README.md.
+#
+# `page_build`: while the source is still “Deploy from a branch”, GitHub's
+# own build publishes the README on every push and replaced the landing
+# page. That build fires `page_build` when it ends, so the landing page is
+# deployed again after it and stays the published site either way.
 name: Pages
 
 on:
   push:
     branches: [dev]
     paths: ["site/**", ".github/workflows/pages.yml"]
+  page_build:
   workflow_dispatch:
 
 permissions:
@@ -14,9 +20,10 @@ permissions:
   pages: write
   id-token: write
 
+# Queued, not cancelled: the last run to finish must be a landing-page deploy.
 concurrency:
   group: pages
-  cancel-in-progress: true
+  cancel-in-progress: false
 
 jobs:
   deploy:
