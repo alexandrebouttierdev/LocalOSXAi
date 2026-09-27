@@ -45,6 +45,7 @@ struct AgentMessageView: View {
                         ForEach(message.attachments) { AttachmentChip(attachment: $0) }
                     }
                 }
+                MessageTimestamp(date: message.createdAt)
             }
         }
         .accessibilityElement(children: .combine)
@@ -53,7 +54,8 @@ struct AgentMessageView: View {
 
     private var userAccessibilityLabel: String {
         let files = message.attachments.map(\.name).joined(separator: ", ")
-        return "You: \(message.text)" + (files.isEmpty ? "" : ". Attached: \(files)")
+        let sent = MessageTimeFormatter().string(for: message.createdAt)
+        return "You, \(sent): \(message.text)" + (files.isEmpty ? "" : ". Attached: \(files)")
     }
 
     private var assistantMessage: some View {
@@ -124,6 +126,7 @@ struct AgentMessageView: View {
                 .foregroundStyle(AppColors.textPrimary)
                 // Headings let VoiceOver users jump between turns with the rotor.
                 .accessibilityAddTraits(.isHeader)
+            MessageTimestamp(date: message.createdAt)
             switch message.state {
             case .streaming where activity == nil:
                 StreamingStatusView(message: message)
@@ -151,6 +154,7 @@ struct AgentMessageView: View {
                         .font(AppTypography.callout)
                         .foregroundStyle(AppColors.textSecondary)
                 }
+                MessageTimestamp(date: message.createdAt)
             }
             .textSelection(.enabled)
         } icon: {
@@ -356,5 +360,20 @@ private struct TurnStatsView: View {
     private func label(_ text: String) -> some View {
         Label(text, systemImage: "clock")
             .labelStyle(.titleAndIcon)
+    }
+}
+
+/// When a message was sent: “14:32”, “Yesterday 14:32”, “12 Mar 14:32”;
+/// the full date and time in the tooltip.
+private struct MessageTimestamp: View {
+    let date: Date
+
+    var body: some View {
+        let formatter = MessageTimeFormatter()
+        Text(formatter.string(for: date))
+            .font(AppTypography.caption.monospacedDigit())
+            .foregroundStyle(AppColors.textTertiary)
+            .help(formatter.fullString(for: date))
+            .accessibilityLabel("Sent \(formatter.fullString(for: date))")
     }
 }
