@@ -75,8 +75,8 @@ struct ModelPickerView: View {
         }
         .padding(.horizontal, AppSpacing.md)
         .padding(.vertical, AppSpacing.sm)
-        .contentShape(RoundedRectangle(cornerRadius: AppRadius.overlay, style: .continuous))
-        .appGlass(in: RoundedRectangle(cornerRadius: AppRadius.overlay, style: .continuous), interactive: true)
+        .contentShape(RoundedRectangle(cornerRadius: AppRadius.large, style: .continuous))
+        .appFloating(in: RoundedRectangle(cornerRadius: AppRadius.large, style: .continuous), interactive: true, elevated: false)
     }
 
     private func capabilities(of model: AIModel) -> some View {

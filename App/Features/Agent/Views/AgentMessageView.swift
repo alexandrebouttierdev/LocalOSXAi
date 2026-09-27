@@ -31,7 +31,11 @@ struct AgentMessageView: View {
                 .textSelection(.enabled)
                 .padding(.horizontal, AppSpacing.md + AppSpacing.xxs)
                 .padding(.vertical, AppSpacing.sm + AppSpacing.xxs)
-                .background(AppColors.accentSubtle, in: RoundedRectangle(cornerRadius: AppRadius.bubble, style: .continuous))
+                .background(AppColors.surfaceRaised, in: RoundedRectangle(cornerRadius: AppRadius.bubble, style: .continuous))
+                .overlay(
+                    RoundedRectangle(cornerRadius: AppRadius.bubble, style: .continuous)
+                        .strokeBorder(AppColors.border, lineWidth: AppBorders.hairline)
+                )
         }
         .accessibilityElement(children: .combine)
         .accessibilityLabel("You: \(message.text)")
@@ -139,12 +143,16 @@ struct AgentMessageView: View {
                 .foregroundStyle(AppColors.danger)
         }
         .font(AppTypography.body)
-        .padding(AppSpacing.md)
+        .padding(.horizontal, AppSpacing.md)
+        .padding(.vertical, AppSpacing.sm + AppSpacing.xxs)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(AppColors.danger.opacity(0.08), in: RoundedRectangle(cornerRadius: AppRadius.large, style: .continuous))
+        // Quiet, like Linear's inline errors: the icon carries the color; the
+        // surface stays neutral with a faint red wash.
+        .background(AppColors.danger.opacity(0.05), in: RoundedRectangle(cornerRadius: AppRadius.large, style: .continuous))
+        .background(AppColors.surfaceRaised, in: RoundedRectangle(cornerRadius: AppRadius.large, style: .continuous))
         .overlay(
             RoundedRectangle(cornerRadius: AppRadius.large, style: .continuous)
-                .strokeBorder(AppColors.danger.opacity(0.35), lineWidth: AppBorders.hairline)
+                .strokeBorder(AppColors.border, lineWidth: AppBorders.hairline)
         )
         .accessibilityLabel("Error: \(message.text)")
     }

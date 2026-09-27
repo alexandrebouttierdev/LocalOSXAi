@@ -27,7 +27,7 @@ struct WelcomeView: View {
                     Label("Open Project…", systemImage: "folder.badge.plus")
                         .padding(.horizontal, AppSpacing.xs)
                 }
-                .appGlassButton(prominent: true)
+                .appButton(prominent: true)
                 .controlSize(.large)
                 ShortcutBadge(shortcut: WorkspaceCommand.openProject.shortcut?.displayString ?? "")
             }
@@ -60,7 +60,7 @@ struct WelcomeView: View {
         }
         .padding(AppSpacing.sm)
         .frame(width: 420)
-        .appGlass(in: RoundedRectangle(cornerRadius: AppRadius.overlay, style: .continuous))
+        .appFloating(in: RoundedRectangle(cornerRadius: AppRadius.large, style: .continuous), elevated: false)
     }
 }
 

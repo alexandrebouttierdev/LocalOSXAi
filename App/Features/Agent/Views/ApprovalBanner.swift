@@ -32,7 +32,7 @@ struct ApprovalBanner: View {
             }
         }
         .padding(AppSpacing.md)
-        .appGlass(.tinted(AppColors.warning), in: RoundedRectangle(cornerRadius: AppRadius.composer, style: .continuous))
+        .appFloating(.tinted(AppColors.warning), in: RoundedRectangle(cornerRadius: AppRadius.composer, style: .continuous))
         .overlay(
             RoundedRectangle(cornerRadius: AppRadius.composer, style: .continuous)
                 .strokeBorder(AppColors.warning.opacity(0.35), lineWidth: AppBorders.hairline)
@@ -60,10 +60,10 @@ struct ApprovalBanner: View {
                     .foregroundStyle(AppColors.textSecondary)
             }
             Spacer(minLength: AppSpacing.sm)
-            AppGlassContainer {
+            Group {
                 HStack(spacing: AppSpacing.xs) {
                     Button("Deny") { onDecision(.deny) }
-                        .appGlassButton()
+                        .appButton()
                         .keyboardShortcut(.delete, modifiers: .command)
                         .help("Deny (⌘⌫)")
                     if let rule = request.suggestedCommandRule {
@@ -77,11 +77,11 @@ struct ApprovalBanner: View {
                               + "Blocked commands stay blocked.")
                     } else {
                         Button("Allow for Session") { onDecision(.allowForSession) }
-                            .appGlassButton()
+                            .appButton()
                             .help("Don't ask again for \(request.toolName) in this session.")
                     }
                     Button("Allow") { onDecision(.allowOnce) }
-                        .appGlassButton(prominent: true)
+                        .appButton(prominent: true)
                         .keyboardShortcut(.return, modifiers: .command)
                         .help("Allow (⌘↩)")
                 }

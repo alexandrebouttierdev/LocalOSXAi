@@ -43,7 +43,7 @@ struct MainContentView: View {
                     message: "Start a session to ask the agent about this project."
                 ) {
                     Button("New Session") { onCommand(.newSession) }
-                        .appGlassButton(prominent: true)
+                        .appButton(prominent: true)
                         .controlSize(.large)
                 }
             }

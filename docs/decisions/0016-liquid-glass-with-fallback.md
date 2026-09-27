@@ -1,6 +1,6 @@
 # 0016: Liquid Glass for floating layers, with a material fallback
 
-**Status:** Accepted
+**Status:** Superseded by [0023](0023-opaque-linear-surfaces.md)
 
 ## Context
 The interface should feel premium and native. macOS 26 introduces Liquid Glass (`glassEffect`,

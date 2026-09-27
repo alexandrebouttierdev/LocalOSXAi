@@ -17,7 +17,7 @@ Status as of **Phase 8 (conversation summaries)**:
 | Area | Status |
 |---|---|
 | Native window, sidebar / content / inspector layout | ✅ |
-| Linear-like design system with Liquid Glass on macOS 26 (tokens, components, light/dark, Increase Contrast) | ✅ |
+| Linear's visual language: Inter, Linear's palette, opaque surfaces, compact controls (tokens, components, light/dark, Increase Contrast) | ✅ |
 | Markdown answers with copyable code blocks, human-readable tool activity | ✅ |
 | Command palette (⌘K), menu commands and shortcuts | ✅ |
 | Project selection (open folder, recent projects, remove with confirmation) | ✅ |

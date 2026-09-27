@@ -20,8 +20,11 @@ struct SidebarView: View {
                 recentSection
             }
         }
-        // Native sidebar material: Liquid Glass on macOS 26, vibrancy before.
+        // Native sidebar behavior (selection, keyboard, disclosure) on Linear's
+        // opaque ground instead of the translucent sidebar material.
         .listStyle(.sidebar)
+        .scrollContentBackground(.hidden)
+        .background(AppColors.background)
         .safeAreaInset(edge: .top, spacing: 0) {
             VStack(alignment: .leading, spacing: AppSpacing.xs) {
                 appHeader
@@ -160,11 +163,11 @@ struct SidebarView: View {
             .foregroundStyle(AppColors.textTertiary)
             .padding(.leading, AppSpacing.md)
             .padding(.trailing, AppSpacing.xs + AppSpacing.xxs)
-            .frame(height: 30)
-            .contentShape(Capsule())
+            .frame(height: AppLayout.buttonHeight)
+            .contentShape(RoundedRectangle(cornerRadius: AppRadius.medium, style: .continuous))
         }
         .buttonStyle(.plain)
-        .appGlass(in: Capsule(), interactive: true)
+        .appFloating(in: RoundedRectangle(cornerRadius: AppRadius.medium, style: .continuous), interactive: true, elevated: false)
         .padding(.horizontal, AppSpacing.md)
         .padding(.vertical, AppSpacing.sm)
         .accessibilityLabel("Command palette")

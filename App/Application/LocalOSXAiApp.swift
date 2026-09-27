@@ -23,6 +23,9 @@ struct LocalOSXAiApp: App {
         Window("LocalOSXAi", id: "main") {
             WorkspaceView(viewModel: workspace)
                 .frame(minWidth: 900, minHeight: 560)
+                // Inter everywhere, including controls without an explicit font.
+                .font(AppTypography.body)
+                .containerBackground(AppColors.background, for: .window)
                 .onChange(of: appearance, initial: true) {
                     NSApp.appearance = appearance.nsAppearance
                 }
@@ -35,6 +38,7 @@ struct LocalOSXAiApp: App {
 
         Settings {
             SettingsView(agent: agentSettings, providers: providerSettings, models: workspace.models)
+                .font(AppTypography.body)
         }
     }
 }

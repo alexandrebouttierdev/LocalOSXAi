@@ -16,7 +16,7 @@ struct EmptyStateView<Actions: View>: View {
                 .font(.system(size: 22, weight: .regular))
                 .foregroundStyle(AppColors.textSecondary)
                 .frame(width: 56, height: 56)
-                .appGlass(in: Circle())
+                .appFloating(in: RoundedRectangle(cornerRadius: AppRadius.panel, style: .continuous), elevated: false)
                 .accessibilityHidden(true)
             VStack(spacing: AppSpacing.xs) {
                 Text(title)

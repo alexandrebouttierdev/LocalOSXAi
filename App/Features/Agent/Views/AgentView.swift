@@ -105,7 +105,7 @@ struct AgentView: View {
             Label("Retry", systemImage: "arrow.clockwise")
                 .font(AppTypography.callout)
         }
-        .appGlassButton()
+        .appButton()
         .controlSize(.small)
         .help("Run the last message again")
         .accessibilityHint("Runs your last message again, replacing the failed or stopped answer.")
@@ -123,7 +123,7 @@ struct AgentView: View {
                     .foregroundStyle(AppColors.textSecondary)
                     .multilineTextAlignment(.center)
             }
-            AppGlassContainer {
+            Group {
                 VStack(spacing: AppSpacing.sm) {
                     ForEach(Self.suggestions, id: \.self) { suggestion in
                         Button {
@@ -137,12 +137,13 @@ struct AgentView: View {
                             }
                             .font(AppTypography.callout)
                             .padding(.horizontal, AppSpacing.md)
-                            .frame(height: 30)
-                            .contentShape(Capsule())
+                            .frame(height: AppLayout.buttonHeight)
+                            .contentShape(RoundedRectangle(cornerRadius: AppRadius.medium, style: .continuous))
                         }
                         .buttonStyle(.plain)
                         .foregroundStyle(AppColors.textSecondary)
-                        .appGlass(in: Capsule(), interactive: true)
+                        .appFloating(in: RoundedRectangle(cornerRadius: AppRadius.medium, style: .continuous),
+                                     interactive: true, elevated: false)
                     }
                 }
             }
