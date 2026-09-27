@@ -95,6 +95,11 @@ struct AgentRuntime: AgentService {
                            options: generationOptions(request.options.generation, contextTokens: contextTokens)),
                 provider: resolved.provider, contextTokens: contextTokens, emit: emit
             )
+            // A call cut by the length limit has truncated arguments: running
+            // it could write half a file, and retrying hits the same limit.
+            if response.finishReason == .length, !response.toolCalls.isEmpty {
+                throw AgentError.toolCallCutOff(contextTokens: contextTokens)
+            }
             context.appendAssistant(text: response.text, toolCalls: response.toolCalls)
             guard !response.toolCalls.isEmpty else {
                 // A silent end would look like a hang: say why nothing came back.

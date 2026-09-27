@@ -59,8 +59,10 @@ struct OllamaStreamDecoder: LLMStreamDecoder, Sendable {
         return []
     }
 
+    /// `length` wins over tool calls: a call cut by the limit must not look
+    /// complete, or its truncated arguments would be executed.
     private func finishReason(_ doneReason: String?) -> FinishReason {
-        if sawToolCall { return .toolCalls }
-        return doneReason == "length" ? .length : .stop
+        if doneReason == "length" { return .length }
+        return sawToolCall ? .toolCalls : .stop
     }
 }

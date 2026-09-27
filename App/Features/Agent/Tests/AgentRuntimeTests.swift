@@ -216,6 +216,19 @@ struct AgentRuntimeTests {
         #expect(cutResult.error as? AgentError == .outputLimitReached)
     }
 
+    @Test("a tool call cut by the length limit is never run, and the error names the context size")
+    func cutToolCall() async throws {
+        let provider = FakeLLMProvider(turns: [
+            .events([.toolCall(Fixtures.call("echo", #"{"text":"half"}"#)), .finished(.length)])
+        ])
+        let result = await collect(try runtime(provider).run(Fixtures.runRequest(), approver: StubApprover()))
+
+        #expect(result.error as? AgentError == .toolCallCutOff(contextTokens: 8_192))
+        #expect(toolResults(result.elements).isEmpty)
+        #expect(!result.elements.contains { if case .toolCallStarted = $0 { true } else { false } })
+        #expect((result.error as? LocalizedError)?.errorDescription?.contains("8.2K") == true)
+    }
+
     @Test("tool-call progress is forwarded with the target path")
     func preparingProgress() async throws {
         let provider = FakeLLMProvider(turns: [

@@ -71,6 +71,17 @@ struct OpenAIStreamDecoderTests {
         #expect(try decode(stream) == [.textDelta("ok"), .finished(.length)])
     }
 
+    @Test("a tool call cut by the length limit keeps the length finish reason")
+    func lengthAfterToolCall() throws {
+        let stream = #"""
+            data: {"choices":[{"delta":{"tool_calls":[{"index":0,"id":"c1","function":{"name":"x","arguments":"{\"a\":\"<ht"}}]}}]}
+            data: {"choices":[{"delta":{},"finish_reason":"length"}]}
+            data: [DONE]
+            """#
+        let events = try decode(stream).filter { if case .toolCallProgress = $0 { false } else { true } }
+        #expect(events.last == .finished(.length))
+    }
+
     @Test("a stream closed before any finish reason is an error")
     func truncated() {
         #expect { try decode(#"data: {"choices":[{"delta":{"content":"par"}}]}"#) } throws: { error in

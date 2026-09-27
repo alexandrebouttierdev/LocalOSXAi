@@ -5,7 +5,8 @@ struct WriteFileTool: AgentTool {
     let name = "write_file"
     let description = """
         Create a file, or replace a file's entire content. Parent folders are created. Prefer \
-        edit_file to change part of an existing file.
+        edit_file to change part of an existing file. Give "path" before "content". For a long file, \
+        write a first part, then add the rest with edit_file.
         """
     let parameters = ToolParameterSchema(
         properties: [
