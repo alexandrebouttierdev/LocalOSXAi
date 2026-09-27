@@ -51,7 +51,11 @@ struct AppEnvironment {
                                         fileBrowser: LocalFileBrowser(), isSimulated: false,
                                         storageError: storage.error, attachmentLoader: LocalAttachmentLoader(),
                                         notifier: SystemUserNotifier(), appInfo: bundleInfo,
-                                        notificationPreferences: { notificationPreferences(from: agentSettings.load()) }),
+                                        notificationPreferences: { notificationPreferences(from: agentSettings.load()) },
+                                        releaseChecker: GitHubReleaseChecker(owner: AppInfo.repositoryOwner,
+                                                                             repository: AppInfo.repositoryName,
+                                                                             appVersion: bundleInfo.version),
+                                        checksForUpdatesAtLaunch: { agentSettings.load().checksForUpdates }),
             makeProviders: { ProviderFactory.providers(for: $0, secrets: secrets) }
         )
     }

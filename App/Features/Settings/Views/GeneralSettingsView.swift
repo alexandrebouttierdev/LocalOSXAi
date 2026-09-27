@@ -1,8 +1,10 @@
 import SwiftUI
 
-/// Settings › General: appearance and agent limits. Each change is saved at once.
+/// Settings › General: appearance, agent limits, notifications and updates.
+/// Each change is saved at once.
 struct GeneralSettingsView: View {
     @Bindable var agent: AgentSettingsViewModel
+    let updates: UpdatesViewModel
     @AppStorage(AppearancePreference.storageKey) private var appearance: AppearancePreference = .system
 
     var body: some View {
@@ -80,6 +82,8 @@ struct GeneralSettingsView: View {
                     .foregroundStyle(.secondary)
             }
             .task { await agent.refreshNotificationPermission() }
+
+            updatesSection
         }
         .formStyle(.grouped)
         .scrollContentBackground(.hidden)
@@ -131,6 +135,61 @@ struct GeneralSettingsView: View {
         case nil:
             EmptyView()
         }
+    }
+
+    private var updatesSection: some View {
+        Section {
+            LabeledContent("Version") {
+                HStack(spacing: AppSpacing.sm) {
+                    Text(updates.currentVersion?.description ?? "—")
+                        .monospacedDigit()
+                        .textSelection(.enabled)
+                    updateStatus
+                }
+            }
+            Toggle("Check for updates at launch", isOn: checksForUpdates)
+                .help("Asks GitHub for the latest release each time the app starts. A new version shows at the "
+                      + "bottom of the sidebar.")
+            HStack {
+                Spacer()
+                Button("Check Now") { Task { await updates.checkNow() } }
+                    .disabled(!updates.canCheck || updates.isChecking)
+                    .help(updates.canCheck ? "Looks for a newer release now." : "Update checks are off in simulated mode.")
+            }
+        } header: {
+            Text("Updates")
+        } footer: {
+            Text("Only the app's version is sent to GitHub, never your projects or prompts. "
+                 + "Updates are downloaded from the release page, in your browser.")
+                .font(AppTypography.caption)
+                .foregroundStyle(.secondary)
+        }
+    }
+
+    /// The last check's result, in words; the icon only reinforces it.
+    @ViewBuilder
+    private var updateStatus: some View {
+        switch updates.status {
+        case .available(let release):
+            Button { updates.showAvailableUpdate() } label: {
+                Label("\(release.tag) available", systemImage: "arrow.down.circle.fill")
+                    .foregroundStyle(AppColors.accentText)
+            }
+            .buttonStyle(.plain)
+            .help("Show the new version")
+        case .upToDate:
+            Label("Up to date", systemImage: "checkmark.circle.fill")
+                .foregroundStyle(AppColors.success)
+        case .checking:
+            Label("Checking…", systemImage: "arrow.triangle.2.circlepath")
+                .foregroundStyle(AppColors.textSecondary)
+        case .idle, .failed:
+            EmptyView()
+        }
+    }
+
+    private var checksForUpdates: Binding<Bool> {
+        Binding(get: { agent.settings.checksForUpdates }, set: { agent.setChecksForUpdates($0) })
     }
 
     private var showsNotifications: Binding<Bool> {

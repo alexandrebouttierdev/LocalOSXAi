@@ -14,6 +14,7 @@ final class WorkspaceViewModel {
     let sessions: SessionsViewModel
     let models: ModelsViewModel
     let palette = CommandPaletteViewModel()
+    let updates: UpdatesViewModel
     let services: WorkspaceServices
     var isSimulated: Bool { services.isSimulated }
     var appInfo: AppInfo { services.appInfo }
@@ -49,6 +50,8 @@ final class WorkspaceViewModel {
         self.sessions = sessions
         self.models = models
         self.services = services
+        updates = UpdatesViewModel(currentVersion: services.appInfo.version, checker: services.releaseChecker,
+                                   checksAtLaunch: services.checksForUpdatesAtLaunch)
         storageError = services.storageError.map {
             UserFacingError($0, title: "History is not being saved", category: .persistence)
         }
@@ -119,6 +122,8 @@ final class WorkspaceViewModel {
 
     func load() async {
         prepareNotifications()
+        // Not awaited: the answer from GitHub must never delay the workspace.
+        Task { await updates.checkAtLaunch() }
         await projects.load()
         await models.refresh()
         if selectedProjectID == nil, let mostRecent = projects.projects.first {
@@ -263,6 +268,8 @@ final class WorkspaceViewModel {
         switch command {
         case .openProject, .toggleSidebar, .toggleInspector, .openSettings, .about:
             nil
+        case .checkForUpdates:
+            updates.canCheck ? nil : "Update checks are off in simulated mode"
         case .newSession, .projectSettings, .showAgent, .showFiles, .showChanges, .openTerminal, .searchFiles:
             selectedProjectID == nil ? "Open a project first" : nil
         case .changeModel:
@@ -296,7 +303,7 @@ final class WorkspaceViewModel {
             activePanels?.files.requestSearchFocus()
         case .changeModel: showModelPalette()
         case .compactSession: activeAgent?.compact()
-        case .toggleSidebar, .toggleInspector, .openSettings, .about: performWindowCommand(command)
+        case .toggleSidebar, .toggleInspector, .openSettings, .about, .checkForUpdates: performWindowCommand(command)
         case .showAgent, .showFiles, .showChanges, .openTerminal: break
         }
     }
@@ -308,6 +315,7 @@ final class WorkspaceViewModel {
         case .toggleInspector: isInspectorPresented.toggle()
         case .openSettings: showSettings()
         case .about: isAboutPresented = true
+        case .checkForUpdates: Task { await updates.checkNow() }
         default: break
         }
     }

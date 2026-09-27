@@ -250,7 +250,17 @@ struct SidebarView: View {
     private var footer: some View {
         VStack(alignment: .leading, spacing: 0) {
             footerRow
-            versionButton
+            HStack(spacing: AppSpacing.sm) {
+                versionButton
+                Spacer(minLength: 0)
+                if let release = viewModel.updates.availableRelease, viewModel.updates.showsBadge {
+                    UpdateBadge(release: release, action: viewModel.updates.showAvailableUpdate)
+                        .transition(.opacity.combined(with: .scale(scale: 0.9)))
+                }
+            }
+            .padding(.horizontal, AppSpacing.sm)
+            .padding(.bottom, AppSpacing.sm)
+            .appAnimation(AppAnimation.quick, value: viewModel.updates.showsBadge)
         }
     }
 
@@ -262,8 +272,6 @@ struct SidebarView: View {
                 .foregroundStyle(AppColors.textTertiary)
         }
         .buttonStyle(.subtle)
-        .padding(.horizontal, AppSpacing.sm)
-        .padding(.bottom, AppSpacing.sm)
         .help("About LocalOSXAi")
         .accessibilityLabel("About LocalOSXAi, \(viewModel.appInfo.fullVersion)")
     }

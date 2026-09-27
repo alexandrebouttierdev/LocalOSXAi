@@ -11,6 +11,7 @@ enum LogCategory: String, CaseIterable, Sendable {
     case git
     case persistence
     case ui
+    case updates
 }
 
 extension Logger {

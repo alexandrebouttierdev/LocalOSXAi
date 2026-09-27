@@ -47,6 +47,10 @@ final class AgentSettingsViewModel {
         update { $0.compactThresholdPercent = value }
     }
 
+    func setChecksForUpdates(_ value: Bool) {
+        update { $0.checksForUpdates = value }
+    }
+
     /// Turning notifications on asks macOS for permission if it never was.
     func setShowsNotifications(_ value: Bool) {
         update { $0.showsNotifications = value }

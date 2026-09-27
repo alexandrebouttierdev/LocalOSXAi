@@ -10,6 +10,7 @@ struct AppCommands: Commands {
         // has no separate Settings window (ADR 0024).
         CommandGroup(replacing: .appInfo) {
             Button("About LocalOSXAi") { workspace.perform(.about) }
+            button(.checkForUpdates)
         }
 
         CommandGroup(replacing: .appSettings) {

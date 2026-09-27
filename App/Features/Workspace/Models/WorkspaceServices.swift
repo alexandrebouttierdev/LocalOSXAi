@@ -22,6 +22,10 @@ struct WorkspaceServices {
     var appInfo = AppInfo(infoDictionary: [:])
     /// Read each time a session needs the user, so a Settings change applies at once.
     var notificationPreferences: @Sendable () -> NotificationPreferences = { NotificationPreferences() }
+    /// Finds the latest release; `nil` turns update checks off.
+    var releaseChecker: (any ReleaseChecking)?
+    /// The Settings choice, read at launch.
+    var checksForUpdatesAtLaunch: @Sendable () -> Bool = { true }
 }
 
 /// The per-project view models behind the Files, Changes and Terminal tabs

@@ -11,6 +11,7 @@ struct SettingsScreen: View {
     let agent: AgentSettingsViewModel
     let providers: ProviderSettingsViewModel
     let models: ModelsViewModel
+    let updates: UpdatesViewModel
     /// Shared with the workspace, so both sidebars have the same width.
     @Binding var sidebarWidth: Double
     /// False while another layer (the command palette) owns Esc.
@@ -92,7 +93,7 @@ struct SettingsScreen: View {
     @ViewBuilder
     private var content: some View {
         switch section {
-        case .general: GeneralSettingsView(agent: agent)
+        case .general: GeneralSettingsView(agent: agent, updates: updates)
         case .systemPrompt: SystemPromptSettingsView(agent: agent)
         case .providers: ProvidersSettingsView(viewModel: providers, models: models)
         }

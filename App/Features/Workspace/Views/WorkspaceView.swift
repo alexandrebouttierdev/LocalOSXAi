@@ -24,6 +24,7 @@ struct WorkspaceView: View {
                     agent: agentSettings,
                     providers: providerSettings,
                     models: viewModel.models,
+                    updates: viewModel.updates,
                     sidebarWidth: $sidebarWidth,
                     closesWithEscape: !viewModel.isCommandPalettePresented,
                     onClose: viewModel.closeSettings
@@ -38,6 +39,10 @@ struct WorkspaceView: View {
         .appAnimation(AppAnimation.overlay, value: viewModel.isCommandPalettePresented)
         .sheet(isPresented: $viewModel.isAboutPresented) {
             AboutView(info: viewModel.appInfo)
+        }
+        .sheet(isPresented: Binding(get: { viewModel.updates.isSheetPresented },
+                                    set: { viewModel.updates.isSheetPresented = $0 })) {
+            UpdateView(viewModel: viewModel.updates)
         }
         .sheet(isPresented: $viewModel.isProjectSettingsPresented) {
             if let project = viewModel.selectedProject {

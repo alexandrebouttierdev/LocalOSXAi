@@ -1,10 +1,11 @@
 import Foundation
 
-/// User-adjustable limits of an agent run and how it reports back
-/// (Settings › General).
+/// User-adjustable limits of an agent run, how it reports back, and whether
+/// the app looks for updates (Settings › General).
 ///
 /// Read at the start of every run, so a change applies to the next run;
-/// notification choices are read each time a session needs the user.
+/// notification choices are read each time a session needs the user, and the
+/// update choice at launch.
 struct AgentSettings: Hashable, Sendable, Codable {
     /// Model calls per run before the run stops and asks the user to continue.
     var maxIterations: Int
@@ -24,6 +25,8 @@ struct AgentSettings: Hashable, Sendable, Codable {
     /// The user's own instructions, added to the system prompt of every run,
     /// after the built-in prompt and before the project's instructions.
     var customInstructions = ""
+    /// Ask GitHub for a newer release at launch (`UpdatesViewModel`).
+    var checksForUpdates = true
 
     static let defaults = AgentSettings(maxIterations: 25, toolTimeoutSeconds: 30)
     static let maxIterationsRange = 5...100
@@ -45,7 +48,8 @@ struct AgentSettings: Hashable, Sendable, Codable {
                 ?? Self.defaults.compactThresholdPercent,
             showsNotifications: showsNotifications,
             playsSound: playsSound,
-            customInstructions: String(customInstructions.prefix(Self.maxCustomInstructionsCharacters))
+            customInstructions: String(customInstructions.prefix(Self.maxCustomInstructionsCharacters)),
+            checksForUpdates: checksForUpdates
         )
     }
 
@@ -67,5 +71,6 @@ extension AgentSettings {
         showsNotifications = try container.decodeIfPresent(Bool.self, forKey: .showsNotifications) ?? true
         playsSound = try container.decodeIfPresent(Bool.self, forKey: .playsSound) ?? true
         customInstructions = try container.decodeIfPresent(String.self, forKey: .customInstructions) ?? ""
+        checksForUpdates = try container.decodeIfPresent(Bool.self, forKey: .checksForUpdates) ?? true
     }
 }

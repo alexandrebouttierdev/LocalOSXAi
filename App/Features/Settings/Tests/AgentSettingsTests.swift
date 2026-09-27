@@ -58,6 +58,19 @@ struct AgentSettingsTests {
         #expect(settings.showsNotifications)
         #expect(settings.playsSound)
         #expect(settings.customInstructions.isEmpty)
+        #expect(settings.checksForUpdates)
+    }
+
+    @Test("checking for updates at launch is on by default and can be turned off")
+    func checksForUpdates() {
+        let store = InMemoryAgentSettingsStore()
+        let viewModel = AgentSettingsViewModel(store: store)
+        #expect(viewModel.settings.checksForUpdates)
+
+        viewModel.setChecksForUpdates(false)
+
+        #expect(!store.load().checksForUpdates)
+        #expect(!store.load().clamped.checksForUpdates)
     }
 
     @Test("custom instructions are saved as typed, capped, and reach the runtime")

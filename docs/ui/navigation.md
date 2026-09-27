@@ -86,6 +86,7 @@ never disagree.
 | ⌘P | Search Files… |
 | ⌘L | Change Model… |
 | — | Compact Session (palette, Go menu, inspector button) |
+| — | Check for Updates… (app menu, palette, Settings › General › Updates) |
 | ⌘1 – ⌘4 | Agent / Files / Changes / Terminal |
 | ⌃⌘S | Toggle sidebar |
 | ⌥⌘I | Toggle inspector |

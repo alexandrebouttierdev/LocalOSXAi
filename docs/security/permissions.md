@@ -67,6 +67,10 @@ every action appears in the transcript with its arguments and result.
   URLs with a host are accepted. ✅ A URL whose host is not this Mac (anything but `localhost`,
   `127.x.x.x`, `::1`) shows a warning in Settings: prompts, including file contents, leave the
   machine. The warning also says when an API key would be sent over plain HTTP.
+- ✅ Besides the model servers, the app makes one request on its own: at launch, an anonymous
+  `GET` of the latest release from `api.github.com`, carrying only the app's version
+  ([ADR 0030](../decisions/0030-update-check.md)). Settings › General › Updates turns it off.
+  The page it opens is always on the app's GitHub releases.
 - Environment variables whose names contain `KEY`, `TOKEN`, `SECRET`, `PASSWORD`, `PASSWD` or
   `CREDENTIAL` are removed from the environment of every command. An allowlist is planned
   (not implemented yet).

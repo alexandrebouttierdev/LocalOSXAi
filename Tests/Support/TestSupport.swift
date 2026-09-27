@@ -193,3 +193,12 @@ final class FailingProviderSecretStore: ProviderSecretStore {
         stored.apiKey(for: provider)
     }
 }
+
+/// Waits, up to about a second, for state set by a task the test cannot
+/// await (work a view model starts without returning it).
+@MainActor
+func waitUntil(_ condition: () -> Bool) async {
+    for _ in 0..<200 where !condition() {
+        try? await Task.sleep(for: .milliseconds(5))
+    }
+}

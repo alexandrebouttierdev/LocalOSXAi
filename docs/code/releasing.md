@@ -20,11 +20,19 @@
 ## Publishing a new version
 
 1. Bump `CFBundleShortVersionString` in `project.yml` (and `App/Resources/Info.plist`, which
-   XcodeGen rewrites from it), following [semantic versioning](https://semver.org):
-   `0.1.0` → `0.2.0` for features, `0.1.1` for fixes.
-2. Merge into `main`. The workflow publishes `v0.2.0`.
+   XcodeGen rewrites from it). The first release is `0.0.0.1`; versions are dotted numbers,
+   compared number by number, so `0.0.0.2` follows it, and `0.0.1` or `0.1` are later still.
+2. Merge into `main`. The workflow publishes `v0.0.0.2`.
 
 To build the same archive locally: `scripts/build-release.sh 1` (writes `dist/`).
+
+## Update check
+
+At launch the app asks GitHub for the latest release and, if it is newer than the running
+version, shows an **Update** pill at the bottom of the sidebar; **Check for Updates…** does the
+same on request ([ADR 0030](../decisions/0030-update-check.md)). Only full releases count:
+pre-releases (`-build.N`) are never offered. So a version bump in `project.yml` is what makes
+users see an update.
 
 ## Website
 

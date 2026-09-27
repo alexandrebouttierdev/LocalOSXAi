@@ -31,7 +31,8 @@ clone of Cline or OpenCode.
 ## Why LocalOSXAi
 
 - 🔒 **Private by default**: prompts and code stay on your machine. A server configured outside
-  this Mac is clearly flagged in Settings.
+  this Mac is clearly flagged in Settings. The only other request is an anonymous update check at
+  launch, which you can turn off.
 - 🛡️ **You stay in control**: the agent reads freely, but edits and commands go through a clear
   permission policy (safe, needs approval, blocked). Stop it anytime with ⌘.
 - 🧠 **Made for local models**: honest context sizes, conversation summaries when history grows,
@@ -64,6 +65,8 @@ clone of Cline or OpenCode.
   with fuzzy search (⌘P) and a Terminal tab.
 - Command palette (⌘K), shortcuts everywhere, VoiceOver labels, Reduce Motion respected.
 - Notifications and a sound when the agent answers or needs you while you are elsewhere.
+- Tells you when a new version is out: an **Update** pill in the sidebar, the release notes and
+  a download link (**Check for Updates…** anytime).
 
 **Models and providers**
 - Ollama and LM Studio discovered automatically; any OpenAI-compatible server (llama.cpp, vLLM,
@@ -75,7 +78,8 @@ clone of Cline or OpenCode.
 Get the latest **LocalOSXAi.zip** from the
 [Releases page](https://github.com/alexandrebouttierdev/LocalOSXAi/releases), unzip it and move
 the app to Applications. The app is not notarized yet: the first time, right-click it and
-choose **Open**. Requires macOS 15 or later.
+choose **Open**. Requires macOS 15 or later. The app tells you when a newer version is
+released.
 
 ## Quick start
 
@@ -181,6 +185,8 @@ docs/                 architecture, conventions, AI, UI, security, decisions (AD
 - [x] Attachments, notifications, your own system prompt
 - [ ] Images for vision models
 - [x] Automatic releases on every push to `main`
+- [x] Update check at launch
+- [ ] Updates installed from the app (Sparkle, once releases are notarized)
 - [ ] Signed and notarized releases
 - [ ] Full manual VoiceOver pass
 

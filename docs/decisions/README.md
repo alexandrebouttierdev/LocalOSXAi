@@ -48,3 +48,4 @@ Accepted ADRs are not edited to change their decision. Write a new ADR that supe
 | [0027](0027-notifications.md) | Notify only when the user is not looking; the sound follows its own switch | Accepted |
 | [0028](0028-text-attachments.md) | Attach text files by copying their content into the message | Accepted |
 | [0029](0029-user-system-prompt.md) | The user's system prompt adds to the built-in one | Accepted |
+| [0030](0030-update-check.md) | Check GitHub Releases at launch; download in the browser | Accepted |

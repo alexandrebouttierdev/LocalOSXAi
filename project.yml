@@ -45,7 +45,7 @@ targets:
       path: App/Resources/Info.plist
       properties:
         CFBundleDisplayName: LocalOSXAi
-        CFBundleShortVersionString: "0.1.0"
+        CFBundleShortVersionString: "0.0.0.1"
         CFBundleVersion: "1"
         LSApplicationCategoryType: public.app-category.developer-tools
         LSMinimumSystemVersion: "15.0"

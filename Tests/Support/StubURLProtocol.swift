@@ -36,6 +36,7 @@ final class StubURLProtocol: URLProtocol, @unchecked Sendable {
         let path: String
         let body: JSONValue?
         let authorization: String?
+        var headers: [String: String] = [:]
     }
 
     typealias Handler = @Sendable (CapturedRequest) -> Response
@@ -98,7 +99,8 @@ final class StubURLProtocol: URLProtocol, @unchecked Sendable {
             method: request.httpMethod ?? "GET",
             path: url.path(),
             body: Self.body(of: request).flatMap { try? JSONValue.parse($0) },
-            authorization: request.value(forHTTPHeaderField: "Authorization")
+            authorization: request.value(forHTTPHeaderField: "Authorization"),
+            headers: request.allHTTPHeaderFields ?? [:]
         )
         route.record(captured)
         let response = route.handler(captured)

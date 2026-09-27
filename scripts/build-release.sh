@@ -22,7 +22,7 @@ xcodebuild -project LocalOSXAi.xcodeproj -scheme LocalOSXAi -configuration Relea
   -destination 'generic/platform=macOS' -derivedDataPath "$derived" \
   ARCHS="arm64 x86_64" ONLY_ACTIVE_ARCH=NO build -quiet
 
-# The build number identifies this build in About (“Version 0.1.0 (42)”).
+# The build number identifies this build in About (“Version 0.0.0.1 (42)”).
 /usr/libexec/PlistBuddy -c "Set :CFBundleVersion $build_number" "$app/Contents/Info.plist"
 # Changing Info.plist invalidates the signature: sign again, ad hoc.
 codesign --force --deep --options runtime --sign - "$app"
