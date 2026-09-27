@@ -10,7 +10,14 @@ struct WorkspaceView: View {
     @AppStorage(AppLayout.sidebarWidthKey) private var sidebarWidth = Double(AppLayout.sidebarIdealWidth)
 
     var body: some View {
-        Group {
+        ZStack {
+            // The workspace stays alive under the settings screen: rebuilding
+            // it (transcript, Markdown, inspector, Git) made “Back to app”
+            // slow. Hidden, it is disabled so its shortcuts cannot fire.
+            workspace
+                .opacity(viewModel.isSettingsPresented ? 0 : 1)
+                .disabled(viewModel.isSettingsPresented)
+                .accessibilityHidden(viewModel.isSettingsPresented)
             if viewModel.isSettingsPresented {
                 SettingsScreen(
                     section: $viewModel.settingsSection,
@@ -21,10 +28,10 @@ struct WorkspaceView: View {
                     closesWithEscape: !viewModel.isCommandPalettePresented,
                     onClose: viewModel.closeSettings
                 )
-            } else {
-                workspace
+                .transition(.opacity)
             }
         }
+        .appAnimation(AppAnimation.quick, value: viewModel.isSettingsPresented)
         // While the palette is open, VoiceOver stays inside it (modal).
         .accessibilityHidden(viewModel.isCommandPalettePresented)
         .overlay { commandPalette }

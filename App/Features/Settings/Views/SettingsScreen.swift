@@ -3,8 +3,9 @@ import SwiftUI
 /// Settings as a screen of the main window, like Linear's: a way back and the
 /// sections on the left, the selected section on the inset panel.
 ///
-/// It replaces the workspace while open (⌘, or Settings in the sidebar);
-/// “Back to app” or Esc returns to the workspace as it was left.
+/// It covers the workspace while open (⌘, or Settings in the sidebar);
+/// “Back to app” or Esc returns at once to the workspace as it was left,
+/// which stays alive underneath.
 struct SettingsScreen: View {
     @Binding var section: SettingsSection
     let agent: AgentSettingsViewModel
@@ -23,6 +24,9 @@ struct SettingsScreen: View {
             page
         }
         .navigationTitle("Settings")
+        // The hidden workspace's message field may still have the keyboard:
+        // take it away so typing never goes there.
+        .onAppear { NSApp.keyWindow?.makeFirstResponder(nil) }
     }
 
     private var sidebar: some View {
