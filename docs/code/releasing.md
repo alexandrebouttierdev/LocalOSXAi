@@ -52,8 +52,10 @@ latest release, so a new release needs no change to the site.
 
 ## Signing
 
-The app is signed **ad hoc**, not with a Developer ID, and not notarized: macOS asks users to
-confirm the first launch (right-click › Open, or remove the quarantine attribute). The release
+The app is signed **ad hoc**, not with a Developer ID, and not notarized: macOS refuses the first
+launch outright, with no “Open Anyway” on the dialog itself. Users allow it once in System
+Settings › Privacy & Security, or remove the quarantine attribute (`xattr -dr
+com.apple.quarantine`). The release
 notes say so. Notarizing needs an Apple Developer account; when one exists, add the certificate
 and an App Store Connect API key as repository secrets and sign with `codesign` and
 `notarytool` in `build-release.sh` (planned).

@@ -89,8 +89,11 @@ jobs:
 
           1. Download **LocalOSXAi-$VERSION.dmg** below and open it.
           2. Drag **LocalOSXAi** onto **Applications**.
-          3. The app is not notarized yet: the first time, right-click it and choose **Open**, then
-             **Open** again (or run \`xattr -dr com.apple.quarantine /Applications/LocalOSXAi.app\`).
+          3. The app is not notarized yet, so on the first launch macOS refuses it outright (“Apple could
+             not confirm…”, no “Open Anyway” on the dialog itself): open **System Settings › Privacy &
+             Security**, scroll to the message about LocalOSXAi being blocked and click **Open Anyway**,
+             then confirm once more when you reopen the app. (Or run
+             \`xattr -dr com.apple.quarantine /Applications/LocalOSXAi.app\` in Terminal instead.)
 
           Requires macOS 15 or later, and Ollama, LM Studio or another local model server.
           NOTES

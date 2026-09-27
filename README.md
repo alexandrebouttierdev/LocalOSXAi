@@ -77,8 +77,9 @@ clone of Cline or OpenCode.
 
 Get the latest **LocalOSXAi.dmg** from the
 [Releases page](https://github.com/alexandrebouttierdev/LocalOSXAi/releases), open it and drag
-LocalOSXAi onto Applications. The app is not notarized yet: the first time, right-click it and
-choose **Open**. Requires macOS 15 or later. The app tells you when a newer version is
+LocalOSXAi onto Applications. The app is not notarized yet, so macOS refuses the first launch
+outright: open **System Settings › Privacy & Security**, then click **Open Anyway** next to the
+message about LocalOSXAi. Requires macOS 15 or later. The app tells you when a newer version is
 released.
 
 ## Quick start
