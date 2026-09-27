@@ -98,11 +98,9 @@ struct ChangesView: View {
                 .padding(.horizontal, AppSpacing.md)
                 .frame(height: 44)
                 Divider().overlay(AppColors.border)
-                ScrollView([.vertical, .horizontal]) {
-                    DiffView(diff: change.diff)
-                        .padding(.vertical, AppSpacing.sm)
-                }
-                .background(AppColors.codeBackground)
+                DiffView(diff: change.diff, path: change.path, showsHeader: false)
+                    .frame(maxHeight: .infinity, alignment: .top)
+                    .background(AppColors.codeBackground)
             }
         }
     }

@@ -8,27 +8,21 @@ struct ApprovalBanner: View {
     let request: ToolApprovalRequest
     let onDecision: (ToolApprovalDecision) -> Void
 
-    @State private var showsChanges = true
+    /// Lines of the proposed change shown before scrolling.
+    static let diffHeight: CGFloat = 280
 
     var body: some View {
         VStack(alignment: .leading, spacing: AppSpacing.sm) {
             header
             if let preview = request.preview {
-                DisclosureGroup(isExpanded: $showsChanges) {
-                    ScrollView([.vertical, .horizontal]) {
-                        DiffView(diff: preview.diff)
-                            .padding(.vertical, AppSpacing.xs)
-                    }
-                    .frame(maxHeight: 240)
-                    .background(AppColors.codeBackground, in: RoundedRectangle(cornerRadius: AppRadius.large, style: .continuous))
-                } label: {
-                    HStack(spacing: AppSpacing.sm) {
-                        Text(preview.isNewFile ? "New file" : "Changes")
-                            .font(AppTypography.callout)
-                            .foregroundStyle(AppColors.textSecondary)
-                        DiffStatView(added: preview.diff.addedLines, removed: preview.diff.removedLines)
-                    }
-                }
+                DiffView(diff: preview.diff, path: preview.path, badge: preview.isNewFile ? "New file" : nil,
+                         maxHeight: Self.diffHeight)
+                    .background(AppColors.surface, in: RoundedRectangle(cornerRadius: AppRadius.large, style: .continuous))
+                    .clipShape(RoundedRectangle(cornerRadius: AppRadius.large, style: .continuous))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: AppRadius.large, style: .continuous)
+                            .strokeBorder(AppColors.border, lineWidth: AppBorders.hairline)
+                    )
             }
         }
         .padding(AppSpacing.md)
