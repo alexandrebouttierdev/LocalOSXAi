@@ -42,3 +42,4 @@ Accepted ADRs are not edited to change their decision. Write a new ADR that supe
 | [0021](0021-custom-openai-compatible-servers.md) | Custom OpenAI-compatible servers declare what they cannot report | Accepted |
 | [0022](0022-conversation-summaries.md) | Summarize old conversation once per run, keep the summary in the transcript | Accepted |
 | [0023](0023-opaque-linear-surfaces.md) | Linear's visual language: Inter, Linear's palette, opaque surfaces | Accepted |
+| [0024](0024-settings-screen.md) | Settings as a screen of the main window, not a Settings window | Accepted |

@@ -1,6 +1,7 @@
 import SwiftUI
 
-/// The application: one main window, the Settings window and menu commands.
+/// The application: one main window, which also shows the settings screen,
+/// and menu commands.
 ///
 /// A single `Window` (not a `WindowGroup`) is used on purpose: one workspace
 /// per app avoids two windows driving the same session concurrently. Multiple
@@ -21,7 +22,7 @@ struct LocalOSXAiApp: App {
 
     var body: some Scene {
         Window("LocalOSXAi", id: "main") {
-            WorkspaceView(viewModel: workspace)
+            WorkspaceView(viewModel: workspace, agentSettings: agentSettings, providerSettings: providerSettings)
                 .frame(minWidth: 900, minHeight: 560)
                 // Inter everywhere, including controls without an explicit font.
                 .font(AppTypography.body)
@@ -36,9 +37,5 @@ struct LocalOSXAiApp: App {
             AppCommands(workspace: workspace)
         }
 
-        Settings {
-            SettingsView(agent: agentSettings, providers: providerSettings, models: workspace.models)
-                .font(AppTypography.body)
-        }
     }
 }

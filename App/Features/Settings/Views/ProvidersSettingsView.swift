@@ -66,7 +66,7 @@ struct ProvidersSettingsView: View {
             }
         }
         .formStyle(.grouped)
-        .padding(AppSpacing.sm)
+        .scrollContentBackground(.hidden)
         .alert(viewModel.error?.title ?? "", isPresented: Binding(get: { viewModel.error != nil },
                                                                   set: { if !$0 { viewModel.error = nil } })) {
             Button("OK", role: .cancel) { viewModel.error = nil }

@@ -10,12 +10,6 @@ import Observation
 @MainActor
 @Observable
 final class WorkspaceViewModel {
-    /// Where a command leaves the UI, for effects only a view can perform.
-    enum Effect: Equatable {
-        case none
-        case openSettings
-    }
-
     /// Identifies a selectable sidebar row.
     enum SidebarItem: Hashable {
         case project(Project.ID)
@@ -41,6 +35,9 @@ final class WorkspaceViewModel {
     var isCommandPalettePresented = false
     var isProjectImporterPresented = false
     var isProjectSettingsPresented = false
+    /// The settings screen replaces the workspace in the main window.
+    private(set) var isSettingsPresented = false
+    var settingsSection: SettingsSection = .general
 
     /// Set when history could not be opened and the app runs on memory only.
     private(set) var storageError: UserFacingError?
@@ -261,29 +258,42 @@ final class WorkspaceViewModel {
         }
     }
 
-    /// Performs a command. Returns an effect the calling view must carry out
-    /// when the command needs a SwiftUI environment action.
-    @discardableResult
-    func perform(_ command: WorkspaceCommand) -> Effect {
-        guard isEnabled(command) else { return .none }
+    func perform(_ command: WorkspaceCommand) {
+        guard isEnabled(command) else { return }
         if let tab = command.tab {
+            isSettingsPresented = false
             selectedTab = tab
-            return .none
+            return
         }
         switch command {
         case .openProject: isProjectImporterPresented = true
-        case .newSession: Task { await createSession() }
+        case .newSession:
+            isSettingsPresented = false
+            Task { await createSession() }
         case .projectSettings: isProjectSettingsPresented = true
         case .searchFiles:
+            isSettingsPresented = false
             selectedTab = .files
             activePanels?.files.requestSearchFocus()
         case .changeModel: showModelPalette()
         case .toggleSidebar: isSidebarVisible.toggle()
         case .toggleInspector: isInspectorPresented.toggle()
-        case .openSettings: return .openSettings
+        case .openSettings: showSettings()
         case .showAgent, .showFiles, .showChanges, .openTerminal: break
         }
-        return .none
+    }
+
+    // MARK: Settings
+
+    /// Shows the settings screen in place of the workspace.
+    func showSettings(_ section: SettingsSection? = nil) {
+        if let section { settingsSection = section }
+        isSettingsPresented = true
+    }
+
+    /// Returns to the workspace as it was left.
+    func closeSettings() {
+        isSettingsPresented = false
     }
 
     // MARK: Command palette
@@ -310,16 +320,16 @@ final class WorkspaceViewModel {
         isCommandPalettePresented = false
     }
 
-    /// Handles an activated palette row and returns the effect to perform.
-    func activatePaletteItem(_ item: PaletteItem) -> Effect {
+    /// Handles an activated palette row.
+    func activatePaletteItem(_ item: PaletteItem) {
         if let modelID = paletteModelIDs[item.id] {
             models.select(modelID)
             dismissCommandPalette()
-            return .none
+            return
         }
-        guard let command = WorkspaceCommand(rawValue: item.id) else { return .none }
+        guard let command = WorkspaceCommand(rawValue: item.id) else { return }
         if command != .changeModel { dismissCommandPalette() }
-        return perform(command)
+        perform(command)
     }
 
     private func showModelPalette() {

@@ -45,6 +45,8 @@ enum AppLayout {
     static let contentMinWidth: CGFloat = 420
     static let readableWidth: CGFloat = 760
     static let commandPaletteWidth: CGFloat = 560
+    /// Column of a settings page on the settings screen.
+    static let settingsWidth: CGFloat = 720
     static let rowHeight: CGFloat = 28
     /// Buttons and icon buttons (Linear's compact 28 pt controls).
     static let buttonHeight: CGFloat = 28

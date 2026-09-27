@@ -6,6 +6,13 @@ struct AppCommands: Commands {
     let workspace: WorkspaceViewModel
 
     var body: some Commands {
+        // Settings… (⌘,) opens the settings screen of the main window: the app
+        // has no separate Settings window (ADR 0024).
+        CommandGroup(replacing: .appSettings) {
+            Button("Settings…") { workspace.perform(.openSettings) }
+                .keyboardShortcut(WorkspaceCommand.openSettings.shortcut?.keyboardShortcut)
+        }
+
         CommandGroup(replacing: .newItem) {
             button(.newSession)
             button(.openProject)

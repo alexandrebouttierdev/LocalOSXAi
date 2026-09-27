@@ -60,17 +60,20 @@ final class UISnapshotTests: XCTestCase {
         sleep(1)
         save(window, "\(appearance)-6-changes")
 
+        // Settings are a screen of the main window, with its sections in a sidebar.
         app.typeKey(",", modifierFlags: .command)
-        let settings = app.windows.element(boundBy: 0)
-        sleep(2)
-        save(settings, "\(appearance)-7-settings-general")
-        let providers = settings.toolbars.buttons["Providers"].exists
-            ? settings.toolbars.buttons["Providers"] : settings.buttons["Providers"]
+        let back = window.buttons["Back to app"].firstMatch
+        XCTAssertTrue(back.waitForExistence(timeout: 5))
+        sleep(1)
+        save(window, "\(appearance)-7-settings-general")
+        let providers = window.staticTexts["Providers"].firstMatch
         if providers.waitForExistence(timeout: 2) {
             providers.click()
             sleep(1)
-            save(settings, "\(appearance)-8-settings-providers")
+            save(window, "\(appearance)-8-settings-providers")
         }
+        app.typeKey(.escape, modifierFlags: [])
+        XCTAssertTrue(back.waitForNonExistence(timeout: 5))
     }
 
     private func save(_ element: XCUIElement, _ name: String) {

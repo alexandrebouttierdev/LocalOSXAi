@@ -70,7 +70,31 @@ struct WorkspaceViewModelTests {
         #expect(!workspace.isInspectorPresented)
         workspace.perform(.openProject)
         #expect(workspace.isProjectImporterPresented)
-        #expect(workspace.perform(.openSettings) == .openSettings)
+        workspace.perform(.openSettings)
+        #expect(workspace.isSettingsPresented)
+    }
+
+    @Test("settings open as a screen, remember their section, and close when navigating back to work")
+    func settingsScreen() async {
+        let workspace = makeWorkspace(projects: [Fixtures.project()])
+        await workspace.load()
+        #expect(!workspace.isSettingsPresented)
+
+        workspace.showSettings(.providers)
+        #expect(workspace.isSettingsPresented)
+        #expect(workspace.settingsSection == .providers)
+        workspace.closeSettings()
+        #expect(!workspace.isSettingsPresented)
+
+        workspace.perform(.openSettings)
+        #expect(workspace.settingsSection == .providers)
+        workspace.perform(.showFiles)
+        #expect(!workspace.isSettingsPresented)
+        #expect(workspace.selectedTab == .files)
+
+        workspace.perform(.openSettings)
+        workspace.perform(.toggleInspector)
+        #expect(workspace.isSettingsPresented)
     }
 
     @Test("each project gets its own panels, kept when switching back")
@@ -291,7 +315,7 @@ struct WorkspaceViewModelTests {
         workspace.showCommandPalette()
         let item = try #require(workspace.palette.results.first { $0.id == WorkspaceCommand.toggleInspector.rawValue })
 
-        _ = workspace.activatePaletteItem(item)
+        workspace.activatePaletteItem(item)
 
         #expect(!workspace.isCommandPalettePresented)
         #expect(!workspace.isInspectorPresented)
@@ -304,13 +328,13 @@ struct WorkspaceViewModelTests {
         workspace.showCommandPalette()
         let changeModel = try #require(workspace.palette.results.first { $0.id == WorkspaceCommand.changeModel.rawValue })
 
-        _ = workspace.activatePaletteItem(changeModel)
+        workspace.activatePaletteItem(changeModel)
         #expect(workspace.isCommandPalettePresented)
         #expect(workspace.palette.results.map(\.title) == ["alpha", "beta"])
         #expect(workspace.palette.results.first?.subtitle == "Current")
 
         let beta = try #require(workspace.palette.results.last)
-        _ = workspace.activatePaletteItem(beta)
+        workspace.activatePaletteItem(beta)
         #expect(!workspace.isCommandPalettePresented)
         #expect(workspace.models.selectedModel?.name == "beta")
     }

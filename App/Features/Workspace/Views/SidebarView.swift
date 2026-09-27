@@ -176,10 +176,13 @@ struct SidebarView: View {
 
     private var footer: some View {
         HStack(spacing: AppSpacing.sm) {
-            SettingsLink {
+            Button {
+                onCommand(.openSettings)
+            } label: {
                 Label("Settings", systemImage: "gearshape")
             }
             .buttonStyle(.subtle)
+            .help("Settings (⌘,)")
             Spacer()
             if viewModel.isSimulated {
                 StatusBadge(title: "Simulated", systemImage: "theatermasks", tone: .warning)

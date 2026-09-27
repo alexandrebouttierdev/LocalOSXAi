@@ -1,23 +1,7 @@
 import SwiftUI
 
-/// The Settings window (⌘,).
-struct SettingsView: View {
-    let agent: AgentSettingsViewModel
-    let providers: ProviderSettingsViewModel
-    let models: ModelsViewModel
-
-    var body: some View {
-        TabView {
-            GeneralSettingsView(agent: agent)
-                .tabItem { Label("General", systemImage: "gearshape") }
-            ProvidersSettingsView(viewModel: providers, models: models)
-                .tabItem { Label("Providers", systemImage: "cpu") }
-        }
-        .frame(width: 560)
-    }
-}
-
-private struct GeneralSettingsView: View {
+/// Settings › General: appearance and agent limits. Each change is saved at once.
+struct GeneralSettingsView: View {
     @Bindable var agent: AgentSettingsViewModel
     @AppStorage(AppearancePreference.storageKey) private var appearance: AppearancePreference = .system
 
@@ -65,7 +49,7 @@ private struct GeneralSettingsView: View {
             }
         }
         .formStyle(.grouped)
-        .padding(AppSpacing.sm)
+        .scrollContentBackground(.hidden)
         .alert(agent.error?.title ?? "", isPresented: Binding(get: { agent.error != nil }, set: { if !$0 { agent.error = nil } })) {
             Button("OK", role: .cancel) { agent.error = nil }
         } message: {

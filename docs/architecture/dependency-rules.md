@@ -39,6 +39,6 @@ Rules 1–6 skip comments, because documentation may name providers or implement
 - Views may call platform UI services that are purely presentational, such as
   `NSWorkspace.activateFileViewerSelecting` for “Reveal in Finder” and `NSPasteboard` for
   “Copy” on code blocks.
-- `SettingsView` uses `@AppStorage` for appearance, a UI preference with no business meaning.
+- `GeneralSettingsView` uses `@AppStorage` for appearance, a UI preference with no business meaning.
 
 Any other exception needs an ADR.
