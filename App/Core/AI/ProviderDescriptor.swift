@@ -28,4 +28,8 @@ struct ProviderDescriptor: Hashable, Sendable, Identifiable {
     /// True when the context length can be chosen per request. Otherwise it is
     /// fixed when the model is loaded, and per-model context settings are hidden.
     var supportsContextLength = false
+    /// Name of the image asset showing the provider's logo, chosen by the
+    /// composition root; `nil` shows a generic server icon. Opaque here, so
+    /// the core never names a provider.
+    var logo: String?
 }

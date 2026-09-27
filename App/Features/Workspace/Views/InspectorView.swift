@@ -1,6 +1,6 @@
 import SwiftUI
 
-/// Right-hand panel: model, context budget, tools and Git state for the
+/// Right-hand panel: model, context (usage and length) and Git state for the
 /// current session.
 struct InspectorView: View {
     let viewModel: WorkspaceViewModel
@@ -10,12 +10,18 @@ struct InspectorView: View {
             VStack(alignment: .leading, spacing: AppSpacing.xl) {
                 InspectorSection(title: "Model") {
                     ModelPickerView(viewModel: viewModel.models)
+                    if viewModel.models.selectedModel?.supportsTools == false {
+                        placeholder("This model does not support tools: the agent can only chat.")
+                    }
                 }
                 InspectorSection(title: "Context") {
                     if let usage = viewModel.activeAgent?.contextUsage {
                         ContextMeterView(usage: usage)
                     } else {
                         placeholder("Context usage appears after the first run.")
+                    }
+                    if let model = viewModel.models.selectedModel {
+                        ContextLengthPicker(viewModel: viewModel.models, model: model)
                     }
                     if let sources = viewModel.activeAgent?.instructionSources, !sources.isEmpty {
                         Label("Instructions: \(sources.joined(separator: ", "))", systemImage: "doc.text")
@@ -33,26 +39,6 @@ struct InspectorView: View {
                         .help("Give the agent this project's CLAUDE.md after AGENTS.md. Applies to the next run.")
                     }
                 }
-                InspectorSection(title: "Tools") {
-                    if viewModel.toolDefinitions.isEmpty {
-                        placeholder("No tools available.")
-                    } else {
-                        LazyVGrid(columns: Self.toolColumns, alignment: .leading, spacing: AppSpacing.xs) {
-                            ForEach(viewModel.toolDefinitions, id: \.name) { tool in
-                                Text(tool.name)
-                                    .font(AppTypography.code)
-                                    .foregroundStyle(AppColors.textPrimary)
-                                    .lineLimit(1)
-                                    .help(tool.description)
-                            }
-                        }
-                        if viewModel.models.selectedModel?.supportsTools == false {
-                            placeholder("The selected model does not support tools: the agent can only chat.")
-                        } else {
-                            placeholder("File changes and commands that change things ask for your approval.")
-                        }
-                    }
-                }
                 InspectorSection(title: "Git") {
                     if let git = viewModel.activePanels?.git {
                         GitSummaryView(viewModel: git)
@@ -68,11 +54,6 @@ struct InspectorView: View {
         // Linear's opaque ground, like the sidebar: no desktop tint.
         .background(AppColors.background)
     }
-
-    private static let toolColumns = [
-        GridItem(.flexible(), spacing: AppSpacing.md, alignment: .leading),
-        GridItem(.flexible(), spacing: AppSpacing.md, alignment: .leading)
-    ]
 
     private func placeholder(_ text: String) -> some View {
         Text(text)

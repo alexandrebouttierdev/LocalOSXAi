@@ -13,7 +13,8 @@ enum ProviderFactory {
                 id: ProviderSettings.ollamaID,
                 baseURL: settings.ollama.baseURL,
                 contextTokens: settings.ollamaContextTokens,
-                idleTimeout: settings.idleTimeoutSeconds
+                idleTimeout: settings.idleTimeoutSeconds,
+                logo: ProviderSettings.ollamaLogo
             )))
         }
         if settings.lmStudio.isEnabled {
@@ -22,7 +23,8 @@ enum ProviderFactory {
                 displayName: "LM Studio",
                 baseURL: settings.lmStudio.baseURL,
                 flavor: .lmStudio,
-                idleTimeout: settings.idleTimeoutSeconds
+                idleTimeout: settings.idleTimeoutSeconds,
+                logo: ProviderSettings.lmStudioLogo
             )))
         }
         for server in settings.customServers where server.isEnabled {

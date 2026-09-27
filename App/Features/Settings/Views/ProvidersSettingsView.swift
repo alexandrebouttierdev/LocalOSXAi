@@ -18,7 +18,7 @@ struct ProvidersSettingsView: View {
                 .help("Automatic reuses the size of an already loaded model, otherwise 8K. "
                       + "A different size makes Ollama reload the model.")
             } header: {
-                providerHeader("Ollama", id: ProviderSettings.ollamaID)
+                providerHeader("Ollama", id: ProviderSettings.ollamaID, logo: ProviderSettings.ollamaLogo)
             }
 
             Section {
@@ -28,7 +28,7 @@ struct ProvidersSettingsView: View {
                     .font(AppTypography.caption)
                     .foregroundStyle(.secondary)
             } header: {
-                providerHeader("LM Studio", id: ProviderSettings.lmStudioID)
+                providerHeader("LM Studio", id: ProviderSettings.lmStudioID, logo: ProviderSettings.lmStudioLogo)
             }
 
             ForEach($viewModel.customServers) { $server in
@@ -101,7 +101,7 @@ struct ProvidersSettingsView: View {
                     .accessibilityLabel("Remove \(draft.name)")
             }
         } header: {
-            providerHeader(draft.name.isEmpty ? "Custom Server" : draft.name, id: draft.providerID)
+            providerHeader(draft.name.isEmpty ? "Custom Server" : draft.name, id: draft.providerID, logo: nil)
         }
     }
 
@@ -135,8 +135,10 @@ struct ProvidersSettingsView: View {
         }
     }
 
-    private func providerHeader(_ title: String, id: ProviderID) -> some View {
-        HStack {
+    private func providerHeader(_ title: String, id: ProviderID, logo: String?) -> some View {
+        HStack(spacing: AppSpacing.sm) {
+            ProviderLogo(asset: logo, size: 14)
+                .foregroundStyle(AppColors.textPrimary)
             Text(title)
             Spacer()
             if let entry = models.catalog.first(where: { $0.id == id }) {

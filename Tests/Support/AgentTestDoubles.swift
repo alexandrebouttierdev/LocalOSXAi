@@ -170,6 +170,6 @@ extension WorkspaceServices {
     static func stub(agent: any AgentService = StubAgentService(.events([.finished(.completed)])),
                      git: any GitService = StubGitService(), browser: any ProjectFileBrowsing = StubFileBrowser()) -> WorkspaceServices {
         WorkspaceServices(agentService: agent, commandRunner: StubCommandRunner(), git: git, changeTracker: ChangeTracker(),
-                          fileBrowser: browser, toolDefinitions: [], isSimulated: false)
+                          fileBrowser: browser, isSimulated: false)
     }
 }

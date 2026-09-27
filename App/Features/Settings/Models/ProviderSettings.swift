@@ -62,6 +62,9 @@ struct ProviderSettings: Codable, Hashable, Sendable {
     /// that creates them and the views that show their status.
     static let ollamaID: ProviderID = "ollama"
     static let lmStudioID: ProviderID = "lmstudio"
+    /// Logo image assets of the built-in providers (App/Resources/Assets.xcassets).
+    static let ollamaLogo = "ProviderOllama"
+    static let lmStudioLogo = "ProviderLMStudio"
 
     static let contextPresets = [8_192, 16_384, 32_768, 65_536, 131_072]
     static let idleTimeoutRange: ClosedRange<Double> = 30...1_800

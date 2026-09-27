@@ -26,6 +26,8 @@ struct OpenAICompatibleProvider: LLMProvider {
         var declaredCapabilities: ModelCapabilities = []
         /// Context length the `.generic` server was started with, if known.
         var contextTokens: Int?
+        /// Image asset of the logo shown next to this provider's models.
+        var logo: String?
     }
 
     let descriptor: ProviderDescriptor
@@ -35,7 +37,8 @@ struct OpenAICompatibleProvider: LLMProvider {
     init(configuration: Configuration, session: URLSession? = nil) {
         self.configuration = configuration
         self.session = session ?? ProviderHTTP.makeSession(idleTimeout: configuration.idleTimeout)
-        descriptor = ProviderDescriptor(id: configuration.id, displayName: configuration.displayName, endpoint: configuration.baseURL)
+        descriptor = ProviderDescriptor(id: configuration.id, displayName: configuration.displayName, endpoint: configuration.baseURL,
+                                        logo: configuration.logo)
     }
 
     // MARK: Models

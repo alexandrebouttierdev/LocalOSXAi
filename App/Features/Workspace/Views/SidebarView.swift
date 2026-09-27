@@ -196,17 +196,28 @@ struct SidebarView: View {
         .overlay(alignment: .top) { Divider().overlay(AppColors.border) }
     }
 
-    /// Which model servers answered, in words: the dot is decoration only.
+    /// Which model servers answered, in words; the logos and the red dot are
+    /// decoration only.
     @ViewBuilder
     private var connectionStatus: some View {
-        let connected = viewModel.models.connectedProviderNames
+        let connected = viewModel.models.connectedProviders
         if !viewModel.models.catalog.isEmpty {
             HStack(spacing: AppSpacing.xs + AppSpacing.xxs) {
-                Circle()
-                    .fill(connected.isEmpty ? AppColors.danger : AppColors.success)
-                    .frame(width: 6, height: 6)
-                    .accessibilityHidden(true)
-                Text(connected.isEmpty ? "No model server" : "\(connected.joined(separator: ", ")) connected")
+                if connected.isEmpty {
+                    Circle()
+                        .fill(AppColors.danger)
+                        .frame(width: 6, height: 6)
+                        .accessibilityHidden(true)
+                } else {
+                    HStack(spacing: AppSpacing.xxs + 1) {
+                        ForEach(connected) { provider in
+                            ProviderLogo(asset: provider.logo, size: 12)
+                        }
+                    }
+                    .foregroundStyle(AppColors.textSecondary)
+                }
+                Text(connected.isEmpty ? "No model server"
+                                       : "\(connected.map(\.displayName).joined(separator: ", ")) connected")
                     .lineLimit(1)
             }
             .font(AppTypography.caption)

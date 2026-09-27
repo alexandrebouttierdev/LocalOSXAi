@@ -17,6 +17,14 @@ struct ModelSettings: Hashable, Sendable, Codable {
 
     var isDefault: Bool { self == .defaults }
 
+    /// True when temperature or reasoning differ from the defaults: what the
+    /// Model Settings popover edits. The context length is set elsewhere.
+    var hasGenerationOverrides: Bool { temperature != nil || reasoning != nil }
+
+    /// These settings with temperature and reasoning back to their defaults,
+    /// keeping the chosen context length.
+    var withDefaultGeneration: ModelSettings { ModelSettings(contextTokens: contextTokens) }
+
     /// Settings as provider options. The context is dropped when the provider
     /// cannot set it, so the budget never exceeds what is really allocated.
     func generationOptions(canSetContext: Bool) -> GenerationOptions {

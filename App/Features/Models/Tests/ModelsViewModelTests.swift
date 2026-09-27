@@ -77,9 +77,11 @@ struct ModelsViewModelTests {
             MockLLMProvider(id: "up", displayName: "Up", models: .success([])),
             MockLLMProvider(id: "also", displayName: "Also", models: .success([]))
         ]))
-        #expect(viewModel.connectedProviderNames.isEmpty)
+        #expect(viewModel.connectedProviders.isEmpty)
         await viewModel.refresh()
-        #expect(viewModel.connectedProviderNames == ["Up", "Also"])
+        #expect(viewModel.connectedProviders.map(\.displayName) == ["Up", "Also"])
+        #expect(viewModel.provider(for: "up")?.displayName == "Up")
+        #expect(viewModel.provider(for: "missing") == nil)
     }
 
     @Test("no models means no selection")
@@ -115,6 +117,41 @@ struct ModelsViewModelTests {
         await viewModel.updateSettings(.defaults, for: ollamaModel.id)
         #expect(viewModel.settings(for: ollamaModel.id).isDefault)
         #expect(await repository.allSettings()[ollamaModel.id] == nil)
+    }
+
+    @Test("the inspector sets the context length of models whose provider allows it, up to their maximum")
+    func contextLength() async {
+        let ollamaModel = Fixtures.model("gemma", provider: "ollama", advertised: 32_768)
+        let studioModel = Fixtures.model("qwen", provider: "lmstudio", advertised: 131_072)
+        let repository = InMemoryModelSettingsRepository()
+        let viewModel = ModelsViewModel(registry: ProviderRegistry(providers: [
+            MockLLMProvider(id: "ollama", displayName: "Ollama", supportsContextLength: true, models: .success([ollamaModel])),
+            MockLLMProvider(id: "lmstudio", displayName: "LM Studio", models: .success([studioModel]))
+        ]), settingsRepository: repository)
+        await viewModel.refresh()
+
+        #expect(viewModel.contextChoices(for: ollamaModel) == [8_192, 16_384, 32_768])
+        #expect(viewModel.automaticContextTokens(for: ollamaModel) == ContextWindow.fallbackTokens)
+
+        await viewModel.setContextTokens(32_768, for: ollamaModel)
+        #expect(viewModel.effectiveContextTokens(for: ollamaModel) == 32_768)
+        #expect(await repository.allSettings()[ollamaModel.id]?.contextTokens == 32_768)
+
+        await viewModel.setContextTokens(nil, for: ollamaModel)
+        #expect(viewModel.effectiveContextTokens(for: ollamaModel) == ContextWindow.fallbackTokens)
+        #expect(await repository.allSettings()[ollamaModel.id] == nil)
+
+        await viewModel.setContextTokens(65_536, for: studioModel)
+        #expect(await repository.allSettings()[studioModel.id] == nil)
+    }
+
+    @Test("restoring the popover's defaults keeps the context chosen in the inspector")
+    func generationOverrides() {
+        let settings = ModelSettings(temperature: 0.2, reasoning: .high, contextTokens: 32_768)
+        #expect(settings.hasGenerationOverrides)
+        #expect(settings.withDefaultGeneration == ModelSettings(contextTokens: 32_768))
+        #expect(!settings.withDefaultGeneration.hasGenerationOverrides)
+        #expect(!ModelSettings(contextTokens: 16_384).hasGenerationOverrides)
     }
 
     @Test("temperatures outside the supported range are clamped when sent")

@@ -48,7 +48,7 @@ struct AppEnvironment {
             agentSettingsStore: agentSettings,
             registry: registry,
             services: WorkspaceServices(agentService: agent, commandRunner: runner, git: git, changeTracker: tracker,
-                                        fileBrowser: LocalFileBrowser(), toolDefinitions: tools.definitions, isSimulated: false,
+                                        fileBrowser: LocalFileBrowser(), isSimulated: false,
                                         storageError: storage.error),
             makeProviders: { ProviderFactory.providers(for: $0, secrets: secrets) }
         )
@@ -99,7 +99,7 @@ struct AppEnvironment {
             agentSettingsStore: InMemoryAgentSettingsStore(),
             registry: ProviderRegistry(providers: [SimulatedLLMProvider()]),
             services: WorkspaceServices(agentService: SimulatedAgentService(), commandRunner: runner, git: CLIGitService(runner: runner),
-                                        changeTracker: ChangeTracker(), fileBrowser: LocalFileBrowser(), toolDefinitions: [],
+                                        changeTracker: ChangeTracker(), fileBrowser: LocalFileBrowser(),
                                         isSimulated: true),
             makeProviders: { _ in [SimulatedLLMProvider()] }
         )

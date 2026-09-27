@@ -13,6 +13,8 @@ struct OllamaProvider: LLMProvider {
         /// loaded size (or the conservative fallback).
         var contextTokens: Int?
         var idleTimeout: TimeInterval
+        /// Image asset of the logo shown next to this provider's models.
+        var logo: String?
     }
 
     let descriptor: ProviderDescriptor
@@ -23,7 +25,7 @@ struct OllamaProvider: LLMProvider {
         self.configuration = configuration
         self.session = session ?? ProviderHTTP.makeSession(idleTimeout: configuration.idleTimeout)
         descriptor = ProviderDescriptor(id: configuration.id, displayName: "Ollama", endpoint: configuration.baseURL,
-                                        supportsContextLength: true)
+                                        supportsContextLength: true, logo: configuration.logo)
     }
 
     // MARK: Models

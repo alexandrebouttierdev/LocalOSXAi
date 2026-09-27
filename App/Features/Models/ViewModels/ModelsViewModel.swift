@@ -32,10 +32,10 @@ final class ModelsViewModel {
         !catalog.isEmpty && catalog.allSatisfy { if case .unavailable = $0.status { true } else { false } }
     }
 
-    /// Names of the providers that answered the last discovery, in configuration order.
-    var connectedProviderNames: [String] {
+    /// Providers that answered the last discovery, in configuration order.
+    var connectedProviders: [ProviderDescriptor] {
         catalog.compactMap { group in
-            if case .available = group.status { group.provider.displayName } else { nil }
+            if case .available = group.status { group.provider } else { nil }
         }
     }
 
@@ -59,6 +59,26 @@ final class ModelsViewModel {
         model.contextWindow.effectiveTokens(choosing: generationOptions(for: model.id).contextLength)
     }
 
+    /// Context the model gets without a chosen length (the loaded size, the
+    /// provider setting or the fallback).
+    func automaticContextTokens(for model: AIModel) -> Int {
+        model.contextWindow.effectiveTokens(choosing: nil)
+    }
+
+    /// Context lengths offered for a model: up to its advertised maximum.
+    func contextChoices(for model: AIModel) -> [Int] {
+        ModelSettings.contextChoices.filter { $0 <= (model.contextWindow.advertisedTokens ?? .max) }
+    }
+
+    /// Chooses the context length of a model (`nil`: automatic). Applies to
+    /// the next run; ignored for providers that fix it when loading a model.
+    func setContextTokens(_ tokens: Int?, for model: AIModel) async {
+        guard canSetContext(for: model.id) else { return }
+        var next = settings(for: model.id)
+        next.contextTokens = tokens
+        await updateSettings(next, for: model.id)
+    }
+
     func updateSettings(_ settings: ModelSettings, for id: AIModel.ID) async {
         do {
             try await settingsRepository.save(settings, for: id)
@@ -69,7 +89,11 @@ final class ModelsViewModel {
     }
 
     func providerName(for id: ProviderID) -> String {
-        catalog.first { $0.id == id }?.provider.displayName ?? id.rawValue
+        provider(for: id)?.displayName ?? id.rawValue
+    }
+
+    func provider(for id: ProviderID) -> ProviderDescriptor? {
+        catalog.first { $0.id == id }?.provider
     }
 
     /// Rediscovers models. Keeps the current selection when the model is

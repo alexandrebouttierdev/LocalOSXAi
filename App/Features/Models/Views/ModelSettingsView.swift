@@ -1,8 +1,9 @@
 import SwiftUI
 
 /// Generation settings for one model, saved as they change. Controls the
-/// model or provider cannot use are not shown: reasoning only for reasoning
-/// models, context only when the provider can set it (Ollama).
+/// model cannot use are not shown: reasoning only for reasoning models. The
+/// context length is chosen in the inspector's Context section
+/// (`ContextLengthPicker`), next to the meter it changes.
 struct ModelSettingsView: View {
     let viewModel: ModelsViewModel
     let model: AIModel
@@ -49,40 +50,17 @@ struct ModelSettingsView: View {
                 }
             }
 
-            if viewModel.canSetContext(for: model.id) {
-                Section {
-                    Picker("Context", selection: Binding(
-                        get: { settings.contextTokens },
-                        set: { value in save { $0.contextTokens = value } }
-                    )) {
-                        Text("Default").tag(Int?.none)
-                        ForEach(contextChoices, id: \.self) { tokens in
-                            Text(TokenCountFormatter.string(for: tokens)).tag(Int?.some(tokens))
-                        }
-                    }
-                } footer: {
-                    Text("A different size than the loaded one makes the server reload the model.")
-                        .font(AppTypography.caption)
-                        .foregroundStyle(AppColors.textSecondary)
-                }
-            }
-
             HStack {
                 Spacer()
                 Button("Restore Defaults") {
-                    Task { await viewModel.updateSettings(.defaults, for: model.id) }
+                    Task { await viewModel.updateSettings(settings.withDefaultGeneration, for: model.id) }
                 }
-                .disabled(settings.isDefault)
+                .disabled(!settings.hasGenerationOverrides)
             }
         }
         .formStyle(.grouped)
         .frame(width: 340)
         .onAppear { temperature = settings.temperature ?? temperature }
-    }
-
-    /// Sizes up to the model's advertised maximum.
-    private var contextChoices: [Int] {
-        ModelSettings.contextChoices.filter { $0 <= (model.contextWindow.advertisedTokens ?? .max) }
     }
 
     private func save(_ change: (inout ModelSettings) -> Void) {

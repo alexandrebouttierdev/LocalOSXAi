@@ -24,6 +24,14 @@ struct ProviderFactoryTests {
         #expect(providers[1].descriptor.endpoint == ProviderSettings.customServerDefaultURL)
     }
 
+    @Test("built-in providers carry their logo; custom servers get the generic icon")
+    func logos() {
+        var settings = ProviderSettings.defaults
+        settings.customServers = [server("vLLM")]
+        let logos = ProviderFactory.providers(for: settings, secrets: InMemoryProviderSecretStore()).map(\.descriptor.logo)
+        #expect(logos == [ProviderSettings.ollamaLogo, ProviderSettings.lmStudioLogo, nil])
+    }
+
     @Test("a key that cannot be read still builds the server")
     func unreadableKey() {
         var settings = ProviderSettings.defaults

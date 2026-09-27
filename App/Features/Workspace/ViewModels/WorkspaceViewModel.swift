@@ -21,7 +21,6 @@ final class WorkspaceViewModel {
     let models: ModelsViewModel
     let palette = CommandPaletteViewModel()
     let services: WorkspaceServices
-    var toolDefinitions: [ToolDefinition] { services.toolDefinitions }
     var isSimulated: Bool { services.isSimulated }
 
     private(set) var selectedProjectID: Project.ID?

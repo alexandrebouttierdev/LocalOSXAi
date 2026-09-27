@@ -53,6 +53,12 @@ struct ModelPickerView: View {
 
     private var selectedLabel: some View {
         HStack(spacing: AppSpacing.sm) {
+            if let model = viewModel.selectedModel {
+                ProviderLogo(asset: viewModel.provider(for: model.provider)?.logo, size: 16)
+                    .foregroundStyle(AppColors.textPrimary)
+                    .frame(width: 28, height: 28)
+                    .background(AppColors.hover, in: RoundedRectangle(cornerRadius: AppRadius.medium, style: .continuous))
+            }
             VStack(alignment: .leading, spacing: AppSpacing.xxs) {
                 if let model = viewModel.selectedModel {
                     Text(viewModel.providerName(for: model.provider))
@@ -91,7 +97,7 @@ struct ModelPickerView: View {
     }
 
     private func settingsButton(for model: AIModel) -> some View {
-        let isCustom = !viewModel.settings(for: model.id).isDefault
+        let isCustom = viewModel.settings(for: model.id).hasGenerationOverrides
         return Button {
             showsSettings = true
         } label: {
@@ -100,7 +106,7 @@ struct ModelPickerView: View {
         }
         .buttonStyle(.plain)
         .foregroundStyle(isCustom ? AppColors.accentText : AppColors.textSecondary)
-        .help("Temperature, reasoning and context for \(model.displayName)")
+        .help("Temperature and reasoning for \(model.displayName)")
         .popover(isPresented: $showsSettings, arrowEdge: .leading) {
             ModelSettingsView(viewModel: viewModel, model: model)
         }

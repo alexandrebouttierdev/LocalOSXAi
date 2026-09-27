@@ -23,8 +23,14 @@ session (the project on other tabs) with the project as subtitle, text-only pill
 center with a count badge on Changes, and the inspector toggle is on the right. The panel
 itself holds only the tab content. The sidebar starts with the app mark, then
 the search field, projects, sessions (“2 h ago · 4 tool calls”), and a footer with
-Settings and which model servers answered (“Ollama connected”). The inspector lists model,
-context, tools (two columns) and Git.
+Settings and which model servers answered (their logos and “Ollama connected”). The inspector
+lists the model (with its provider's logo), the context (usage meter and length) and Git.
+
+Provider logos (Ollama, LM Studio) come from `@lobehub/icons-static-svg` (MIT); the marks belong
+to their owners and identify the providers only. They are vector template images
+(`ProviderOllama`, `ProviderLMStudio` in `Assets.xcassets`), so they take the text color, like
+SF Symbols. The composition root sets them on `ProviderDescriptor.logo`; custom servers show
+`server.rack` (`ProviderLogo`).
 
 Avoided: gradients, large cards, large colored buttons, heavy shadows, decorative “AI startup”
 aesthetics, dashboards of widgets.

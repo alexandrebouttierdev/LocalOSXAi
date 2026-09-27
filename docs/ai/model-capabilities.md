@@ -51,9 +51,13 @@ effective = min(configured ?? loaded ?? 8_192, advertised ?? ∞)
 - Phase 7: custom OpenAI-compatible servers, whose tool support and context length are
   declared by the user because `/v1/models` reports neither
   ([ADR 0021](../decisions/0021-custom-openai-compatible-servers.md)).
-- Per-model settings (inspector › Model Settings, saved in SQLite): temperature (0–2),
-  reasoning effort (default/off/low/medium/high, only for models with `.reasoning`) and the
-  context length (only when the provider can set it per request, `ProviderDescriptor.supportsContextLength`:
-  Ollama; LM Studio fixes it at load time). A chosen context replaces the configured one and is
-  still capped by the advertised maximum. The inspector's “ctx” chip shows the context actually
+- Per-model settings (saved in SQLite): temperature (0–2) and reasoning effort
+  (default/off/low/medium/high, only for models with `.reasoning`) in inspector › Model
+  Settings; the **context length directly in the inspector's Context section**
+  (`ContextLengthPicker`: Automatic, then 8K up to the advertised maximum), only when the
+  provider can set it per request (`ProviderDescriptor.supportsContextLength`: Ollama). For
+  other providers the section shows the size and where it is set (LM Studio fixes it at load
+  time, custom servers declare it in Settings › Providers). A chosen context replaces the
+  configured one and is still capped by the advertised maximum. Restoring the popover's
+  defaults keeps the chosen context. The inspector's “ctx” chip shows the context actually
   used (`ContextWindow.effectiveTokens(choosing:)`, shared with the runtime).
