@@ -24,21 +24,36 @@ struct AgentMessageView: View {
     private var userMessage: some View {
         HStack {
             Spacer(minLength: AppSpacing.xxl * 2)
-            Text(message.text)
-                .font(AppTypography.body)
-                .foregroundStyle(AppColors.textPrimary)
-                .lineSpacing(3)
-                .textSelection(.enabled)
-                .padding(.horizontal, AppSpacing.md + AppSpacing.xxs)
-                .padding(.vertical, AppSpacing.sm + AppSpacing.xxs)
-                .background(AppColors.surfaceRaised, in: RoundedRectangle(cornerRadius: AppRadius.bubble, style: .continuous))
-                .overlay(
-                    RoundedRectangle(cornerRadius: AppRadius.bubble, style: .continuous)
-                        .strokeBorder(AppColors.border, lineWidth: AppBorders.hairline)
-                )
+            VStack(alignment: .trailing, spacing: AppSpacing.xs) {
+                if !message.text.isEmpty {
+                    Text(message.text)
+                        .font(AppTypography.body)
+                        .foregroundStyle(AppColors.textPrimary)
+                        .lineSpacing(3)
+                        .textSelection(.enabled)
+                        .padding(.horizontal, AppSpacing.md + AppSpacing.xxs)
+                        .padding(.vertical, AppSpacing.sm + AppSpacing.xxs)
+                        .background(AppColors.surfaceRaised,
+                                    in: RoundedRectangle(cornerRadius: AppRadius.bubble, style: .continuous))
+                        .overlay(
+                            RoundedRectangle(cornerRadius: AppRadius.bubble, style: .continuous)
+                                .strokeBorder(AppColors.border, lineWidth: AppBorders.hairline)
+                        )
+                }
+                if !message.attachments.isEmpty {
+                    FlowLayout(spacing: AppSpacing.xs) {
+                        ForEach(message.attachments) { AttachmentChip(attachment: $0) }
+                    }
+                }
+            }
         }
         .accessibilityElement(children: .combine)
-        .accessibilityLabel("You: \(message.text)")
+        .accessibilityLabel(userAccessibilityLabel)
+    }
+
+    private var userAccessibilityLabel: String {
+        let files = message.attachments.map(\.name).joined(separator: ", ")
+        return "You: \(message.text)" + (files.isEmpty ? "" : ". Attached: \(files)")
     }
 
     private var assistantMessage: some View {

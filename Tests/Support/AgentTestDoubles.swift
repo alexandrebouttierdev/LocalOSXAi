@@ -178,3 +178,15 @@ extension WorkspaceServices {
                           fileBrowser: browser, isSimulated: false)
     }
 }
+
+/// An `AttachmentLoading` returning scripted results by file name.
+struct StubAttachmentLoader: AttachmentLoading {
+    /// Text of each attachable file, by name; other names fail as not text.
+    var files: [String: String] = [:]
+
+    func attachment(from file: URL, projectRoot: URL) async throws -> MessageAttachment {
+        guard let text = files[file.lastPathComponent] else { throw AttachmentError.notText(name: file.lastPathComponent) }
+        return .make(name: file.lastPathComponent, path: MessageAttachment.displayPath(of: file, projectRoot: projectRoot),
+                     text: text, byteCount: text.utf8.count)
+    }
+}

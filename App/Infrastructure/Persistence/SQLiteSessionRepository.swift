@@ -113,6 +113,7 @@ struct MessageRecord: Codable, FetchableRecord, PersistableRecord {
     var toolCalls: String
     var finishedAt: Double?
     var outputTokens: Int?
+    var attachments: String
 
     init(_ message: AgentMessage, sessionID: Session.ID, position: Int) throws {
         id = message.id.uuidString
@@ -129,6 +130,10 @@ struct MessageRecord: Codable, FetchableRecord, PersistableRecord {
             throw PersistenceError.corruptData("tool calls of message \(id)")
         }
         toolCalls = json
+        guard let attachmentsJSON = String(bytes: try JSONEncoder().encode(message.attachments), encoding: .utf8) else {
+            throw PersistenceError.corruptData("attachments of message \(id)")
+        }
+        attachments = attachmentsJSON
     }
 
     func message() throws -> AgentMessage {
@@ -138,15 +143,22 @@ struct MessageRecord: Codable, FetchableRecord, PersistableRecord {
             throw PersistenceError.corruptData("message \(id)")
         }
         let calls: [ToolCallRecord]
+        let files: [MessageAttachment]
         do {
             calls = try JSONDecoder().decode([ToolCallRecord].self, from: Data(toolCalls.utf8))
         } catch {
             throw PersistenceError.corruptData("tool calls of message \(id)")
         }
+        do {
+            files = try JSONDecoder().decode([MessageAttachment].self, from: Data(attachments.utf8))
+        } catch {
+            throw PersistenceError.corruptData("attachments of message \(id)")
+        }
         var message = AgentMessage(id: uuid, role: role, text: text, reasoning: reasoning, toolCalls: calls,
                                    state: state, createdAt: Date(timeIntervalSinceReferenceDate: createdAt))
         message.finishedAt = finishedAt.map(Date.init(timeIntervalSinceReferenceDate:))
         message.outputTokens = outputTokens
+        message.attachments = files
         return message
     }
 }

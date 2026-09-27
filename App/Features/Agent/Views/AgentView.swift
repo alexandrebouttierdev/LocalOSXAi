@@ -8,6 +8,7 @@ struct AgentView: View {
     let modelName: String?
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @State private var isDropTargeted = false
 
     static let suggestions = [
         "Explain how this project is structured",
@@ -35,6 +36,12 @@ struct AgentView: View {
                     isRunning: viewModel.isRunning,
                     canSend: viewModel.canSend,
                     modelName: modelName,
+                    attachments: viewModel.draftAttachments,
+                    attachmentError: viewModel.attachmentError,
+                    canAttach: viewModel.canAttach,
+                    isDropTargeted: isDropTargeted,
+                    onAttach: { files in Task { await viewModel.attach(files) } },
+                    onRemoveAttachment: viewModel.removeAttachment,
                     onSend: viewModel.send,
                     onStop: viewModel.cancel
                 )
@@ -45,6 +52,12 @@ struct AgentView: View {
             .frame(maxWidth: .infinity)
             .appAnimation(AppAnimation.standard, value: viewModel.pendingApproval)
         }
+        // Files dropped anywhere on the conversation are attached to the draft.
+        .dropDestination(for: URL.self) { files, _ in
+            guard viewModel.canAttach else { return false }
+            Task { await viewModel.attach(files) }
+            return true
+        } isTargeted: { isDropTargeted = viewModel.canAttach && $0 }
         .onChange(of: viewModel.announcement) { _, announcement in
             if let announcement { AccessibilityNotification.Announcement(announcement.text).post() }
         }

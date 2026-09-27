@@ -175,6 +175,13 @@ struct AppDatabase: Sendable {
                 table.add(column: "outputTokens", .integer)
             }
         }
+        migrator.registerMigration("v4_message_attachments") { db in
+            // Files attached to user messages, with their text, as JSON: like
+            // tool calls, always read and written with their message.
+            try db.alter(table: "message") { table in
+                table.add(column: "attachments", .text).notNull().defaults(to: "[]")
+            }
+        }
         return migrator
     }
 }

@@ -35,6 +35,10 @@ final class AgentViewModel: ToolApprover {
     /// Not a transcript entry: it would make the last message retryable.
     private(set) var compactionError: UserFacingError?
     var draft = ""
+    /// Files attached to the draft, sent with the next message.
+    private(set) var draftAttachments: [MessageAttachment] = []
+    /// Why the last files could not be attached, until the next attempt or send.
+    private(set) var attachmentError: UserFacingError?
 
     /// A run or a compaction is in progress: nothing else can start, and ⌘. stops it.
     var isRunning: Bool { runState != .idle }
@@ -52,7 +56,11 @@ final class AgentViewModel: ToolApprover {
 
     /// Duration and tokens of each agent turn, keyed by the index of its last message.
     var turnStats: [Int: TurnStats] { TurnStats.turns(in: messages) }
-    var canSend: Bool { !isRunning && !draft.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }
+    var canSend: Bool {
+        !isRunning && (!draft.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || !draftAttachments.isEmpty)
+    }
+    /// False where no loader is available (previews).
+    var canAttach: Bool { attachmentLoader != nil }
 
     /// A run can be retried when the last one failed, was stopped, or never
     /// answered (e.g. the app quit during the run).
@@ -81,6 +89,7 @@ final class AgentViewModel: ToolApprover {
     private var commandPrefixesAllowed: [String] = []
     private let persist: @Sendable (UUID, [AgentMessage]) async -> Void
     private let onAttention: @MainActor (AgentAttention) -> Void
+    private let attachmentLoader: (any AttachmentLoading)?
     private let now: @Sendable () -> Date
     private var runTask: Task<Void, Never>?
     private var approvalContinuation: CheckedContinuation<ToolApprovalDecision, Never>?
@@ -92,6 +101,7 @@ final class AgentViewModel: ToolApprover {
     ///   - persist: called with the full transcript after each run ends.
     ///   - onAttention: called when a run ends or waits for an approval, to
     ///     notify the user; not for a run they stopped.
+    ///   - attachmentLoader: reads files the user attaches; `nil` disables attaching.
     init(
         sessionID: UUID,
         projectID: UUID? = nil,
@@ -103,6 +113,7 @@ final class AgentViewModel: ToolApprover {
         addCommandRule: @escaping @MainActor (String) async -> Void = { _ in },
         persist: @escaping @Sendable (UUID, [AgentMessage]) async -> Void,
         onAttention: @escaping @MainActor (AgentAttention) -> Void = { _ in },
+        attachmentLoader: (any AttachmentLoading)? = nil,
         now: @escaping @Sendable () -> Date = { Date() }
     ) {
         self.sessionID = sessionID
@@ -115,37 +126,80 @@ final class AgentViewModel: ToolApprover {
         self.addCommandRule = addCommandRule
         self.persist = persist
         self.onAttention = onAttention
+        self.attachmentLoader = attachmentLoader
         self.now = now
     }
 
-    /// Sends the draft as a new user message and starts a run.
-    /// Does nothing if the draft is blank or a run is already in progress.
+    /// Sends the draft and its attachments as a new user message and starts
+    /// a run. Does nothing if both are empty or a run is already in progress.
     func send() {
         let prompt = draft.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !prompt.isEmpty, !isRunning else { return }
+        guard canSend else { return }
+        let attachments = draftAttachments
         draft = ""
-        start(prompt: prompt)
+        draftAttachments = []
+        attachmentError = nil
+        start(prompt: prompt, attachments: attachments)
     }
 
-    /// Runs the last prompt again, replacing what its failed or stopped run
-    /// produced. Keeps the draft the user may be typing.
+    /// Runs the last prompt again, with the same attachments, replacing what
+    /// its failed or stopped run produced. Keeps the draft the user may be typing.
     func retry() {
         guard canRetry, let index = messages.lastIndex(where: { $0.role == .user }) else { return }
-        let prompt = messages[index].text
+        let prompt = messages[index]
         messages.removeSubrange(index...)
-        start(prompt: prompt)
+        start(prompt: prompt.text, attachments: prompt.attachments)
     }
 
-    private func start(prompt: String) {
+    // MARK: Attachments
+
+    /// Reads and attaches files to the draft, skipping ones already attached.
+    /// Files that cannot be attached are reported; the others are kept.
+    func attach(_ files: [URL]) async {
+        guard let attachmentLoader else { return }
+        attachmentError = nil
+        for file in files {
+            guard draftAttachments.count < MessageAttachment.maxPerMessage else {
+                report(AttachmentError.tooMany(limit: MessageAttachment.maxPerMessage))
+                return
+            }
+            do {
+                let attachment = try await attachmentLoader.attachment(from: file, projectRoot: projectRoot)
+                guard !draftAttachments.contains(where: { $0.path == attachment.path }) else { continue }
+                draftAttachments.append(attachment)
+            } catch {
+                report(error)
+            }
+        }
+    }
+
+    func removeAttachment(_ id: MessageAttachment.ID) {
+        draftAttachments.removeAll { $0.id == id }
+    }
+
+    func dismissAttachmentError() {
+        attachmentError = nil
+    }
+
+    /// Keeps the first failure: later ones are usually the same problem.
+    private func report(_ error: any Error) {
+        guard attachmentError == nil else { return }
+        attachmentError = UserFacingError(error, title: "Could not attach the file", category: .ui)
+    }
+
+    private func start(prompt: String, attachments: [MessageAttachment] = []) {
         let request = AgentRunRequest(
             sessionID: sessionID,
             projectRoot: projectRoot,
             prompt: prompt,
             history: messages,
             model: currentModel(),
-            options: runOptions()
+            options: runOptions(),
+            attachments: attachments
         )
-        messages.append(AgentMessage(role: .user, text: prompt, createdAt: now()))
+        var message = AgentMessage(role: .user, text: prompt, createdAt: now())
+        message.attachments = attachments
+        messages.append(message)
         runState = .running
         announcement = nil
         compactionError = nil

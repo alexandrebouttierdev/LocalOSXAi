@@ -142,13 +142,14 @@ struct AgentRuntime: AgentService {
     private func runContext(system: String, request: AgentRunRequest, resolved: ResolvedModel, contextTokens: Int,
                             limits: AgentLimits, emit: @Sendable (AgentEvent) -> Void) async throws -> RunContext {
         var history = AgentPrompt.history(from: request.history)
+        let prompt = AgentPrompt.userContent(request.prompt, attachments: request.attachments)
         if limits.summarizesHistory {
-            history = try await summarizedIfNeeded(history, system: system, request: request, resolved: resolved,
-                                                   contextTokens: contextTokens, startRatio: limits.summaryStartRatio,
-                                                   emit: emit)
+            history = try await summarizedIfNeeded(history, system: system, prompt: prompt, request: request,
+                                                   resolved: resolved, contextTokens: contextTokens,
+                                                   startRatio: limits.summaryStartRatio, emit: emit)
         }
         return RunContext(contextTokens: contextTokens, systemPrompt: AgentPrompt.system(system, summary: history.summary),
-                          history: history.messages, prompt: request.prompt)
+                          history: history.messages, prompt: prompt)
     }
 
     /// Replaces the oldest history with a summary written by the model when
@@ -157,12 +158,13 @@ struct AgentRuntime: AgentService {
     /// A failed or empty summary is not an error: the run continues with the
     /// history unchanged and the context manager drops the oldest messages,
     /// as it did before summaries existed. Only cancellation ends the run.
-    private func summarizedIfNeeded(_ history: AgentPrompt.History, system: String, request: AgentRunRequest,
+    /// - Parameter prompt: the new message as sent, with its attachments.
+    private func summarizedIfNeeded(_ history: AgentPrompt.History, system: String, prompt: String, request: AgentRunRequest,
                                     resolved: ResolvedModel, contextTokens: Int, startRatio: Double,
                                     emit: @Sendable (AgentEvent) -> Void) async throws -> AgentPrompt.History {
         let count = HistoryCompaction.messagesToSummarize(
             history: history.messages,
-            fixedTokens: TokenEstimator.estimate(messages: [system, request.prompt]),
+            fixedTokens: TokenEstimator.estimate(messages: [system, prompt]),
             currentSummaryTokens: history.summary.map(TokenEstimator.estimate) ?? 0,
             promptBudget: RunContext.promptBudget(contextTokens: contextTokens),
             startRatio: startRatio

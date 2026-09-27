@@ -40,6 +40,8 @@ struct AgentMessage: Identifiable, Hashable, Sendable, Codable {
     /// Output tokens the server counted for this message's model call;
     /// `nil` when it did not say (the UI then shows an estimate).
     var outputTokens: Int?
+    /// Files the user attached to this message, sent to the model after its text.
+    var attachments: [MessageAttachment] = []
 
     init(id: UUID = UUID(), role: Role, text: String, reasoning: String = "", toolCalls: [ToolCallRecord] = [],
          state: State = .complete, createdAt: Date) {

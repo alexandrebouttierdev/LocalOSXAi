@@ -219,7 +219,8 @@ final class WorkspaceViewModel {
             },
             onAttention: { [weak self, title = session.title] attention in
                 self?.notify(attention, sessionID: sessionID, projectID: projectID, fallbackTitle: title)
-            }
+            },
+            attachmentLoader: services.attachmentLoader
         )
         agents[sessionID] = agent
         return agent

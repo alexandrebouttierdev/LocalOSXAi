@@ -208,7 +208,7 @@ enum AgentPrompt {
     private static func llmMessage(from message: AgentMessage) -> LLMMessage? {
         switch message.role {
         case .user:
-            return .user(message.text)
+            return .user(userContent(message.text, attachments: message.attachments))
         case .assistant where message.state != .failed:
             let tools = message.toolCalls.map { "- \($0.name) \($0.argumentsJSON) → \($0.summary ?? $0.status.rawValue)" }
             let text = tools.isEmpty ? message.text : "[Tools used]\n" + tools.joined(separator: "\n") + "\n\n" + message.text
@@ -216,6 +216,22 @@ enum AgentPrompt {
         case .assistant, .error, .summary:
             return nil
         }
+    }
+
+    /// A user message as the model reads it: the text, then each attached
+    /// file in a `<file>` block with its path, so the model can refer to it
+    /// and, for a project file, edit it with its tools.
+    static func userContent(_ text: String, attachments: [MessageAttachment]) -> String {
+        guard !attachments.isEmpty else { return text }
+        let files = attachments.map { file in
+            var block = "<file path=\"\(file.path)\">\n\(file.content)\n</file>"
+            if file.isTruncated {
+                block += "\n[Only the first \(MessageAttachment.maxCharacters) characters of \(file.name) were attached.]"
+            }
+            return block
+        }
+        let header = attachments.count == 1 ? "Attached file:" : "Attached files:"
+        return ([text, header] + files).filter { !$0.isEmpty }.joined(separator: "\n\n")
     }
 
     /// The request asking the model to summarize `messages`, folding in the

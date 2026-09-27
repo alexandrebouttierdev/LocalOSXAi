@@ -14,6 +14,8 @@ struct WorkspaceServices {
     let isSimulated: Bool
     /// Why history could not be opened, when the app fell back to memory.
     var storageError: (any Error)?
+    /// Reads files attached to messages; `nil` hides attaching.
+    var attachmentLoader: (any AttachmentLoading)?
     /// Tells the user a session needs them; `nil` posts nothing.
     var notifier: (any UserNotifying)?
     /// Read each time a session needs the user, so a Settings change applies at once.

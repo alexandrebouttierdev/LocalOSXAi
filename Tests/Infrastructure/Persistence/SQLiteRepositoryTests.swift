@@ -23,7 +23,12 @@ struct SQLiteRepositoryTests {
         let call = ToolCallRecord(id: "c1", name: "read_file", argumentsJSON: #"{"path":"a.swift"}"#, status: .succeeded,
                                   summary: "Read 3 lines", output: "a\nb\nc")
         return [
-            AgentMessage(role: .user, text: "Read a.swift", createdAt: Date(timeIntervalSinceReferenceDate: 10.123_456)),
+            {
+                var question = AgentMessage(role: .user, text: "Read a.swift", createdAt: Date(timeIntervalSinceReferenceDate: 10.123_456))
+                question.attachments = [MessageAttachment(name: "notes.md", path: "/Users/me/notes.md", content: "# Notes",
+                                                          byteCount: 7, isTruncated: true)]
+                return question
+            }(),
             {
                 var answer = AgentMessage(role: .assistant, text: "It has 3 lines.", reasoning: "Let me look.", toolCalls: [call],
                                           createdAt: Date(timeIntervalSinceReferenceDate: 11))
@@ -211,6 +216,7 @@ struct SQLiteSettingsTests {
         let session = try await SQLiteSessionRepository(database: database).session(id: try #require(UUID(uuidString: sessionID)))
         #expect(session?.title == "Old session")
         #expect(session?.messages.map(\.text) == ["Hello"])
+        #expect(session?.messages.first?.attachments == [])
         #expect(try await SQLiteModelSettingsRepository(database: database).allSettings().isEmpty)
     }
 }

@@ -51,6 +51,8 @@ struct AgentRunRequest: Sendable, Hashable {
     let history: [AgentMessage]
     let model: AIModel.ID?
     var options = AgentRunOptions()
+    /// Files attached to the new message.
+    var attachments: [MessageAttachment] = []
 }
 
 /// Everything an `AgentService` needs to summarize a session on request.

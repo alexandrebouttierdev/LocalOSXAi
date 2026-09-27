@@ -32,6 +32,8 @@ enum AppRadius {
 /// Border widths.
 enum AppBorders {
     static let hairline: CGFloat = 1
+    /// Drop targets and focused fields: visible without being heavy.
+    static let focus: CGFloat = 1.5
 }
 
 /// Fixed layout dimensions shared by several views.

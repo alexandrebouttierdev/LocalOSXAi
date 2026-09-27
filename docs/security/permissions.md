@@ -22,6 +22,9 @@ protections below therefore replace the sandbox with explicit, auditable applica
   (`App-secrets` next to `App`) is outside.
 - Commands run with the project root as working directory. A command itself can still
   touch other paths, which is why commands go through the policy below.
+- **Attachments are the exception, by design**: a file the user attaches to a message is read
+  wherever it is, because the user chose it ([attachments](../ai/attachments.md)). The model
+  cannot trigger such a read.
 
 ## Permission model
 
