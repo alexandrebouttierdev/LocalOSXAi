@@ -13,7 +13,7 @@ Ollama · LM Studio · llama.cpp · any OpenAI-compatible server
 ![Swift 6](https://img.shields.io/badge/Swift-6-F05138?logo=swift&logoColor=white)
 ![SwiftUI](https://img.shields.io/badge/UI-SwiftUI-0A84FF)
 
-[Features](#features) · [Download](#download) · [Quick start](#quick-start) · [Connect a model](#connect-a-model) ·
+[Website](https://alexandrebouttierdev.github.io/LocalOSXAi/) · [Features](#features) · [Download](#download) · [Quick start](#quick-start) · [Connect a model](#connect-a-model) ·
 [How it works](#how-it-works) · [Contributing](#contributing) · [Docs](docs/README.md)
 
 </div>

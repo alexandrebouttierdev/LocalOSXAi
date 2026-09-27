@@ -26,6 +26,12 @@
 
 To build the same archive locally: `scripts/build-release.sh 1` (writes `dist/`).
 
+## Website
+
+The landing page in `site/` is published to GitHub Pages by `.github/workflows/pages.yml` when
+it changes on `dev` ([site/README.md](../../site/README.md)). Its download buttons point to the
+latest release, so a new release needs no change to the site.
+
 ## Signing
 
 The app is signed **ad hoc**, not with a Developer ID, and not notarized: macOS asks users to
