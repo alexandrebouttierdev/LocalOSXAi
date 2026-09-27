@@ -119,3 +119,41 @@ struct AgentSettingsTests {
         #expect(limits.summaryStartRatio == HistoryCompaction.defaultStartRatio)
     }
 }
+
+@MainActor
+@Suite("Notification settings", .timeLimit(.minutes(1)))
+struct NotificationSettingsTests {
+    @Test("the macOS permission is read, asked for, and a test notification is posted")
+    func permissionAndTest() async throws {
+        let notifier = RecordingNotifier()
+        let viewModel = AgentSettingsViewModel(store: InMemoryAgentSettingsStore(), notifier: notifier)
+        #expect(viewModel.notificationPermission == nil)
+
+        await viewModel.refreshNotificationPermission()
+        #expect(viewModel.notificationPermission == .notDetermined)
+        await viewModel.allowNotifications()
+        #expect(viewModel.notificationPermission == .allowed)
+
+        await viewModel.sendTestNotification()
+        let test = try #require(notifier.posted.last)
+        #expect(test.sessionID == nil)
+        #expect(test.playsSound)
+
+        viewModel.openNotificationSettings()
+        #expect(notifier.openedSystemSettings)
+    }
+
+    @Test("a denied permission is shown as such, and turning notifications on asks again only if never asked")
+    func denied() async {
+        let notifier = RecordingNotifier()
+        notifier.answer = .denied
+        let store = InMemoryAgentSettingsStore()
+        let viewModel = AgentSettingsViewModel(store: store, notifier: notifier)
+        viewModel.setShowsNotifications(false)
+        viewModel.setShowsNotifications(true)
+        for _ in 0..<100 where viewModel.notificationPermission == nil { await Task.yield() }
+
+        #expect(viewModel.notificationPermission == .denied)
+        #expect(notifier.permissionRequests == 1)
+    }
+}

@@ -37,11 +37,17 @@ applies at once.
 
 ## System integration
 
-- `UserNotifying` (Workspace/Services) is the boundary; `SystemUserNotifier`
+- `UserNotifying` (Core/Notifications, shared by Workspace and Settings) is the boundary; `SystemUserNotifier`
   (Infrastructure/Notifications) implements it with the User Notifications framework and
   `NSSound` (“Tink”, short and quiet) for the sound alone.
-- Permission is asked with the **first notification**, not at launch. Declined or failed
+- Permission is asked **at launch** while notifications are on (`prepareNotifications`), and
+  when they are turned on in Settings, so the macOS prompt appears while the user is in the
+  app. Asked on the first notification instead, the prompt came while the user was elsewhere and
+  was easily missed, and nothing was shown until it was answered. Declined or failed
   notifications are only logged.
+- Settings › General › Notifications shows the **macOS permission** (Allowed, Not asked yet with
+  “Allow Notifications…”, Off in System Settings with “Open System Settings…”) and has **Send
+  Test Notification**, which posts one at once to check Focus modes and banner style.
 - Notifications of a session share a thread in Notification Center. **Clicking one** activates
   the app and opens the session (`WorkspaceViewModel.openSession`), selecting its project and
   closing the settings screen if needed.

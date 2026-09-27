@@ -1,25 +1,5 @@
 import Foundation
 
-/// A system notification about a session that needs the user.
-struct UserNotification: Hashable, Sendable {
-    let sessionID: UUID
-    /// The session's title.
-    let title: String
-    /// The project's name.
-    let subtitle: String
-    let body: String
-    let playsSound: Bool
-
-    /// Characters of an answer shown in a notification.
-    static let previewLength = 180
-}
-
-/// The user's choices in Settings › General, read each time a session needs them.
-struct NotificationPreferences: Hashable, Sendable {
-    var showsNotifications = true
-    var playsSound = true
-}
-
 /// How the app tells the user that a session needs them.
 enum AttentionResponse: Hashable, Sendable {
     case none

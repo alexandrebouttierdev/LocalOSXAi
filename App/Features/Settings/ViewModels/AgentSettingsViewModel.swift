@@ -8,11 +8,16 @@ import Observation
 final class AgentSettingsViewModel {
     private(set) var settings: AgentSettings
     var error: UserFacingError?
+    /// What macOS allows, once read (`refreshNotificationPermission()`);
+    /// `nil` without a notifier or before the first read.
+    private(set) var notificationPermission: NotificationPermission?
 
     private let store: any AgentSettingsStore
+    private let notifier: (any UserNotifying)?
 
-    init(store: any AgentSettingsStore) {
+    init(store: any AgentSettingsStore, notifier: (any UserNotifying)? = nil) {
         self.store = store
+        self.notifier = notifier
         settings = store.load()
     }
 
@@ -32,8 +37,35 @@ final class AgentSettingsViewModel {
         update { $0.compactThresholdPercent = value }
     }
 
+    /// Turning notifications on asks macOS for permission if it never was.
     func setShowsNotifications(_ value: Bool) {
         update { $0.showsNotifications = value }
+        if value { Task { await allowNotifications() } }
+    }
+
+    func refreshNotificationPermission() async {
+        notificationPermission = await notifier?.permission()
+    }
+
+    /// Shows the macOS prompt if the user was never asked.
+    func allowNotifications() async {
+        notificationPermission = await notifier?.requestPermission()
+    }
+
+    func openNotificationSettings() {
+        notifier?.openSystemSettings()
+    }
+
+    /// Posts a notification now, whatever the user is looking at, to check
+    /// that macOS shows it (Focus, permission, banner style).
+    func sendTestNotification() async {
+        guard let notifier else { return }
+        notificationPermission = await notifier.requestPermission()
+        await notifier.post(UserNotification(
+            sessionID: nil, title: "LocalOSXAi", subtitle: "Test notification",
+            body: "Notifications work: you will be told when the agent answers or needs you.",
+            playsSound: settings.playsSound
+        ))
     }
 
     func setPlaysSound(_ value: Bool) {

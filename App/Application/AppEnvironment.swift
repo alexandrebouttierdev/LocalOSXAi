@@ -135,7 +135,7 @@ struct AppEnvironment {
     }
 
     func makeAgentSettingsViewModel() -> AgentSettingsViewModel {
-        AgentSettingsViewModel(store: agentSettingsStore)
+        AgentSettingsViewModel(store: agentSettingsStore, notifier: services.notifier)
     }
 
     func makeProviderSettingsViewModel(models: ModelsViewModel) -> ProviderSettingsViewModel {

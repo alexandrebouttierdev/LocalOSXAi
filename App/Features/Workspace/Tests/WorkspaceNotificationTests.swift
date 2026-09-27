@@ -72,6 +72,20 @@ struct WorkspaceNotificationTests {
         #expect(quiet.posted.isEmpty)
     }
 
+    @Test("permission is asked at launch while notifications are on, never when they are off")
+    func permissionAtLaunch() async {
+        let session = Fixtures.session(projectID: project.id)
+        let notifier = RecordingNotifier()
+        await makeWorkspace(sessions: [session], notifier: notifier).load()
+        for _ in 0..<100 where notifier.permissionRequests == 0 { await Task.yield() }
+        #expect(notifier.permissionRequests == 1)
+
+        let quiet = RecordingNotifier()
+        await makeWorkspace(sessions: [session], notifier: quiet,
+                            preferences: NotificationPreferences(showsNotifications: false, playsSound: true)).load()
+        #expect(quiet.permissionRequests == 0)
+    }
+
     @Test("another tab or the settings screen counts as not looking")
     func otherView() async {
         let session = Fixtures.session(projectID: project.id)

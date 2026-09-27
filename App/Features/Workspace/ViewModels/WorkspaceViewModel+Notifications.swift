@@ -2,6 +2,13 @@ import Foundation
 
 /// Notifications and sounds when a session needs the user (docs/ui/notifications.md).
 extension WorkspaceViewModel {
+    /// Asks for permission at launch while notifications are on, so the macOS
+    /// prompt shows while the user is here, not when a run ends unseen.
+    func prepareNotifications() {
+        guard let notifier = services.notifier, services.notificationPreferences().showsNotifications else { return }
+        Task { _ = await notifier.requestPermission() }
+    }
+
     /// The user sees the session's conversation right now.
     func isVisible(_ sessionID: Session.ID) -> Bool {
         isAppActive && !isSettingsPresented && selectedTab == .agent && selectedSessionID == sessionID

@@ -59,19 +59,27 @@ struct GeneralSettingsView: View {
             }
 
             Section {
+                if agent.settings.showsNotifications {
+                    notificationPermissionRow
+                }
                 Toggle("Show notifications", isOn: showsNotifications)
                     .help("When the agent answers, fails, pauses or waits for an approval while you are in another "
                           + "app, session or tab. Click the notification to open the session.")
                 Toggle("Play a sound", isOn: playsSound)
                     .help("At the same moments, also while you are looking at the session.")
+                HStack {
+                    Spacer()
+                    Button("Send Test Notification") { Task { await agent.sendTestNotification() } }
+                        .help("Shows a notification now, to check that macOS displays it (Focus, permission, banners).")
+                }
             } header: {
                 Text("Notifications")
             } footer: {
-                Text("macOS asks for permission with the first notification. You can change it later in "
-                     + "System Settings › Notifications.")
+                Text("While you look at a session, only the sound plays. A Focus mode can hide notifications.")
                     .font(AppTypography.caption)
                     .foregroundStyle(.secondary)
             }
+            .task { await agent.refreshNotificationPermission() }
         }
         .formStyle(.grouped)
         .scrollContentBackground(.hidden)
@@ -92,6 +100,37 @@ struct GeneralSettingsView: View {
 
     private var compactThreshold: Binding<Int> {
         Binding(get: { agent.settings.compactThresholdPercent }, set: { agent.setCompactThresholdPercent($0) })
+    }
+
+    /// Whether macOS lets the app notify, with the way to fix it: a status
+    /// dot and words, never the color alone.
+    @ViewBuilder
+    private var notificationPermissionRow: some View {
+        switch agent.notificationPermission {
+        case .allowed:
+            LabeledContent("macOS permission") {
+                Label("Allowed", systemImage: "checkmark.circle.fill")
+                    .foregroundStyle(AppColors.success)
+            }
+        case .denied:
+            LabeledContent("macOS permission") {
+                HStack(spacing: AppSpacing.sm) {
+                    Label("Off in System Settings", systemImage: "xmark.circle.fill")
+                        .foregroundStyle(AppColors.danger)
+                    Button("Open System Settings…", action: agent.openNotificationSettings)
+                }
+            }
+        case .notDetermined:
+            LabeledContent("macOS permission") {
+                HStack(spacing: AppSpacing.sm) {
+                    Label("Not asked yet", systemImage: "questionmark.circle")
+                        .foregroundStyle(AppColors.warning)
+                    Button("Allow Notifications…") { Task { await agent.allowNotifications() } }
+                }
+            }
+        case nil:
+            EmptyView()
+        }
     }
 
     private var showsNotifications: Binding<Bool> {

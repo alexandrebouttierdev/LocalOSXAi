@@ -116,6 +116,7 @@ final class WorkspaceViewModel {
     // MARK: Lifecycle and navigation
 
     func load() async {
+        prepareNotifications()
         await projects.load()
         await models.refresh()
         if selectedProjectID == nil, let mostRecent = projects.projects.first {

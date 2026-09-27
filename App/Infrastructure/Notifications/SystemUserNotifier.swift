@@ -5,9 +5,11 @@ import UserNotifications
 /// Posts notifications with the User Notifications framework and plays the
 /// system's short sound.
 ///
-/// Permission is asked with the first notification rather than at launch,
-/// so the prompt comes when the user can see why. A declined or failed
-/// notification is only logged: it must never disturb a run.
+/// Permission is asked at launch while notifications are on (the workspace
+/// calls `requestPermission()`), so the macOS prompt appears while the user
+/// is in the app rather than, easy to miss, when a run ends in the
+/// background. A declined or failed notification is only logged: it must
+/// never disturb a run.
 ///
 /// Concurrency: the delegate callbacks are nonisolated. They only read a
 /// Sendable value (the session id) before hopping to the main actor.
@@ -27,18 +29,59 @@ final class SystemUserNotifier: NSObject, UserNotifying, UNUserNotificationCente
     func post(_ notification: UserNotification) async {
         let center = UNUserNotificationCenter.current()
         do {
-            guard try await center.requestAuthorization(options: [.alert, .sound]) else { return }
+            guard await requestPermission() == .allowed else {
+                Logger(category: .ui).info("Notification not posted: not allowed in System Settings")
+                return
+            }
             let content = UNMutableNotificationContent()
             content.title = notification.title
             content.subtitle = notification.subtitle
             content.body = notification.body
             content.sound = notification.playsSound ? .default : nil
-            // Groups a session's notifications together in Notification Center.
-            content.threadIdentifier = notification.sessionID.uuidString
-            content.userInfo = [Self.sessionIDKey: notification.sessionID.uuidString]
+            if let sessionID = notification.sessionID {
+                // Groups a session's notifications together in Notification Center.
+                content.threadIdentifier = sessionID.uuidString
+                content.userInfo = [Self.sessionIDKey: sessionID.uuidString]
+            }
             try await center.add(UNNotificationRequest(identifier: UUID().uuidString, content: content, trigger: nil))
         } catch {
             Logger(category: .ui).error("Notification not posted: \(error)")
+        }
+    }
+
+    func permission() async -> NotificationPermission {
+        Self.permission(from: await Self.authorizationStatus())
+    }
+
+    /// Nonisolated, so the non-Sendable settings object never crosses to the
+    /// main actor: only the status does.
+    private nonisolated static func authorizationStatus() async -> UNAuthorizationStatus {
+        await UNUserNotificationCenter.current().notificationSettings().authorizationStatus
+    }
+
+    func requestPermission() async -> NotificationPermission {
+        let current = await permission()
+        guard current == .notDetermined else { return current }
+        do {
+            let granted = try await UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound])
+            return granted ? .allowed : .denied
+        } catch {
+            Logger(category: .ui).error("Notification permission request failed: \(error)")
+            return .notDetermined
+        }
+    }
+
+    func openSystemSettings() {
+        let id = Bundle.main.bundleIdentifier ?? ""
+        let page = URL(string: "x-apple.systempreferences:com.apple.Notifications-Settings.extension?id=\(id)")
+        if let page { NSWorkspace.shared.open(page) }
+    }
+
+    private static func permission(from status: UNAuthorizationStatus) -> NotificationPermission {
+        switch status {
+        case .notDetermined: .notDetermined
+        case .denied: .denied
+        default: .allowed
         }
     }
 

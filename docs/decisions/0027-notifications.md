@@ -13,7 +13,9 @@ They asked for a notification when the agent answers, and for a sound, on by def
   another session, tab or the settings screen is shown. A visible session gets the sound only.
 - **Two independent switches**, both on: notifications and sound. The sound also plays for a
   visible session, so the user can look away inside the app without missing the end.
-- **Permission on first use**, not at launch.
+- **Permission at launch while notifications are on** (first decided as “on first use”, but
+  that prompt came while the user was away and was missed). Settings show the permission and
+  can send a test notification.
 - **Clicking opens the session**, whichever project it belongs to.
 - The decision is a pure function (`AttentionResponse`) and the system calls sit behind
   `UserNotifying`, so the rules are tested without the User Notifications framework.
@@ -24,7 +26,8 @@ They asked for a notification when the agent answers, and for a sound, on by def
 - **Always notify**: banners over the conversation the user is reading are noise.
 - **A notification for every assistant message**: a run produces several (one per step);
   only the end, or a blocked run, needs the user.
-- **Ask for permission at launch**: the prompt comes before the user knows why.
+- **Ask for permission on the first notification**: tried first; the prompt then appears when
+  the user is not looking, and nothing is shown until it is answered.
 
 ## Consequences
 - Users who decline the permission still get the sound.
