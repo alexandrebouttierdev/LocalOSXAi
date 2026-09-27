@@ -31,7 +31,7 @@ Feature views worth knowing:
 | `ActivityIndicator` | Shared | Loader for work without visible output: pulsing symbol, title with a moving highlight, elapsed seconds, optional hint. Used by the agent for `StreamingActivity` (waiting for the model, thinking, next step). Still with Reduce Motion |
 | `AgentView` transcript | Agent | Opens at the bottom and follows a streaming answer while the user is at the bottom. Sending or retrying a message always jumps to the bottom (`AgentViewModel.latestPromptID`), even after scrolling up; the agent's own messages never move a user who scrolled up |
 | `ModelPropertiesView` | Models | Inspector › Model rows: model menu grouped by provider (with its logo), context, temperature, reasoning, abilities |
-| `PropertyRow`, `PropertyValue` | Shared | Linear's property rows: a quiet 84 pt label column; values with an icon, highlighted on hover when they open a menu (`propertyMenuStyle()`) |
+| `PropertyRow`, `PropertyValue`, `PropertyLabel` | Shared | Linear's property rows: a quiet 84 pt label column; values with a tinted icon (`AppColors.Hue`: context teal, temperature blue → orange → red, reasoning and branch purple, instructions green), highlighted on hover when they open a menu (`propertyMenuStyle()`); labels as a colored dot and a word on a hairline pill (abilities: tools orange, reasoning purple, vision blue) |
 | `ProviderLogo` | Shared | A provider's logo as a template image, or `server.rack` |
 | `SidebarView`, `MainContentView`, `InspectorView`, `WelcomeView` | Workspace | Window shell |
 

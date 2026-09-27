@@ -61,6 +61,19 @@ enum AppColors {
         dynamic(light: 0x8A7A1E, dark: 0xC9B24A), dynamic(light: 0x3D6E8F, dark: 0x6F9FC2)
     ]
 
+    /// Linear's label hues, for property icons and ability labels: glyphs and
+    /// dots only, never fills behind text, and always next to a word, so no
+    /// meaning rests on the hue alone.
+    enum Hue {
+        static let blue = dynamic(light: 0x2F74C0, dark: 0x4EA7FC)
+        static let teal = dynamic(light: 0x16869B, dark: 0x26B5CE)
+        static let purple = dynamic(light: 0x7F55C9, dark: 0xBB87FC)
+        static let orange = dynamic(light: 0xB85E17, dark: 0xF2994A)
+        static let yellow = dynamic(light: 0x967407, dark: 0xF2C94C)
+        static let green = dynamic(light: 0x2E8A5B, dark: 0x4CB782)
+        static let pink = dynamic(light: 0xB83F74, dark: 0xF06BA8)
+    }
+
     /// Code blocks: slightly recessed from the surface they sit on.
     static let codeBackground = dynamic(light: 0x000000, lightAlpha: 0.035, dark: 0xFFFFFF, darkAlpha: 0.025)
 

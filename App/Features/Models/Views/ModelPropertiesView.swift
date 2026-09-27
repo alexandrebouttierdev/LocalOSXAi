@@ -91,13 +91,13 @@ struct ModelPropertiesView: View {
                     }
                 }
             } label: {
-                PropertyValue(tokens, systemImage: "gauge.medium")
+                PropertyValue(tokens, systemImage: "gauge.medium", tint: AppColors.Hue.teal)
             }
             .propertyMenuStyle()
             .help("Applies to the next message. A size other than the loaded one makes "
                   + "\(viewModel.providerName(for: model.provider)) reload the model, which can take a while.")
         } else {
-            PropertyValue(tokens, systemImage: "gauge.medium", isInteractive: false)
+            PropertyValue(tokens, systemImage: "gauge.medium", isInteractive: false, tint: AppColors.Hue.teal)
                 .help("\(viewModel.providerName(for: model.provider)) sets the context when it loads the model: "
                       + "change it there (for a custom server, in Settings › Providers).")
         }
@@ -116,8 +116,8 @@ struct ModelPropertiesView: View {
                 }
             }
         } label: {
-            PropertyValue(temperature.map(Self.format) ?? "Default", systemImage: "thermometer.medium",
-                          isPlaceholder: temperature == nil)
+            PropertyValue(temperature.map(Self.format) ?? "Default", systemImage: Self.thermometer(temperature),
+                          isPlaceholder: temperature == nil, tint: Self.tint(forTemperature: temperature))
         }
         .propertyMenuStyle()
         .help("Lower is more focused, higher more varied. Default uses the model's own.")
@@ -136,19 +136,20 @@ struct ModelPropertiesView: View {
                 }
             }
         } label: {
-            PropertyValue(reasoning?.rawValue.capitalized ?? "Default", systemImage: "brain", isPlaceholder: reasoning == nil)
+            PropertyValue(reasoning?.rawValue.capitalized ?? "Default", systemImage: "brain", isPlaceholder: reasoning == nil,
+                          tint: reasoning == .off ? AppColors.textSecondary : AppColors.Hue.purple)
         }
         .propertyMenuStyle()
         .help("How much the model thinks before answering.")
     }
 
-    /// What the provider declares; quiet text, no colored chips.
+    /// What the provider declares, as Linear labels: a colored dot and a word.
     @ViewBuilder
     private func abilities(of model: AIModel) -> some View {
         let abilities = [
-            model.supportsTools ? ("Tools", "wrench.and.screwdriver") : nil,
-            model.supportsReasoning ? ("Reasoning", "brain") : nil,
-            model.supportsVision ? ("Vision", "eye") : nil
+            model.supportsTools ? ("Tools", AppColors.Hue.orange) : nil,
+            model.supportsReasoning ? ("Reasoning", AppColors.Hue.purple) : nil,
+            model.supportsVision ? ("Vision", AppColors.Hue.blue) : nil
         ].compactMap { $0 }
         if abilities.isEmpty {
             Text("Chat only")
@@ -156,12 +157,9 @@ struct ModelPropertiesView: View {
                 .foregroundStyle(AppColors.textSecondary)
                 .padding(.horizontal, AppSpacing.xs + AppSpacing.xxs)
         } else {
-            FlowLayout(spacing: AppSpacing.sm) {
-                ForEach(abilities, id: \.0) { title, systemImage in
-                    Label(title, systemImage: systemImage)
-                        .labelStyle(.titleAndIcon)
-                        .font(AppTypography.caption)
-                        .foregroundStyle(AppColors.textSecondary)
+            FlowLayout(spacing: AppSpacing.xs) {
+                ForEach(abilities, id: \.0) { title, color in
+                    PropertyLabel(title: title, color: color)
                 }
             }
             .padding(.horizontal, AppSpacing.xs + AppSpacing.xxs)
@@ -180,6 +178,21 @@ struct ModelPropertiesView: View {
                 Text(title)
             }
         }
+    }
+
+    /// Cool to hot, like the value: blue when focused, orange then red when varied.
+    private static func tint(forTemperature temperature: Double?) -> Color {
+        guard let temperature else { return AppColors.textSecondary }
+        switch temperature {
+        case ..<0.7: return AppColors.Hue.blue
+        case ..<1.2: return AppColors.Hue.orange
+        default: return AppColors.danger
+        }
+    }
+
+    private static func thermometer(_ temperature: Double?) -> String {
+        guard let temperature else { return "thermometer.medium" }
+        return temperature < 0.7 ? "thermometer.low" : (temperature < 1.2 ? "thermometer.medium" : "thermometer.high")
     }
 
     private static func format(_ temperature: Double) -> String {

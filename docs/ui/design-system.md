@@ -72,7 +72,7 @@ progress bars and count badges.
 
 | Token | Values |
 |---|---|
-| `AppColors` | `background` (ground), `surface` (content panel), `surfaceRaised`, `hover`, `selection`, `scrim`, `shadow`, `hairline`, `border`, `borderStrong`, `textPrimary/Secondary/Tertiary`, `accent` (fills), `accentText` (accent as text), `accentSubtle`, `success`, `warning`, `danger`, `projectPalette`, `codeBackground` |
+| `AppColors` | `background` (ground), `surface` (content panel), `surfaceRaised`, `hover`, `selection`, `scrim`, `shadow`, `hairline`, `border`, `borderStrong`, `textPrimary/Secondary/Tertiary`, `accent` (fills), `accentText` (accent as text), `accentSubtle`, `success`, `warning`, `danger`, `projectPalette`, `Hue` (Linear's label hues: blue, teal, purple, orange, yellow, green, pink — property icons and label dots only, always next to a word), `codeBackground` |
 | `AppTypography` | Inter: `display` (22 semibold), `title` (15 semibold), `headline` (13 medium), `body` (13), `callout` (12), `caption` (11), `sectionHeader` (11 medium), `shortcut`; `code` is the system mono (12) |
 | `AppSpacing` | `xxs 2`, `xs 4`, `sm 8`, `md 12`, `lg 16`, `xl 24`, `xxl 32` |
 | `AppRadius` | `small 4`, `medium 6`, `large 8`, `panel 12`, `overlay 12`, `bubble 10`, `composer 12` |

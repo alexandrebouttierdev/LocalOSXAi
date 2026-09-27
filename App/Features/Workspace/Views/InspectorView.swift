@@ -21,13 +21,15 @@ struct InspectorView: View {
                             ContextMeterView(usage: usage)
                                 .padding(.horizontal, AppSpacing.xs + AppSpacing.xxs)
                         } else {
-                            value("After the first message")
+                            PropertyValue("After the first message", systemImage: "chart.bar", isPlaceholder: true,
+                                          isInteractive: false, tint: AppColors.Hue.teal)
                         }
                     }
                     PropertyRow(label: "Instructions") {
                         let sources = viewModel.activeAgent?.instructionSources ?? []
                         PropertyValue(sources.isEmpty ? "None" : sources.joined(separator: ", "), systemImage: "doc.text",
-                                      isPlaceholder: sources.isEmpty, isInteractive: false)
+                                      isPlaceholder: sources.isEmpty, isInteractive: false,
+                                      tint: sources.isEmpty ? AppColors.textSecondary : AppColors.Hue.green)
                             .help("Instruction files the last run gave the model.")
                     }
                     if let project = viewModel.selectedProject {
@@ -37,6 +39,7 @@ struct InspectorView: View {
                                 set: { value in Task { await viewModel.projects.setIncludesClaudeInstructions(value, for: project.id) } }
                             ))
                             .toggleStyle(.switch)
+                            .tint(AppColors.accent)
                             .controlSize(.mini)
                             .labelsHidden()
                             .padding(.horizontal, AppSpacing.xs + AppSpacing.xxs)
@@ -73,6 +76,7 @@ struct InspectorView: View {
                         ProgressView().controlSize(.mini)
                     } else {
                         Image(systemName: "arrow.down.right.and.arrow.up.left")
+                            .foregroundStyle(agent.canCompact ? AppColors.accentText : AppColors.textTertiary)
                     }
                     Text(agent.isCompacting ? "Compacting…" : "Compact session")
                 }
@@ -101,13 +105,6 @@ struct InspectorView: View {
             SectionHeader(title: title)
             content()
         }
-    }
-
-    private func value(_ text: String) -> some View {
-        Text(text)
-            .font(AppTypography.callout)
-            .foregroundStyle(AppColors.textTertiary)
-            .padding(.horizontal, AppSpacing.xs + AppSpacing.xxs)
     }
 
     private func note(_ text: String) -> some View {

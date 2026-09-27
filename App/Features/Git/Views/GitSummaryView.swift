@@ -12,13 +12,17 @@ struct GitSummaryView: View {
             case .loading:
                 PropertyRow(label: "Branch") { ProgressView().controlSize(.mini) }
             case .notARepository:
-                PropertyRow(label: "Branch") { placeholder("Not a Git repository") }
+                PropertyRow(label: "Branch") {
+                    PropertyValue("Not a Git repository", systemImage: "arrow.triangle.branch", isPlaceholder: true,
+                                  isInteractive: false)
+                }
             case .failed(let message):
                 PropertyRow(label: "Branch") { placeholder(message) }
             case let .loaded(status, lastCommit):
                 PropertyRow(label: "Branch") {
                     HStack(spacing: AppSpacing.xs + AppSpacing.xxs) {
-                        PropertyValue(status.branch ?? "Detached HEAD", systemImage: "arrow.triangle.branch", isInteractive: false)
+                        PropertyValue(status.branch ?? "Detached HEAD", systemImage: "arrow.triangle.branch", isInteractive: false,
+                                      tint: AppColors.Hue.purple)
                             .fixedSize()
                         if status.ahead > 0 || status.behind > 0 {
                             Text([status.ahead > 0 ? "↑\(status.ahead)" : nil, status.behind > 0 ? "↓\(status.behind)" : nil]
@@ -32,19 +36,24 @@ struct GitSummaryView: View {
                 PropertyRow(label: "Changes") {
                     PropertyValue(status.isClean ? "Clean" : (status.files.count == 1 ? "1 file" : "\(status.files.count) files"),
                                   systemImage: status.isClean ? "checkmark.circle" : "plusminus", isPlaceholder: status.isClean,
-                                  isInteractive: false)
+                                  isInteractive: false, tint: status.isClean ? AppColors.Hue.green : AppColors.Hue.orange)
                 }
                 if !status.isClean {
                     files(status.files)
                 }
                 if let lastCommit {
                     PropertyRow(label: "Commit") {
-                        Text("\(lastCommit.shortHash) \(lastCommit.subject)")
-                            .font(AppTypography.callout)
-                            .foregroundStyle(AppColors.textSecondary)
-                            .lineLimit(1)
-                            .padding(.horizontal, AppSpacing.xs + AppSpacing.xxs)
-                            .help(lastCommit.subject)
+                        HStack(spacing: AppSpacing.xs + AppSpacing.xxs) {
+                            Text(lastCommit.shortHash)
+                                .font(AppTypography.code)
+                                .foregroundStyle(AppColors.Hue.yellow)
+                            Text(lastCommit.subject)
+                                .font(AppTypography.callout)
+                                .foregroundStyle(AppColors.textSecondary)
+                                .lineLimit(1)
+                        }
+                        .padding(.horizontal, AppSpacing.xs + AppSpacing.xxs)
+                        .help(lastCommit.subject)
                     }
                 }
             }
