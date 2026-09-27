@@ -28,8 +28,8 @@ Feature views worth knowing:
 | `AgentMessageView`, `ToolCallView`, `ComposerView`, `ApprovalBanner` | Agent | User bubbles, Markdown answers, human-readable tool rows (`ToolCallPresentation`), floating composer |
 | `ActivityIndicator` | Shared | Loader for work without visible output: pulsing symbol, title with a moving highlight, elapsed seconds, optional hint. Used by the agent for `StreamingActivity` (waiting for the model, thinking, next step). Still with Reduce Motion |
 | `AgentView` transcript | Agent | Opens at the bottom and follows a streaming answer while the user is at the bottom. Sending or retrying a message always jumps to the bottom (`AgentViewModel.latestPromptID`), even after scrolling up; the agent's own messages never move a user who scrolled up |
-| `ModelPickerView` | Models | Menu grouped by provider, provider logo, capability badges |
-| `ContextLengthPicker` | Models | Inspector › Context: the model's context length (Automatic or 8K–max), or the fixed size and where it is set |
+| `ModelPropertiesView` | Models | Inspector › Model rows: model menu grouped by provider (with its logo), context, temperature, reasoning, abilities |
+| `PropertyRow`, `PropertyValue` | Shared | Linear's property rows: a quiet 84 pt label column; values with an icon, highlighted on hover when they open a menu (`propertyMenuStyle()`) |
 | `ProviderLogo` | Shared | A provider's logo as a template image, or `server.rack` |
 | `SidebarView`, `MainContentView`, `InspectorView`, `WelcomeView` | Workspace | Window shell |
 

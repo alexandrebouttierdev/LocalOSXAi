@@ -145,13 +145,28 @@ struct ModelsViewModelTests {
         #expect(await repository.allSettings()[studioModel.id] == nil)
     }
 
-    @Test("restoring the popover's defaults keeps the context chosen in the inspector")
-    func generationOverrides() {
-        let settings = ModelSettings(temperature: 0.2, reasoning: .high, contextTokens: 32_768)
-        #expect(settings.hasGenerationOverrides)
-        #expect(settings.withDefaultGeneration == ModelSettings(contextTokens: 32_768))
-        #expect(!settings.withDefaultGeneration.hasGenerationOverrides)
-        #expect(!ModelSettings(contextTokens: 16_384).hasGenerationOverrides)
+    @Test("temperature and reasoning are set from the inspector, each keeping the other settings")
+    func temperatureAndReasoning() async {
+        let thinker = Fixtures.model("qwen3", provider: "ollama", capabilities: [.tools, .reasoning])
+        let plain = Fixtures.model("llama", provider: "ollama")
+        let repository = InMemoryModelSettingsRepository(settings: [thinker.id: ModelSettings(contextTokens: 16_384)])
+        let viewModel = ModelsViewModel(registry: ProviderRegistry(providers: [
+            MockLLMProvider(id: "ollama", displayName: "Ollama", supportsContextLength: true, models: .success([thinker, plain]))
+        ]), settingsRepository: repository)
+        await viewModel.refresh()
+
+        await viewModel.setTemperature(0.4, for: thinker)
+        await viewModel.setReasoning(.high, for: thinker)
+        #expect(viewModel.settings(for: thinker.id) == ModelSettings(temperature: 0.4, reasoning: .high, contextTokens: 16_384))
+
+        await viewModel.setTemperature(9, for: thinker)
+        #expect(viewModel.settings(for: thinker.id).temperature == 2)
+        await viewModel.setTemperature(nil, for: thinker)
+        #expect(viewModel.settings(for: thinker.id).temperature == nil)
+
+        await viewModel.setReasoning(.high, for: plain)
+        #expect(viewModel.settings(for: plain.id).isDefault)
+        #expect(ModelSettings.temperatureChoices.allSatisfy(ModelSettings.temperatureRange.contains))
     }
 
     @Test("temperatures outside the supported range are clamped when sent")

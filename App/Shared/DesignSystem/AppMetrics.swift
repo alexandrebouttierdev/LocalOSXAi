@@ -43,6 +43,8 @@ enum AppLayout {
     /// top-left corner since the window has no title bar.
     static let windowControlsHeight: CGFloat = 38
     static let windowControlsWidth: CGFloat = 78
+    /// The label column of the inspector's property rows.
+    static let propertyLabelWidth: CGFloat = 84
     /// The header row at the top of the content panel (title, actions).
     static let panelHeaderHeight: CGFloat = 44
     /// Where the sidebar width is remembered (`@AppStorage`, a UI preference).
@@ -52,9 +54,8 @@ enum AppLayout {
     static func clampedSidebarWidth(_ width: Double) -> CGFloat {
         min(max(CGFloat(width), sidebarMinWidth), sidebarMaxWidth)
     }
-    static let inspectorMinWidth: CGFloat = 240
-    static let inspectorIdealWidth: CGFloat = 280
-    static let inspectorMaxWidth: CGFloat = 380
+    /// The properties column on the right of the content panel.
+    static let inspectorWidth: CGFloat = 300
     static let contentMinWidth: CGFloat = 420
     static let readableWidth: CGFloat = 760
     static let commandPaletteWidth: CGFloat = 560

@@ -37,7 +37,9 @@ extension ProviderError: LocalizedError {
         case .unreachable: "Check that the model server is running and that its URL in Settings is correct."
         case .modelNotFound: "Refresh the model list or pull the model in your provider."
         case .unsupportedCapability: "Choose a model that supports this capability."
-        case .timedOut: "The model may still be loading. Try again, or increase the timeout in Settings."
+        case .timedOut:
+            "The model may still be loading, or writing a long tool call such as a whole file, which some servers "
+                + "send only once it is complete. Ask for smaller steps, or increase the timeout in Settings › Providers."
         case .httpStatus(401, _), .httpStatus(403, _): "Check the server's API key in Settings › Providers."
         case .httpStatus, .invalidResponse: nil
         }

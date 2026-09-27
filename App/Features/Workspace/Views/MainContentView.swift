@@ -15,8 +15,21 @@ struct MainContentView: View {
                     Rectangle()
                         .fill(AppColors.hairline)
                         .frame(height: AppBorders.hairline)
-                    tabContent
-                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    HStack(spacing: 0) {
+                        tabContent
+                            .frame(maxWidth: .infinity, maxHeight: .infinity)
+                        if viewModel.isInspectorPresented {
+                            // Linear's issue properties: a column of the same
+                            // panel, behind a hairline.
+                            Rectangle()
+                                .fill(AppColors.hairline)
+                                .frame(width: AppBorders.hairline)
+                            InspectorView(viewModel: viewModel)
+                                .frame(width: AppLayout.inspectorWidth)
+                                .transition(.move(edge: .trailing).combined(with: .opacity))
+                        }
+                    }
+                    .appAnimation(AppAnimation.standard, value: viewModel.isInspectorPresented)
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
                 .background(AppColors.surface)

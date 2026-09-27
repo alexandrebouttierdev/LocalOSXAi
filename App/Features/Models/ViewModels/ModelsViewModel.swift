@@ -79,6 +79,25 @@ final class ModelsViewModel {
         await updateSettings(next, for: model.id)
     }
 
+    /// Sets the temperature of a model (`nil`: the model's default), clamped
+    /// to the supported range.
+    func setTemperature(_ temperature: Double?, for model: AIModel) async {
+        var next = settings(for: model.id)
+        next.temperature = temperature.map {
+            min(max($0, ModelSettings.temperatureRange.lowerBound), ModelSettings.temperatureRange.upperBound)
+        }
+        await updateSettings(next, for: model.id)
+    }
+
+    /// Sets the reasoning effort of a model (`nil`: the model's default).
+    /// Ignored for models that do not reason.
+    func setReasoning(_ effort: ReasoningEffort?, for model: AIModel) async {
+        guard model.supportsReasoning else { return }
+        var next = settings(for: model.id)
+        next.reasoning = effort
+        await updateSettings(next, for: model.id)
+    }
+
     func updateSettings(_ settings: ModelSettings, for id: AIModel.ID) async {
         do {
             try await settingsRepository.save(settings, for: id)

@@ -160,7 +160,9 @@ enum AgentPrompt {
 
                 Use the tools to inspect the project before answering questions about its code; never \
                 invent file contents. Read a file before editing it, and prefer edit_file for small \
-                changes. Some actions need the user's approval: if one is denied, do not retry it. \
+                changes. Write a file longer than about 150 lines in several steps: create it with a \
+                first part, then add the rest with edit_file, so no single call is too long to \
+                finish. Some actions need the user's approval: if one is denied, do not retry it. \
                 When the task is done, answer briefly and say which files you changed.
                 """
         } else {

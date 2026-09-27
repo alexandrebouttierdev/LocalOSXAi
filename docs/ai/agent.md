@@ -61,7 +61,7 @@ header per turn.
 | Tool timeout | 30 s | Failed tool result, and the run continues |
 | Consecutive all-invalid iterations | 3 | Run fails with `AgentError.tooManyInvalidToolCalls` |
 | Tool output sent to the model | 16,000 characters (head + tail) | Truncated with a marker |
-| Model silence | Provider idle timeout, 300 s by default (Settings) | `ProviderError.timedOut` |
+| Model silence | Provider idle timeout, 900 s by default (Settings) | `ProviderError.timedOut` |
 
 Steps per run (5–100) and the tool timeout (15 s–5 min) are set in Settings › General › Agent
 (`AgentSettings`). The runtime reads them at the start of each run, so a change applies to the

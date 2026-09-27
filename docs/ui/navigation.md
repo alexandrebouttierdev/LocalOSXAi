@@ -15,7 +15,11 @@
 └───────────────────┴─────────────────────────────────────────┴─────────────────┘
 ```
 
-- `SidebarLayout` (sidebar + detail) plus the `.inspector` modifier (right panel). The sidebar
+- `SidebarLayout` (sidebar + detail). The inspector is a **properties column inside the content
+  panel**, behind a hairline, like Linear's issue properties (`InspectorView`, 300 pt, toggled from
+  the panel header or the menu): label/value rows for the model (model, context, temperature,
+  reasoning, abilities), the context (usage, instruction files, CLAUDE.md switch) and Git
+  (branch, changes, last commit), every changeable value a menu or switch on its row. The sidebar
   sits flat on the window ground, like Linear's, instead of `NavigationSplitView`'s floating
   glass panel on macOS 26 ([ADR 0025](../decisions/0025-flat-sidebar.md)). Drag its edge to
   resize it (200–320 pt, remembered); the View menu hides it, and the panel header then offers

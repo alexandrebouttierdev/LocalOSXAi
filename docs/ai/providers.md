@@ -104,8 +104,13 @@ file contents they quote go to that host.
 
 `URLSessionConfiguration.timeoutIntervalForRequest` is an **idle** timeout: it fires when no
 byte arrives for that long. That is exactly the "server stopped responding" condition, so no
-custom timer is needed. It defaults to **300 s** and can be set in Settings (30–1800 s),
-because loading a model or evaluating a long prompt can take minutes before the first token.
+custom timer is needed. It defaults to **900 s** and can be set in Settings (30–1800 s),
+because loading a model or evaluating a long prompt can take minutes before the first token, and
+**Ollama sends nothing while a model writes a tool call**: it parses tool calls and emits them
+whole. A 26B model writing a whole landing page into `write_file` stayed silent for more than
+5 minutes, past the former 300 s default, which failed the run. Saved settings still at 300 s
+move to the new default; any other value is kept. The system prompt and the `write_file`
+description ask models to write long files in several steps, which keeps each call short.
 LM Studio was observed accepting a connection and sending nothing for more than 60 s while busy.
 
 ## Error mapping

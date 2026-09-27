@@ -52,8 +52,13 @@ struct ProviderSettings: Codable, Hashable, Sendable {
         ollama: Endpoint(isEnabled: true, baseURL: staticURL("http://localhost:11434")),
         ollamaContextTokens: nil,
         lmStudio: Endpoint(isEnabled: true, baseURL: staticURL("http://localhost:1234")),
-        idleTimeoutSeconds: 300
+        idleTimeoutSeconds: 900
     )
+
+    /// The default before it was raised to 15 minutes: Ollama sends nothing
+    /// while a model writes a tool call, and a local 26B model writing a whole
+    /// file into `write_file` stayed silent for more than 5 minutes.
+    static let previousDefaultIdleTimeout: Double = 300
 
     /// Suggested for a new custom server: llama.cpp's `llama-server` default.
     static let customServerDefaultURL = staticURL("http://localhost:8080")
@@ -107,7 +112,10 @@ extension ProviderSettings {
         ollama = try container.decode(Endpoint.self, forKey: .ollama)
         ollamaContextTokens = try container.decodeIfPresent(Int.self, forKey: .ollamaContextTokens)
         lmStudio = try container.decode(Endpoint.self, forKey: .lmStudio)
-        idleTimeoutSeconds = try container.decode(Double.self, forKey: .idleTimeoutSeconds)
+        let idleTimeout = try container.decode(Double.self, forKey: .idleTimeoutSeconds)
+        // A saved value equal to the old default was most likely never
+        // chosen: it follows the new default. Any other value is kept.
+        idleTimeoutSeconds = idleTimeout == Self.previousDefaultIdleTimeout ? Self.defaults.idleTimeoutSeconds : idleTimeout
         customServers = try container.decodeIfPresent([CustomServer].self, forKey: .customServers) ?? []
     }
 }

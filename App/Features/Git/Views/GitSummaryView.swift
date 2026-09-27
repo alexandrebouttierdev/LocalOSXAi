@@ -1,64 +1,90 @@
 import SwiftUI
 
-/// Compact Git state for the inspector: branch, sync state, changed files,
-/// last commit.
+/// Git state as inspector properties, like Linear's: branch (with how far it
+/// is ahead or behind), changed files, last commit.
 struct GitSummaryView: View {
     let viewModel: GitViewModel
-    static let maxFiles = 8
+    static let maxFiles = 6
 
     var body: some View {
-        switch viewModel.state {
-        case .loading:
-            ProgressView().controlSize(.small)
-        case .notARepository:
-            note("Not a Git repository.")
-        case .failed(let message):
-            note(message)
-        case let .loaded(status, lastCommit):
-            VStack(alignment: .leading, spacing: AppSpacing.sm) {
-                HStack(spacing: AppSpacing.xs + AppSpacing.xxs) {
-                    Image(systemName: "arrow.triangle.branch").foregroundStyle(AppColors.textSecondary)
-                    Text(status.branch ?? "Detached HEAD").font(AppTypography.headline).foregroundStyle(AppColors.textPrimary)
-                    Spacer(minLength: 0)
-                    if status.ahead > 0 { StatusBadge(title: "↑ \(status.ahead)") }
-                    if status.behind > 0 { StatusBadge(title: "↓ \(status.behind)", tone: .warning) }
-                }
-                if status.isClean {
-                    Label("Working tree clean", systemImage: "checkmark.circle")
-                        .font(AppTypography.caption)
-                        .foregroundStyle(AppColors.textSecondary)
-                } else {
-                    ForEach(status.files.prefix(Self.maxFiles), id: \.self) { file in
-                        HStack(spacing: AppSpacing.sm) {
-                            Text(file.code)
-                                .font(AppTypography.code.weight(.semibold))
-                                .foregroundStyle(color(for: file.kind))
-                                .frame(width: 12)
-                            Text(file.path)
-                                .font(AppTypography.caption)
-                                .foregroundStyle(AppColors.textSecondary)
-                                .lineLimit(1)
-                                .truncationMode(.head)
+        VStack(alignment: .leading, spacing: 0) {
+            switch viewModel.state {
+            case .loading:
+                PropertyRow(label: "Branch") { ProgressView().controlSize(.mini) }
+            case .notARepository:
+                PropertyRow(label: "Branch") { placeholder("Not a Git repository") }
+            case .failed(let message):
+                PropertyRow(label: "Branch") { placeholder(message) }
+            case let .loaded(status, lastCommit):
+                PropertyRow(label: "Branch") {
+                    HStack(spacing: AppSpacing.xs + AppSpacing.xxs) {
+                        PropertyValue(status.branch ?? "Detached HEAD", systemImage: "arrow.triangle.branch", isInteractive: false)
+                            .fixedSize()
+                        if status.ahead > 0 || status.behind > 0 {
+                            Text([status.ahead > 0 ? "↑\(status.ahead)" : nil, status.behind > 0 ? "↓\(status.behind)" : nil]
+                                    .compactMap { $0 }.joined(separator: " "))
+                                .font(AppTypography.caption.monospacedDigit())
+                                .foregroundStyle(AppColors.textTertiary)
+                                .accessibilityLabel("\(status.ahead) ahead, \(status.behind) behind")
                         }
-                        .accessibilityElement(children: .combine)
-                        .accessibilityLabel("\(file.kind.rawValue) \(file.path)\(file.isStaged ? ", staged" : "")")
                     }
-                    if status.files.count > Self.maxFiles {
-                        note("+ \(status.files.count - Self.maxFiles) more")
-                    }
+                }
+                PropertyRow(label: "Changes") {
+                    PropertyValue(status.isClean ? "Clean" : (status.files.count == 1 ? "1 file" : "\(status.files.count) files"),
+                                  systemImage: status.isClean ? "checkmark.circle" : "plusminus", isPlaceholder: status.isClean,
+                                  isInteractive: false)
+                }
+                if !status.isClean {
+                    files(status.files)
                 }
                 if let lastCommit {
-                    Text("\(lastCommit.shortHash) · \(lastCommit.subject)")
-                        .font(AppTypography.caption)
-                        .foregroundStyle(AppColors.textTertiary)
-                        .lineLimit(1)
+                    PropertyRow(label: "Commit") {
+                        Text("\(lastCommit.shortHash) \(lastCommit.subject)")
+                            .font(AppTypography.callout)
+                            .foregroundStyle(AppColors.textSecondary)
+                            .lineLimit(1)
+                            .padding(.horizontal, AppSpacing.xs + AppSpacing.xxs)
+                            .help(lastCommit.subject)
+                    }
                 }
             }
         }
     }
 
-    private func note(_ text: String) -> some View {
-        Text(text).font(AppTypography.callout).foregroundStyle(AppColors.textTertiary)
+    /// The first changed files, under the Changes row and aligned with values.
+    private func files(_ files: [GitFileChange]) -> some View {
+        VStack(alignment: .leading, spacing: AppSpacing.xxs) {
+            ForEach(files.prefix(Self.maxFiles), id: \.self) { file in
+                HStack(spacing: AppSpacing.sm) {
+                    Text(file.code)
+                        .font(AppTypography.code.weight(.semibold))
+                        .foregroundStyle(color(for: file.kind))
+                        .frame(width: 12)
+                    Text(file.path)
+                        .font(AppTypography.caption)
+                        .foregroundStyle(AppColors.textSecondary)
+                        .lineLimit(1)
+                        .truncationMode(.head)
+                }
+                .accessibilityElement(children: .combine)
+                .accessibilityLabel("\(file.kind.rawValue) \(file.path)\(file.isStaged ? ", staged" : "")")
+            }
+            if files.count > Self.maxFiles {
+                Text("+ \(files.count - Self.maxFiles) more")
+                    .font(AppTypography.caption)
+                    .foregroundStyle(AppColors.textTertiary)
+            }
+        }
+        .padding(.leading, AppLayout.propertyLabelWidth + AppSpacing.sm + AppSpacing.xs + AppSpacing.xxs)
+        .padding(.bottom, AppSpacing.xs)
+    }
+
+    private func placeholder(_ text: String) -> some View {
+        Text(text)
+            .font(AppTypography.callout)
+            .foregroundStyle(AppColors.textTertiary)
+            .lineLimit(2)
+            .padding(.horizontal, AppSpacing.xs + AppSpacing.xxs)
     }
 
     private func color(for kind: GitFileChange.Kind) -> Color {

@@ -1,6 +1,7 @@
 import Foundation
 
-/// The user's generation settings for one model (inspector › Model settings).
+/// The user's generation settings for one model, set in the inspector's
+/// Model rows.
 /// `nil` everywhere means “use the model's and provider's defaults”.
 struct ModelSettings: Hashable, Sendable, Codable {
     /// 0 (focused) to 2 (creative).
@@ -13,17 +14,11 @@ struct ModelSettings: Hashable, Sendable, Codable {
 
     static let defaults = ModelSettings()
     static let temperatureRange = 0.0...2.0
+    /// Temperatures offered in the inspector, from focused to varied.
+    static let temperatureChoices = [0.0, 0.2, 0.4, 0.6, 0.8, 1.0, 1.2, 1.5, 2.0]
     static let contextChoices = [8_192, 16_384, 32_768, 65_536, 131_072]
 
     var isDefault: Bool { self == .defaults }
-
-    /// True when temperature or reasoning differ from the defaults: what the
-    /// Model Settings popover edits. The context length is set elsewhere.
-    var hasGenerationOverrides: Bool { temperature != nil || reasoning != nil }
-
-    /// These settings with temperature and reasoning back to their defaults,
-    /// keeping the chosen context length.
-    var withDefaultGeneration: ModelSettings { ModelSettings(contextTokens: contextTokens) }
 
     /// Settings as provider options. The context is dropped when the provider
     /// cannot set it, so the budget never exceeds what is really allocated.

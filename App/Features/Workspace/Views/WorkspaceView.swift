@@ -57,12 +57,6 @@ struct WorkspaceView: View {
         } detail: {
             MainContentView(viewModel: viewModel, onCommand: handle)
                 .frame(minWidth: AppLayout.contentMinWidth)
-                .inspector(isPresented: $viewModel.isInspectorPresented) {
-                    InspectorView(viewModel: viewModel)
-                        .inspectorColumnWidth(
-                            min: AppLayout.inspectorMinWidth, ideal: AppLayout.inspectorIdealWidth, max: AppLayout.inspectorMaxWidth
-                        )
-                }
         }
         // The title bar is hidden; the window title still names the window
         // in the Window menu and Mission Control.

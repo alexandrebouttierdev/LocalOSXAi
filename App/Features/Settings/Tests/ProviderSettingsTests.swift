@@ -41,6 +41,11 @@ struct ProviderSettingsTests {
         #expect(settings.ollamaContextTokens == 16_384)
         #expect(!settings.lmStudio.isEnabled)
         #expect(settings.idleTimeoutSeconds == 120)
+
+        let oldDefault = json.replacingOccurrences(of: ":120}", with: ":300}")
+        let migrated = try JSONDecoder().decode(ProviderSettings.self, from: Data(oldDefault.utf8))
+        #expect(migrated.idleTimeoutSeconds == ProviderSettings.defaults.idleTimeoutSeconds)
+        #expect(ProviderSettings.defaults.idleTimeoutSeconds == 900)
         #expect(settings.customServers.isEmpty)
     }
 
