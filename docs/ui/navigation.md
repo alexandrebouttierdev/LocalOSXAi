@@ -4,12 +4,13 @@
 
 ```
 ┌─ Sidebar ─────────┬─ Main content ──────────────────────────┬─ Inspector ─────┐
-│ New session   ⌘N  │ Session · Project  Agent Files …  [▥] │ Model           │
-│ Search        ⌘K  │─────────────────────────────────────────│ Context         │
-│ ▣ project      ⌄  │ transcript / tab content                │ Git             │
-│ Today             │                                         │                 │
-│  Fix the flag   ◌ │ composer                                │                 │
-│ Yesterday         │                                         │                 │
+│ ● ● ●             │ ✦ project › session               [▥] │ Model           │
+│ ▣ project ⌄  🔍 ✎ │─────────────────────────────────────────│ Context         │
+│ ▤ Files           │ transcript / view content               │ Git             │
+│ ± Changes       2 │                                         │                 │
+│ ▹ Terminal        │ composer                                │                 │
+│ Today ▾           │                                         │                 │
+│ ◌ Fix the flag    │                                         │                 │
 │ ⚙ Settings  🦙    │                                         │                 │
 └───────────────────┴─────────────────────────────────────────┴─────────────────┘
 ```
@@ -17,20 +18,27 @@
 - `SidebarLayout` (sidebar + detail) plus the `.inspector` modifier (right panel). The sidebar
   sits flat on the window ground, like Linear's, instead of `NavigationSplitView`'s floating
   glass panel on macOS 26 ([ADR 0025](../decisions/0025-flat-sidebar.md)). Drag its edge to
-  resize it (200–320 pt, remembered); the toolbar's sidebar button or the menu hides it.
-- The sidebar follows Claude Code's: **New session** (⌘N), Search (⌘K), the **project switcher**
-  (a menu with every project, Open Project…, Project Settings…, Reveal in Finder and Remove), then
-  the project's sessions as one-line rows **grouped by date** (Today, Yesterday, Previous 7 days,
-  Previous 30 days, Older — `SessionGroup`). A row shows a spinner while its agent runs and a
-  raised hand while it waits for approval (`SessionActivity`), so work in another session is not
-  forgotten; hovering shows when it was updated and its tool calls.
+  resize it (200–320 pt, remembered); the View menu hides it, and the panel header then offers
+  a button to show it again.
+- **No title bar** (`.windowStyle(.hiddenTitleBar)`, like Linear): the traffic lights float over
+  the sidebar's top, the window drags by its background, the sidebar's top strip and the panel
+  header.
+- The sidebar follows Linear's: the **project switcher** row (“▣ project ⌄”, a menu with every
+  project, Open Project…, Project Settings…, Reveal in Finder and Remove) with search (⌘K) and
+  new session (✎, ⌘N) icons on its right; the project's **views** as icon rows — Files, Changes
+  (with its pending count) and Terminal, which replace the old toolbar tabs; then its sessions in
+  **collapsible date sections** (“Today ▾”, Yesterday, Previous 7 days, Previous 30 days, Older —
+  `SessionGroup`). A session row starts with an icon for its agent: a speech bubble when idle, a
+  spinner while it runs, a raised hand while it waits for approval (`SessionActivity`); hovering
+  shows when it was updated and its tool calls. Selecting a session shows the Agent view.
 - Sidebar rows (`SidebarRow`) have a neutral selection, never the system accent. ↑/↓ move
   through the sessions once the list has focus (clicking a row gives it focus).
 - Minimum window size 900×560. Column widths come from `AppLayout`.
-- The window toolbar is the only header: title and subtitle (session and project), the tabs in
-  the center, the inspector toggle on the right (`WorkspaceViewModel.windowTitle/windowSubtitle`).
-- Main content tabs: **Agent**, **Files** (⌘P focuses its search), **Changes** (with a count badge) and **Terminal**. Each project keeps its own Files, Changes, Terminal and Git state (`ProjectPanels`).
-  Tabs that are not yet implemented show a placeholder that names their phase.
+- The content panel carries its own **header row**, like a Linear issue: the view's icon,
+  “project › session” (`WorkspaceViewModel.windowTitle/windowSubtitle`) and the inspector toggle,
+  with a hairline below.
+- Views: **Agent** (a session, ⌘1), **Files** (⌘P focuses its search), **Changes** and
+  **Terminal**. Each project keeps its own Files, Changes, Terminal and Git state (`ProjectPanels`).
 - **Settings are a screen of the main window**, not a separate window
   ([ADR 0024](../decisions/0024-settings-screen.md)). ⌘, (menu, palette or the sidebar's Settings
   button) replaces the workspace with `SettingsScreen`: “Back to app” and the sections (General,

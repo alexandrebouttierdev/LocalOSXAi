@@ -39,6 +39,12 @@ enum AppLayout {
     static let sidebarMinWidth: CGFloat = 200
     static let sidebarIdealWidth: CGFloat = 240
     static let sidebarMaxWidth: CGFloat = 320
+    /// Room kept for the window's traffic lights, which float over the
+    /// top-left corner since the window has no title bar.
+    static let windowControlsHeight: CGFloat = 38
+    static let windowControlsWidth: CGFloat = 78
+    /// The header row at the top of the content panel (title, actions).
+    static let panelHeaderHeight: CGFloat = 44
     /// Where the sidebar width is remembered (`@AppStorage`, a UI preference).
     static let sidebarWidthKey = "layout.sidebarWidth"
 

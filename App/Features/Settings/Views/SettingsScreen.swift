@@ -23,12 +23,15 @@ struct SettingsScreen: View {
             page
         }
         .navigationTitle("Settings")
-        .navigationSubtitle(section.title)
-        .toolbarBackground(AppColors.background, for: .windowToolbar)
     }
 
     private var sidebar: some View {
         VStack(alignment: .leading, spacing: AppSpacing.xxs) {
+            // Room for the traffic lights; dragging it moves the window.
+            Color.clear
+                .frame(height: AppLayout.windowControlsHeight - AppSpacing.sm)
+                .contentShape(Rectangle())
+                .gesture(WindowDragGesture())
             backButton
                 .padding(.bottom, AppSpacing.sm)
             SectionHeader(title: "Settings")
@@ -82,7 +85,7 @@ struct SettingsScreen: View {
         )
         .padding([.bottom, .trailing], AppSpacing.sm)
         .padding(.leading, AppSpacing.xxs)
-        .padding(.top, AppSpacing.xs)
+        .padding(.top, AppSpacing.sm)
         .background(AppColors.background)
     }
 

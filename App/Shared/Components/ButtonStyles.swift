@@ -141,6 +141,38 @@ struct IconButtonStyle: ButtonStyle {
     }
 }
 
+/// A symbol with no chrome until hovered (Linear's header and sidebar icons):
+/// 28 pt square, secondary color, hover and pressed fills.
+struct GhostIconButtonStyle: ButtonStyle {
+    func makeBody(configuration: Configuration) -> some View {
+        GhostIconButton(configuration: configuration)
+    }
+
+    private struct GhostIconButton: View {
+        let configuration: Configuration
+        @Environment(\.isEnabled) private var isEnabled
+        @State private var isHovered = false
+
+        var body: some View {
+            configuration.label
+                .font(AppTypography.body)
+                .foregroundStyle(isEnabled ? (isHovered ? AppColors.textPrimary : AppColors.textSecondary) : AppColors.textTertiary)
+                .frame(width: AppLayout.buttonHeight, height: AppLayout.buttonHeight)
+                .background(
+                    RoundedRectangle(cornerRadius: AppRadius.medium, style: .continuous)
+                        .fill(configuration.isPressed ? AppColors.selection : (isHovered && isEnabled ? AppColors.hover : .clear))
+                )
+                .contentShape(RoundedRectangle(cornerRadius: AppRadius.medium, style: .continuous))
+                .onHover { isHovered = $0 }
+                .appAnimation(AppAnimation.quick, value: isHovered)
+        }
+    }
+}
+
+extension ButtonStyle where Self == GhostIconButtonStyle {
+    static var ghostIcon: GhostIconButtonStyle { GhostIconButtonStyle() }
+}
+
 extension ButtonStyle where Self == SubtleButtonStyle {
     static var subtle: SubtleButtonStyle { SubtleButtonStyle() }
 }

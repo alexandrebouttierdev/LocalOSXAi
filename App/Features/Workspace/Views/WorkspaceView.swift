@@ -64,32 +64,9 @@ struct WorkspaceView: View {
                         )
                 }
         }
-        .toolbarBackground(AppColors.background, for: .windowToolbar)
+        // The title bar is hidden; the window title still names the window
+        // in the Window menu and Mission Control.
         .navigationTitle(viewModel.windowTitle)
-        .navigationSubtitle(viewModel.windowSubtitle)
-        .toolbar {
-            ToolbarItem(placement: .navigation) {
-                Button {
-                    handle(.toggleSidebar)
-                } label: {
-                    Label("Toggle Sidebar", systemImage: "sidebar.left")
-                }
-                .help("Toggle Sidebar (\(WorkspaceCommand.toggleSidebar.shortcut?.displayString ?? ""))")
-            }
-            if viewModel.selectedProject != nil {
-                ToolbarItem(placement: .principal) {
-                    TabSwitcher(selectedTab: $viewModel.selectedTab, changesCount: viewModel.pendingChangesCount)
-                }
-            }
-            ToolbarItem(placement: .primaryAction) {
-                Button {
-                    handle(.toggleInspector)
-                } label: {
-                    Label("Toggle Inspector", systemImage: "sidebar.right")
-                }
-                .help("Toggle Inspector (\(WorkspaceCommand.toggleInspector.shortcut?.displayString ?? ""))")
-            }
-        }
     }
 
     @ViewBuilder

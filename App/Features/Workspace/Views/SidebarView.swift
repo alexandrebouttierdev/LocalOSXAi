@@ -1,8 +1,9 @@
 import SwiftUI
 
-/// Sidebar, laid out like Claude Code's: New session, search, the project
-/// switcher, then the project's sessions as one-line rows grouped by date,
-/// each with what its agent is doing; Settings and the model servers below.
+/// Sidebar, laid out like Linear's: the project switcher with search and a
+/// new-session button on one row, the project's views (Files, Changes,
+/// Terminal), then its sessions in collapsible date sections, each with an
+/// icon showing what its agent is doing. Settings and the servers below.
 ///
 /// Flat on the window ground with neutral rows (`SidebarRow`), built from
 /// plain views rather than a `List`, whose selection always takes the system
@@ -12,22 +13,33 @@ struct SidebarView: View {
     @Bindable var viewModel: WorkspaceViewModel
     let onCommand: (WorkspaceCommand) -> Void
     @State private var projectPendingRemoval: Project?
+    /// Date sections the user folded, like Linear's collapsible sections.
+    @State private var collapsedPeriods: Set<SessionGroup.Period> = []
     /// Clicking a row focuses the list, so ↑/↓ continue from there.
     @FocusState private var isListFocused: Bool
 
+    /// The project's views besides the agent, which its sessions stand for.
+    private static let views: [MainTab] = [.files, .changes, .terminal]
+
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
-            VStack(alignment: .leading, spacing: AppSpacing.xs) {
-                appHeader
-                newSessionButton
-                searchButton
-                projectSwitcher
-            }
-            .padding(.bottom, AppSpacing.sm)
+            // Room for the traffic lights; dragging it moves the window.
+            Color.clear
+                .frame(height: AppLayout.windowControlsHeight)
+                .contentShape(Rectangle())
+                .gesture(WindowDragGesture())
+            topRow
+                .padding(.horizontal, AppSpacing.sm)
+                .padding(.bottom, AppSpacing.md)
             ScrollView {
-                sessionList
-                    .padding(.horizontal, AppSpacing.sm)
-                    .padding(.bottom, AppSpacing.md)
+                VStack(alignment: .leading, spacing: AppSpacing.lg) {
+                    if viewModel.selectedProject != nil {
+                        viewRows
+                    }
+                    sessionSections
+                }
+                .padding(.horizontal, AppSpacing.sm)
+                .padding(.bottom, AppSpacing.md)
             }
             .scrollIndicators(.never)
             .focusable()
@@ -56,86 +68,39 @@ struct SidebarView: View {
         return .handled
     }
 
-    // MARK: Sessions
+    // MARK: Top row
 
-    @ViewBuilder
-    private var sessionList: some View {
-        if viewModel.selectedProject == nil {
-            placeholder(viewModel.projects.projects.isEmpty ? "Open a project folder to start a session."
-                                                           : "Choose a project above.")
-        } else if viewModel.sessions.sessions.isEmpty {
-            placeholder("No sessions yet. Start one with New session.")
-        } else {
-            // Recomputed with the list, so “Today” rolls over on the next change.
-            VStack(alignment: .leading, spacing: AppSpacing.md) {
-                ForEach(viewModel.sessionGroups(now: .now)) { group in
-                    VStack(alignment: .leading, spacing: AppSpacing.xxs) {
-                        SectionHeader(title: group.period.title)
-                            .padding(.horizontal, AppSpacing.sm)
-                        ForEach(group.sessions) { session in
-                            sessionRow(session)
-                        }
-                    }
-                }
+    /// Linear's “Workspace ⌄  🔍 ✎” row: the project switcher, search, new session.
+    private var topRow: some View {
+        HStack(spacing: AppSpacing.xxs) {
+            projectSwitcher
+            Spacer(minLength: AppSpacing.xs)
+            Button {
+                viewModel.showCommandPalette()
+            } label: {
+                Image(systemName: "magnifyingglass")
             }
-        }
-    }
-
-    private func sessionRow(_ session: Session) -> some View {
-        SidebarRow(isSelected: session.id == viewModel.selectedSessionID, action: {
-            isListFocused = true
-            Task { await viewModel.selectSession(session.id) }
-        }) {
-            SessionRowLabel(session: session, activity: viewModel.activity(of: session.id))
-        }
-        .contextMenu {
-            Button("Delete Session", role: .destructive) {
-                Task { await viewModel.sessions.delete(session.id) }
-            }
-        }
-    }
-
-    private func placeholder(_ text: String) -> some View {
-        Text(text)
-            .font(AppTypography.callout)
-            .foregroundStyle(AppColors.textTertiary)
-            .fixedSize(horizontal: false, vertical: true)
-            .padding(.horizontal, AppSpacing.sm)
-            .padding(.top, AppSpacing.xs)
-    }
-
-    // MARK: Project and new session
-
-    private var newSessionButton: some View {
-        Button {
-            onCommand(.newSession)
-        } label: {
-            HStack(spacing: AppSpacing.sm) {
+            .buttonStyle(.ghostIcon)
+            .help("Search and commands (⌘K)")
+            .accessibilityLabel("Command palette")
+            Button {
+                onCommand(.newSession)
+            } label: {
                 Image(systemName: "square.and.pencil")
-                    .accessibilityHidden(true)
-                Text("New session")
-                    .lineLimit(1)
-                Spacer(minLength: AppSpacing.xs)
-                if let shortcut = WorkspaceCommand.newSession.shortcut?.displayString {
-                    ShortcutBadge(shortcut: shortcut)
-                }
+                    .foregroundStyle(AppColors.textPrimary)
+                    .frame(width: AppLayout.buttonHeight, height: AppLayout.buttonHeight)
+                    .contentShape(Circle())
             }
-            .font(AppTypography.callout.weight(.medium))
-            .foregroundStyle(AppColors.textPrimary)
-            .padding(.leading, AppSpacing.md)
-            .padding(.trailing, AppSpacing.xs + AppSpacing.xxs)
-            .frame(height: AppLayout.buttonHeight)
-            .contentShape(RoundedRectangle(cornerRadius: AppRadius.medium, style: .continuous))
+            .buttonStyle(.plain)
+            .appFloating(in: Circle(), interactive: true, elevated: false)
+            .disabled(!viewModel.isEnabled(.newSession))
+            .help(viewModel.disabledReason(for: .newSession)
+                  ?? "New session (\(WorkspaceCommand.newSession.shortcut?.displayString ?? ""))")
+            .accessibilityLabel("New session")
         }
-        .buttonStyle(.plain)
-        .appFloating(in: RoundedRectangle(cornerRadius: AppRadius.medium, style: .continuous), interactive: true, elevated: false)
-        .disabled(!viewModel.isEnabled(.newSession))
-        .help(viewModel.disabledReason(for: .newSession) ?? "Start a new session in this project")
-        .padding(.horizontal, AppSpacing.md)
     }
 
-    /// The current project, and every project action, in one menu: the list
-    /// below is the project's sessions.
+    /// The current project, and every project action, in one menu.
     private var projectSwitcher: some View {
         Menu {
             ForEach(viewModel.projects.projects) { project in
@@ -164,84 +129,113 @@ struct SidebarView: View {
         } label: {
             HStack(spacing: AppSpacing.sm) {
                 if let project = viewModel.selectedProject {
-                    ProjectBadge(name: project.name, size: 16)
+                    ProjectBadge(name: project.name, size: 20)
                     Text(project.name)
-                        .font(AppTypography.body.weight(.medium))
-                        .foregroundStyle(AppColors.textPrimary)
                         .lineLimit(1)
                 } else {
-                    Image(systemName: "folder")
+                    Image(systemName: "sparkle")
+                        .font(AppTypography.caption.weight(.bold))
+                        .foregroundStyle(.white)
+                        .frame(width: 20, height: 20)
+                        .background(AppColors.accent, in: RoundedRectangle(cornerRadius: AppRadius.medium, style: .continuous))
                         .accessibilityHidden(true)
-                    Text("Open a project")
-                        .font(AppTypography.body)
-                        .foregroundStyle(AppColors.textSecondary)
+                    Text("LocalOSXAi")
                 }
-                Spacer(minLength: AppSpacing.xs)
-                Image(systemName: "chevron.up.chevron.down")
-                    .font(AppTypography.caption)
+                Image(systemName: "chevron.down")
+                    .font(AppTypography.caption.weight(.semibold))
                     .foregroundStyle(AppColors.textTertiary)
                     .accessibilityHidden(true)
             }
-            .padding(.horizontal, AppSpacing.sm)
+            .font(AppTypography.headline)
+            .foregroundStyle(AppColors.textPrimary)
+            .padding(.horizontal, AppSpacing.xs + AppSpacing.xxs)
             .frame(height: AppLayout.rowHeight)
             .contentShape(RoundedRectangle(cornerRadius: AppRadius.medium, style: .continuous))
         }
         .menuStyle(.button)
         .menuIndicator(.hidden)
         .buttonStyle(.plain)
+        .fixedSize()
         .help(viewModel.selectedProject?.rootURL.path ?? "Open a project folder")
         .accessibilityLabel("Project")
         .accessibilityValue(viewModel.selectedProject?.name ?? "None")
-        .padding(.horizontal, AppSpacing.sm)
+    }
+
+    // MARK: Views
+
+    private var viewRows: some View {
+        VStack(alignment: .leading, spacing: 1) {
+            ForEach(Self.views) { tab in
+                SidebarRow(isSelected: viewModel.selectedTab == tab, action: { viewModel.selectedTab = tab }) {
+                    HStack(spacing: AppSpacing.sm) {
+                        SidebarIcon(systemImage: tab.systemImage)
+                        Text(tab.title)
+                        Spacer(minLength: AppSpacing.xs)
+                        if tab == .changes, viewModel.pendingChangesCount > 0 {
+                            Text("\(viewModel.pendingChangesCount)")
+                                .font(AppTypography.caption.monospacedDigit())
+                                .foregroundStyle(AppColors.textSecondary)
+                                .accessibilityLabel("\(viewModel.pendingChangesCount) pending")
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    // MARK: Sessions
+
+    @ViewBuilder
+    private var sessionSections: some View {
+        if viewModel.selectedProject == nil {
+            placeholder(viewModel.projects.projects.isEmpty ? "Open a project folder to start a session."
+                                                           : "Choose a project above.")
+        } else if viewModel.sessions.sessions.isEmpty {
+            placeholder("No sessions yet. Start one with ✎ or ⌘N.")
+        } else {
+            // Recomputed with the list, so “Today” rolls over on the next change.
+            VStack(alignment: .leading, spacing: AppSpacing.md) {
+                ForEach(viewModel.sessionGroups(now: .now)) { group in
+                    let isCollapsed = collapsedPeriods.contains(group.period)
+                    VStack(alignment: .leading, spacing: 1) {
+                        SidebarSectionHeader(title: group.period.title, isCollapsed: isCollapsed) {
+                            collapsedPeriods.formSymmetricDifference([group.period])
+                        }
+                        if !isCollapsed {
+                            ForEach(group.sessions) { session in
+                                sessionRow(session)
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    private func sessionRow(_ session: Session) -> some View {
+        let isSelected = viewModel.selectedTab == .agent && session.id == viewModel.selectedSessionID
+        return SidebarRow(isSelected: isSelected, action: {
+            isListFocused = true
+            Task { await viewModel.selectSession(session.id) }
+        }) {
+            SessionRowLabel(session: session, activity: viewModel.activity(of: session.id))
+        }
+        .contextMenu {
+            Button("Delete Session", role: .destructive) {
+                Task { await viewModel.sessions.delete(session.id) }
+            }
+        }
+    }
+
+    private func placeholder(_ text: String) -> some View {
+        Text(text)
+            .font(AppTypography.callout)
+            .foregroundStyle(AppColors.textTertiary)
+            .fixedSize(horizontal: false, vertical: true)
+            .padding(.horizontal, AppSpacing.sm)
     }
 
     // MARK: Chrome
-
-    private var appHeader: some View {
-        HStack(spacing: AppSpacing.sm) {
-            Image(systemName: "sparkle")
-                .font(.system(size: 11, weight: .bold))
-                .foregroundStyle(.white)
-                .frame(width: 22, height: 22)
-                .background(AppColors.accent, in: RoundedRectangle(cornerRadius: AppRadius.medium, style: .continuous))
-                .accessibilityHidden(true)
-            Text("LocalOSXAi")
-                .font(AppTypography.headline.weight(.semibold))
-                .foregroundStyle(AppColors.textPrimary)
-        }
-        .padding(.horizontal, AppSpacing.md + AppSpacing.xxs)
-        .padding(.top, AppSpacing.xs)
-        .accessibilityElement(children: .combine)
-        .accessibilityAddTraits(.isHeader)
-    }
-
-    private var searchButton: some View {
-        Button {
-            viewModel.showCommandPalette()
-        } label: {
-            HStack(spacing: AppSpacing.sm) {
-                Image(systemName: "magnifyingglass")
-                    .accessibilityHidden(true)
-                // Short on purpose: the sidebar can be narrow, and this label
-                // must stay on one line.
-                Text("Search")
-                    .lineLimit(1)
-                Spacer(minLength: AppSpacing.xs)
-                ShortcutBadge(shortcut: "⌘K")
-            }
-            .font(AppTypography.callout)
-            .foregroundStyle(AppColors.textTertiary)
-            .padding(.leading, AppSpacing.md)
-            .padding(.trailing, AppSpacing.xs + AppSpacing.xxs)
-            .frame(height: AppLayout.buttonHeight)
-            .contentShape(RoundedRectangle(cornerRadius: AppRadius.medium, style: .continuous))
-        }
-        .buttonStyle(.plain)
-        .appFloating(in: RoundedRectangle(cornerRadius: AppRadius.medium, style: .continuous), interactive: true, elevated: false)
-        .padding(.horizontal, AppSpacing.md)
-        .accessibilityLabel("Command palette")
-        .accessibilityHint("Shortcut Command K")
-    }
 
     private var footer: some View {
         HStack(spacing: AppSpacing.sm) {
@@ -262,7 +256,6 @@ struct SidebarView: View {
         }
         .padding(.horizontal, AppSpacing.sm)
         .padding(.vertical, AppSpacing.sm)
-        .overlay(alignment: .top) { Divider().overlay(AppColors.border) }
     }
 
     /// Which model servers answered, in words; the logos and the red dot are
@@ -296,37 +289,82 @@ struct SidebarView: View {
     }
 }
 
-/// One session in the sidebar: its title on one line, and what its agent is
-/// doing, as a symbol with a spoken label (never color alone).
+/// A row's leading symbol, in the sidebar's quieter icon tone.
+private struct SidebarIcon: View {
+    let systemImage: String
+
+    var body: some View {
+        Image(systemName: systemImage)
+            .font(AppTypography.body)
+            .foregroundStyle(AppColors.textSecondary)
+            .frame(width: 16)
+            .accessibilityHidden(true)
+    }
+}
+
+/// Linear's collapsible section title: “Today ▾”.
+private struct SidebarSectionHeader: View {
+    let title: String
+    let isCollapsed: Bool
+    let toggle: () -> Void
+
+    var body: some View {
+        Button(action: toggle) {
+            HStack(spacing: AppSpacing.xs) {
+                Text(title)
+                Image(systemName: "arrowtriangle.down.fill")
+                    .imageScale(.small)
+                    .scaleEffect(0.6)
+                    .rotationEffect(.degrees(isCollapsed ? -90 : 0))
+                    .accessibilityHidden(true)
+            }
+            .font(AppTypography.callout.weight(.medium))
+            .foregroundStyle(AppColors.textTertiary)
+            .padding(.horizontal, AppSpacing.sm)
+            .frame(height: AppLayout.rowHeight - AppSpacing.xs, alignment: .leading)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .appAnimation(AppAnimation.quick, value: isCollapsed)
+        .accessibilityLabel(title)
+        .accessibilityValue(isCollapsed ? "Collapsed" : "Expanded")
+        .accessibilityAddTraits(.isHeader)
+    }
+}
+
+/// One session: an icon for what its agent is doing, then its title on one
+/// line. The state is also spoken, never color alone.
 private struct SessionRowLabel: View {
     let session: Session
     let activity: SessionActivity?
 
     var body: some View {
         HStack(spacing: AppSpacing.sm) {
+            Group {
+                switch activity {
+                case .running:
+                    ProgressView()
+                        .controlSize(.mini)
+                        .accessibilityLabel("Running")
+                case .awaitingApproval:
+                    Image(systemName: "hand.raised.fill")
+                        .font(AppTypography.callout)
+                        .foregroundStyle(AppColors.warning)
+                        .accessibilityLabel("Waiting for your approval")
+                case nil:
+                    SidebarIcon(systemImage: "bubble.left")
+                }
+            }
+            .frame(width: 16)
             Text(session.title)
                 .lineLimit(1)
                 .truncationMode(.tail)
-            Spacer(minLength: AppSpacing.xs)
-            switch activity {
-            case .running:
-                ProgressView()
-                    .controlSize(.mini)
-                    .accessibilityLabel("Running")
-            case .awaitingApproval:
-                Image(systemName: "hand.raised.fill")
-                    .font(AppTypography.caption)
-                    .foregroundStyle(AppColors.warning)
-                    .accessibilityLabel("Waiting for your approval")
-            case nil:
-                EmptyView()
-            }
         }
         .help(details)
         .accessibilityElement(children: .combine)
     }
 
-    /// Shown on hover: the row itself stays on one line, like Claude Code's.
+    /// Shown on hover: the row itself stays on one line.
     private var details: String {
         let updated = session.updatedAt.formatted(.relative(presentation: .named, unitsStyle: .wide))
         guard session.toolCallCount > 0 else { return "Updated \(updated)" }

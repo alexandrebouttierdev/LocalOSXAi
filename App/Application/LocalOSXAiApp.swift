@@ -27,11 +27,15 @@ struct LocalOSXAiApp: App {
                 // Inter everywhere, including controls without an explicit font.
                 .font(AppTypography.body)
                 .containerBackground(AppColors.background, for: .window)
+                // Linear's window: no title bar row; the traffic lights sit
+                // over the sidebar and each panel carries its own header.
+                .ignoresSafeArea(.container, edges: .top)
                 .onChange(of: appearance, initial: true) {
                     NSApp.appearance = appearance.nsAppearance
                 }
         }
-        .windowToolbarStyle(.unified(showsTitle: true))
+        .windowStyle(.hiddenTitleBar)
+        .windowBackgroundDragBehavior(.enabled)
         .defaultSize(width: 1280, height: 820)
         .commands {
             AppCommands(workspace: workspace)

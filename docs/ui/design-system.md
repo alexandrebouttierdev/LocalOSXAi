@@ -18,13 +18,12 @@ interface should disappear behind the work.
 
 The reference mockup (Linear style) is a dark ground holding the sidebar, with the content on
 an **inset panel**: `surface`, 12 pt corners (`AppRadius.panel`), a `hairline` outline and 8 pt
-of ground around it. There is a single header row, the native window toolbar: the title is the
-session (the project on other tabs) with the project as subtitle, text-only pill tabs sit in the
-center with a count badge on Changes, and the inspector toggle is on the right. The panel
-itself holds only the tab content. The sidebar, laid out like Claude Code's, starts with
-the app mark, New session, the search field and the project switcher, then the project's sessions
-grouped by date (one line each, with a spinner or a raised hand for a running or waiting agent),
-and a footer with
+of ground around it. The window has **no title bar**: the traffic lights float over the sidebar,
+and the panel starts with its own header row (the view's icon, “project › session”, the
+inspector toggle) above a hairline, like a Linear issue. The sidebar is Linear's: the project
+switcher row with search and new-session icons, the project's views as icon rows (Files,
+Changes with its count, Terminal), then the sessions in collapsible date sections (“Today ▾”),
+each row led by an icon for its agent (bubble, spinner, raised hand), and a footer with
 Settings and which model servers answered (their logos and “Ollama connected”). The inspector
 lists the model (with its provider's logo), the context (usage meter and length) and Git.
 
@@ -50,7 +49,7 @@ window, so contrast is the same everywhere and the interface reads as one calm p
 
 | Surface | Treatment |
 |---|---|
-| Window, sidebar, inspector, toolbar | `background` ground (`#08090A` in dark mode) |
+| Window, sidebar, inspector | `background` ground (`#08090A` in dark mode) |
 | Content panel | `surface` (`#0F1011`), inset on the ground, 12 pt corners, hairline outline |
 | Command palette, composer, approval banner (warning wash) | `appFloating(in:)`: `surfaceRaised`, `border`, soft `shadow` |
 | Model card, recent projects, search field, suggestion chips, empty-state icon | `appFloating(in:elevated: false)`: same, without shadow (they sit in the content) |

@@ -12,15 +12,17 @@ turned off with public SwiftUI API.
 ## Decision
 - `SidebarLayout` (Shared) replaces `NavigationSplitView` in the workspace and the settings
   screen: an `HStack` of the sidebar, an invisible resize edge (drag, 200–320 pt, remembered in
-  `@AppStorage`) and the detail, all on the `background` ground. The toolbar gets its own
-  sidebar button; the existing Toggle Sidebar command drives `isSidebarVisible`.
+  `@AppStorage`) and the detail, all on the `background` ground. The existing Toggle Sidebar
+  command drives `isSidebarVisible`.
 - Rows are `SidebarRow` buttons: 28 pt, 6 pt corners, `hover` on hover, `selection` (7% white)
   when selected, primary text. Context menus are unchanged.
 - Keyboard: ↑/↓ move the selection through the sessions (`selectAdjacentSession`, unit-tested);
   clicking a row focuses the list.
-- Follow-up: the sidebar's content then took Claude Code's layout (New session, project switcher,
-  sessions grouped by date with their agent's state). The cross-project “Recent” list, and the
-  `recentSessions(limit:)` query that only it used, were removed.
+- Follow-up: the sidebar's content then took Linear's layout: the project switcher row with search
+  and new-session icons, the views (Files, Changes, Terminal) as rows instead of toolbar tabs,
+  sessions in collapsible date sections with their agent's state as a leading icon. The window
+  lost its title bar (`.hiddenTitleBar`): the header moved into the content panel. The
+  cross-project “Recent” list, and the `recentSessions(limit:)` query only it used, were removed.
 
 ## Alternatives
 - **Keep `NavigationSplitView`, style the list**: the glass panel and the accent selection
