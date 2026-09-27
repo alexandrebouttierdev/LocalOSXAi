@@ -4,6 +4,8 @@
 # push of a version creates the release “v<version>”; later pushes of the
 # same version create pre-releases “v<version>-build.<run>”, so a push never
 # fails. Bump the version in project.yml to publish the next release.
+# Run by hand with “replace files”, it rebuilds the current version and
+# replaces the files of its existing release instead.
 # Details: docs/code/releasing.md.
 name: Release
 
@@ -11,6 +13,11 @@ on:
   push:
     branches: [main]
   workflow_dispatch:
+    inputs:
+      replace_files:
+        description: "Rebuild the current version and replace its existing release's files"
+        type: boolean
+        default: false
 
 permissions:
   contents: write
@@ -43,9 +50,16 @@ jobs:
 
       - name: Choose the tag
         id: version
+        env:
+          REPLACE_FILES: ${{ inputs.replace_files || false }}
         run: |
           version=$(scripts/app-version.sh)
-          if git rev-parse -q --verify "refs/tags/v$version" >/dev/null; then
+          replace=false
+          if [[ "$REPLACE_FILES" == "true" ]] && git rev-parse -q --verify "refs/tags/v$version" >/dev/null; then
+            tag="v$version"
+            prerelease=false
+            replace=true
+          elif git rev-parse -q --verify "refs/tags/v$version" >/dev/null; then
             tag="v$version-build.$GITHUB_RUN_NUMBER"
             prerelease=true
           else
@@ -55,7 +69,8 @@ jobs:
           echo "version=$version" >> "$GITHUB_OUTPUT"
           echo "tag=$tag" >> "$GITHUB_OUTPUT"
           echo "prerelease=$prerelease" >> "$GITHUB_OUTPUT"
-          echo "Releasing $tag (pre-release: $prerelease)"
+          echo "replace=$replace" >> "$GITHUB_OUTPUT"
+          echo "Releasing $tag (pre-release: $prerelease, replacing files: $replace)"
 
       - name: Build the app
         run: scripts/build-release.sh "$GITHUB_RUN_NUMBER"
@@ -66,20 +81,31 @@ jobs:
           TAG: ${{ steps.version.outputs.tag }}
           VERSION: ${{ steps.version.outputs.version }}
           PRERELEASE: ${{ steps.version.outputs.prerelease }}
+          REPLACE: ${{ steps.version.outputs.replace }}
         run: |
+          image="dist/LocalOSXAi-$VERSION.dmg"
           cat > notes.md <<NOTES
           ## Install
 
-          1. Download **LocalOSXAi-$VERSION.zip** below and unzip it.
-          2. Move **LocalOSXAi.app** to your Applications folder.
+          1. Download **LocalOSXAi-$VERSION.dmg** below and open it.
+          2. Drag **LocalOSXAi** onto **Applications**.
           3. The app is not notarized yet: the first time, right-click it and choose **Open**, then
              **Open** again (or run \`xattr -dr com.apple.quarantine /Applications/LocalOSXAi.app\`).
 
           Requires macOS 15 or later, and Ollama, LM Studio or another local model server.
           NOTES
+          if [[ "$REPLACE" == "true" ]]; then
+            gh release upload "$TAG" "$image" --clobber
+            # Files of an older build or format (e.g. a zip) go away.
+            gh release view "$TAG" --json assets --jq '.assets[].name' \
+              | { grep -vxF "$(basename "$image")" || true; } \
+              | while read -r name; do gh release delete-asset "$TAG" "$name" --yes; done
+            gh release edit "$TAG" --notes-file notes.md
+            exit 0
+          fi
           flags=()
           [[ "$PRERELEASE" == "true" ]] && flags+=(--prerelease)
-          gh release create "$TAG" "dist/LocalOSXAi-$VERSION.zip" \
+          gh release create "$TAG" "$image" \
             --target "$GITHUB_SHA" \
             --title "LocalOSXAi $TAG" \
             --notes-file notes.md \

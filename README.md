@@ -75,9 +75,9 @@ clone of Cline or OpenCode.
 
 ## Download
 
-Get the latest **LocalOSXAi.zip** from the
-[Releases page](https://github.com/alexandrebouttierdev/LocalOSXAi/releases), unzip it and move
-the app to Applications. The app is not notarized yet: the first time, right-click it and
+Get the latest **LocalOSXAi.dmg** from the
+[Releases page](https://github.com/alexandrebouttierdev/LocalOSXAi/releases), open it and drag
+LocalOSXAi onto Applications. The app is not notarized yet: the first time, right-click it and
 choose **Open**. Requires macOS 15 or later. The app tells you when a newer version is
 released.
 

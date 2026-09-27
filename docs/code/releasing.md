@@ -13,9 +13,11 @@
    - `v<version>-build.<run>` otherwise: a **pre-release**, so a push never fails.
 3. Builds a universal (Apple Silicon and Intel) Release app with `scripts/build-release.sh`,
    sets its build number (`CFBundleVersion`) to the workflow run number, signs it ad hoc and
-   zips it to `LocalOSXAi-<version>.zip`.
-4. Creates the release with the zip, install steps and notes generated from the merged pull
-   requests and commits.
+   packs it in a disk image, `LocalOSXAi-<version>.dmg`: the app next to a link to
+   Applications, to drag it there. A disk image rather than a zip: nothing to unpack, and it is
+   the usual way Mac apps are installed.
+4. Creates the release with the disk image, install steps and notes generated from the merged
+   pull requests and commits.
 
 ## Publishing a new version
 
@@ -24,7 +26,15 @@
    compared number by number, so `0.0.0.2` follows it, and `0.0.1` or `0.1` are later still.
 2. Merge into `main`. The workflow publishes `v0.0.0.2`.
 
-To build the same archive locally: `scripts/build-release.sh 1` (writes `dist/`).
+To build the same disk image locally: `scripts/build-release.sh 1` (writes `dist/`).
+
+## Replacing a release's files
+
+To rebuild the current version without publishing a new one (a packaging fix, say): Actions ›
+Release › Run workflow, with **Rebuild the current version and replace its existing release's
+files** checked. If `v<version>` exists, its files are replaced by the new disk image, other
+files are removed and the install steps are rewritten; the tag and its commit do not move.
+Without an existing release, the run publishes it normally.
 
 ## Update check
 

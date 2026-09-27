@@ -33,7 +33,7 @@ makes on its own must be small, explained and optional.
 - **Sparkle**: downloads, verifies and installs updates in place. It needs an appcast, EdDSA
   signing keys in CI and, to be smooth, a Developer ID signature and notarization, which the
   project does not have yet. Worth revisiting once releases are notarized.
-- **Install from the app** (download the zip and replace the bundle): the app is ad-hoc signed
+- **Install from the app** (download the disk image and replace the bundle): the app is ad-hoc signed
   and quarantined; replacing a running app ourselves is fragile and a security surface.
 - **No check**: users stay on old versions without knowing it.
 - **A periodic check** while the app runs: more network traffic for little gain; the app is
