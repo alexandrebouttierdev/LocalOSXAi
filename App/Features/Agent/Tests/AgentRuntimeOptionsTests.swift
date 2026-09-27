@@ -41,8 +41,30 @@ struct AgentRuntimeOptionsTests {
         let result = await collect(try runtime(provider).run(request, approver: StubApprover()))
 
         let sent = try #require(provider.requests.first?.options)
-        #expect(sent == GenerationOptions(temperature: 0.2, contextLength: 16_384, reasoning: .low))
+        // maxOutputTokens defaults to the context's reserved output margin (RunContext.outputReserve).
+        #expect(sent == GenerationOptions(temperature: 0.2, contextLength: 16_384, maxOutputTokens: 4_096, reasoning: .low))
         #expect(result.elements.contains { if case .contextUsageUpdated(let usage) = $0 { usage.budgetTokens == 16_384 } else { false } })
+    }
+
+    @Test("a run's output is capped to the context's reserved margin, so a runaway generation fails fast")
+    func generationIsCappedToOutputReserve() async throws {
+        let provider = FakeLLMProvider(turns: [.response("ok")])
+        let result = await collect(try runtime(provider).run(Fixtures.runRequest(), approver: StubApprover()))
+
+        // Fixtures.toolModel has no configured or loaded context, so it falls back to 8,192 tokens.
+        #expect(provider.requests.first?.options.maxOutputTokens == RunContext.outputReserve(contextTokens: 8_192))
+        #expect(result.error == nil)
+    }
+
+    @Test("an explicit maxOutputTokens is kept instead of the computed reserve")
+    func explicitMaxOutputTokensIsKept() async throws {
+        let provider = FakeLLMProvider(turns: [.response("ok")])
+        var request = Fixtures.runRequest()
+        request.options.generation = GenerationOptions(maxOutputTokens: 256)
+
+        _ = await collect(try runtime(provider).run(request, approver: StubApprover()))
+
+        #expect(provider.requests.first?.options.maxOutputTokens == 256)
     }
 
     @Test("project command rules apply to the run, and approvals offer a rule to add")

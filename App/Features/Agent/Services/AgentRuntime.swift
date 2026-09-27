@@ -252,10 +252,14 @@ struct AgentRuntime: AgentService {
                             maxOutputCharacters: limits.maxToolOutputCharacters)
     }
 
-    /// The model settings for this run, with the context length the budget uses.
+    /// The model settings for this run, with the context length the budget uses and a cap on
+    /// the answer so a model that ignores the "write in several steps" instruction fails fast
+    /// (`toolCallCutOff`/`outputLimitReached`) instead of generating silently until the
+    /// provider's idle timeout (docs/ai/context.md § Budget, ADR 0029).
     private func generationOptions(_ chosen: GenerationOptions, contextTokens: Int) -> GenerationOptions {
         var options = chosen
         options.contextLength = contextTokens
+        options.maxOutputTokens = chosen.maxOutputTokens ?? RunContext.outputReserve(contextTokens: contextTokens)
         return options
     }
 

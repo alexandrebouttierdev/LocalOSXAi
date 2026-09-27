@@ -32,8 +32,16 @@ struct RunContext: Sendable {
     var promptBudget: Int { Self.promptBudget(contextTokens: contextTokens) }
 
     static func promptBudget(contextTokens: Int) -> Int {
-        let reserve = max(Int(Double(contextTokens) * outputReserveRatio), minimumOutputReserve)
-        return max(contextTokens - reserve, 0)
+        max(contextTokens - outputReserve(contextTokens: contextTokens), 0)
+    }
+
+    /// Tokens reserved for the model's answer: sent to the provider as
+    /// `GenerationOptions.maxOutputTokens` (`AgentRuntime.generationOptions`), so a model that
+    /// ignores the "write in several steps" instruction hits this limit and fails fast with
+    /// `toolCallCutOff`/`outputLimitReached` instead of running until the provider's idle
+    /// timeout (docs/ai/providers.md § Timeouts, ADR 0029).
+    static func outputReserve(contextTokens: Int) -> Int {
+        max(Int(Double(contextTokens) * outputReserveRatio), minimumOutputReserve)
     }
 
     mutating func appendAssistant(text: String, toolCalls: [LLMToolCall]) {

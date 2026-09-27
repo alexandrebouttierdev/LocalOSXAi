@@ -24,6 +24,12 @@ arrive with Phases 4 and 6.
 budget = model.contextWindow.effectiveTokens − reserved output (e.g. 25%, min 1K)
 ```
 
+- The reserved output (`RunContext.outputReserve`) is not just a margin for the prompt: it is
+  also sent to the provider as `GenerationOptions.maxOutputTokens` (`AgentRuntime.generationOptions`,
+  [ADR 0029](../decisions/0029-bounded-generation-output.md)), so a model that ignores the
+  "write in several steps" instruction hits this limit and fails fast with
+  `toolCallCutOff`/`outputLimitReached` instead of generating silently until the provider's idle
+  timeout (see [providers.md](providers.md#timeouts)).
 - The effective window comes from `ContextWindow` and is never the advertised maximum alone
   (see [model-capabilities.md](model-capabilities.md)).
 - Counting uses `TokenEstimator`, a deliberately conservative heuristic of about 4 characters

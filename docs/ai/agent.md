@@ -61,6 +61,7 @@ header per turn.
 | Tool timeout | 30 s | Failed tool result, and the run continues |
 | Consecutive all-invalid iterations | 3 | Run fails with `AgentError.tooManyInvalidToolCalls` |
 | Tool output sent to the model | 16,000 characters (head + tail) | Truncated with a marker |
+| Model output per turn | The context's reserved output margin (`RunContext.outputReserve`, e.g. 25%, min 1K), sent as `GenerationOptions.maxOutputTokens` unless the run already set one ([ADR 0029](../decisions/0029-bounded-generation-output.md)) | `toolCallCutOff` or `outputLimitReached` |
 | Model silence | Provider idle timeout, 900 s by default (Settings) | `ProviderError.timedOut` |
 
 Steps per run (5–100) and the tool timeout (15 s–5 min) are set in Settings › General › Agent
@@ -75,7 +76,7 @@ next run. The other limits are constants.
 | Tool execution error or timeout | Returned to the model as a failed result |
 | Denied by the user | `denied` result telling the model not to retry. The run continues |
 | Provider error mid-stream | Run fails. Partial text is kept and marked failed |
-| Model hits its length limit while writing a tool call | Run fails with `AgentError.toolCallCutOff`, naming the context size, **without running the call**: its arguments are truncated (a `write_file` would write half a file, or miss `path` when `content` came first), and a retry would hit the same limit. Providers keep the `length` finish reason even when a tool call was emitted |
+| Model hits its length limit (the output cap above, or the context itself) while writing a tool call | Run fails with `AgentError.toolCallCutOff`, naming the context size, **without running the call**: its arguments are truncated (a `write_file` would write half a file, or miss `path` when `content` came first), and a retry would hit the same limit. Providers keep the `length` finish reason even when a tool call was emitted |
 | Invalid call with very long arguments (4,000+ characters) | The error sent to the model adds that the arguments may have been cut, to give `path` first and to write a large file in several steps |
 | Model returns neither text nor tool calls | Run fails with `AgentError.emptyResponse`, or `outputLimitReached` when the response was cut by the output limit (for example, all tokens spent reasoning). A silent completion would look like a hang |
 | Context overflow | Compaction first (see [context.md](context.md)). If the run still does not fit, it fails with a clear message |
