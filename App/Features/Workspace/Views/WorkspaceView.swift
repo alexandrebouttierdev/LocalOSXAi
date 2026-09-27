@@ -7,6 +7,7 @@ struct WorkspaceView: View {
     @Bindable var viewModel: WorkspaceViewModel
     let agentSettings: AgentSettingsViewModel
     let providerSettings: ProviderSettingsViewModel
+    @AppStorage(AppLayout.sidebarWidthKey) private var sidebarWidth = Double(AppLayout.sidebarIdealWidth)
 
     var body: some View {
         Group {
@@ -16,6 +17,7 @@ struct WorkspaceView: View {
                     agent: agentSettings,
                     providers: providerSettings,
                     models: viewModel.models,
+                    sidebarWidth: $sidebarWidth,
                     closesWithEscape: !viewModel.isCommandPalettePresented,
                     onClose: viewModel.closeSettings
                 )
@@ -50,11 +52,8 @@ struct WorkspaceView: View {
     }
 
     private var workspace: some View {
-        NavigationSplitView(columnVisibility: sidebarVisibility) {
+        SidebarLayout(isSidebarVisible: viewModel.isSidebarVisible, sidebarWidth: $sidebarWidth) {
             SidebarView(viewModel: viewModel, onCommand: handle)
-                .navigationSplitViewColumnWidth(
-                    min: AppLayout.sidebarMinWidth, ideal: AppLayout.sidebarIdealWidth, max: AppLayout.sidebarMaxWidth
-                )
         } detail: {
             MainContentView(viewModel: viewModel, onCommand: handle)
                 .frame(minWidth: AppLayout.contentMinWidth)
@@ -64,32 +63,33 @@ struct WorkspaceView: View {
                             min: AppLayout.inspectorMinWidth, ideal: AppLayout.inspectorIdealWidth, max: AppLayout.inspectorMaxWidth
                         )
                 }
-                .toolbarBackground(AppColors.background, for: .windowToolbar)
-                .navigationTitle(viewModel.windowTitle)
-                .navigationSubtitle(viewModel.windowSubtitle)
-                .toolbar {
-                    if viewModel.selectedProject != nil {
-                        ToolbarItem(placement: .principal) {
-                            TabSwitcher(selectedTab: $viewModel.selectedTab, changesCount: viewModel.pendingChangesCount)
-                        }
-                    }
-                    ToolbarItem(placement: .primaryAction) {
-                        Button {
-                            handle(.toggleInspector)
-                        } label: {
-                            Label("Toggle Inspector", systemImage: "sidebar.right")
-                        }
-                        .help("Toggle Inspector (\(WorkspaceCommand.toggleInspector.shortcut?.displayString ?? ""))")
-                    }
-                }
         }
-    }
-
-    private var sidebarVisibility: Binding<NavigationSplitViewVisibility> {
-        Binding(
-            get: { viewModel.isSidebarVisible ? .all : .detailOnly },
-            set: { viewModel.isSidebarVisible = $0 != .detailOnly }
-        )
+        .toolbarBackground(AppColors.background, for: .windowToolbar)
+        .navigationTitle(viewModel.windowTitle)
+        .navigationSubtitle(viewModel.windowSubtitle)
+        .toolbar {
+            ToolbarItem(placement: .navigation) {
+                Button {
+                    handle(.toggleSidebar)
+                } label: {
+                    Label("Toggle Sidebar", systemImage: "sidebar.left")
+                }
+                .help("Toggle Sidebar (\(WorkspaceCommand.toggleSidebar.shortcut?.displayString ?? ""))")
+            }
+            if viewModel.selectedProject != nil {
+                ToolbarItem(placement: .principal) {
+                    TabSwitcher(selectedTab: $viewModel.selectedTab, changesCount: viewModel.pendingChangesCount)
+                }
+            }
+            ToolbarItem(placement: .primaryAction) {
+                Button {
+                    handle(.toggleInspector)
+                } label: {
+                    Label("Toggle Inspector", systemImage: "sidebar.right")
+                }
+                .help("Toggle Inspector (\(WorkspaceCommand.toggleInspector.shortcut?.displayString ?? ""))")
+            }
+        }
     }
 
     @ViewBuilder

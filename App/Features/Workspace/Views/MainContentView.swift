@@ -19,7 +19,8 @@ struct MainContentView: View {
                         .strokeBorder(AppColors.hairline, lineWidth: AppBorders.hairline)
                 )
                 .padding([.bottom, .trailing], AppSpacing.sm)
-                .padding(.leading, AppSpacing.xxs)
+                // The sidebar's resize edge already separates it from the panel.
+                .padding(.leading, viewModel.isSidebarVisible ? AppSpacing.xxs : AppSpacing.sm)
                 .padding(.top, AppSpacing.xs)
             } else {
                 WelcomeView(viewModel: viewModel, onCommand: onCommand)

@@ -66,7 +66,7 @@ final class UISnapshotTests: XCTestCase {
         XCTAssertTrue(back.waitForExistence(timeout: 5))
         sleep(1)
         save(window, "\(appearance)-7-settings-general")
-        let providers = window.staticTexts["Providers"].firstMatch
+        let providers = window.buttons["Providers"].firstMatch
         if providers.waitForExistence(timeout: 2) {
             providers.click()
             sleep(1)

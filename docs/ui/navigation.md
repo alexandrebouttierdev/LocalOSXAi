@@ -13,8 +13,12 @@
 └───────────────────┴─────────────────────────────────────────┴─────────────────┘
 ```
 
-- `NavigationSplitView` (sidebar + detail) plus the `.inspector` modifier (right panel).
-  These are native, resizable columns that collapse correctly at small window sizes.
+- `SidebarLayout` (sidebar + detail) plus the `.inspector` modifier (right panel). The sidebar
+  sits flat on the window ground, like Linear's, instead of `NavigationSplitView`'s floating
+  glass panel on macOS 26 ([ADR 0025](../decisions/0025-flat-sidebar.md)). Drag its edge to
+  resize it (200–320 pt, remembered); the toolbar's sidebar button or the menu hides it.
+- Sidebar rows (`SidebarRow`) have a neutral selection, never the system accent. ↑/↓ move the
+  selection once the list has focus (clicking a row gives it focus).
 - Minimum window size 900×560. Column widths come from `AppLayout`.
 - The window toolbar is the only header: title and subtitle (session and project), the tabs in
   the center, the inspector toggle on the right (`WorkspaceViewModel.windowTitle/windowSubtitle`).

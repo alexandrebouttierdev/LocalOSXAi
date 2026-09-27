@@ -81,6 +81,25 @@ final class WorkspaceViewModel {
         return selectedProjectID.map(SidebarItem.project)
     }
 
+    /// The sidebar's rows in display order: projects, the selected project's
+    /// sessions, then recent sessions of other projects.
+    var sidebarItems: [SidebarItem] {
+        projects.projects.map { SidebarItem.project($0.id) }
+            + (selectedProjectID == nil ? [] : sessions.sessions.map { SidebarItem.session($0.id) })
+            + sessions.recentSessions.map { SidebarItem.session($0.id) }
+    }
+
+    /// Moves the sidebar selection by `offset` rows (↑ −1, ↓ +1), staying
+    /// within the list. Without a selection, ↓ selects the first row.
+    func selectAdjacentSidebarItem(_ offset: Int) async {
+        let items = sidebarItems
+        guard !items.isEmpty else { return }
+        let current = sidebarSelection.flatMap { items.firstIndex(of: $0) }
+        let target = current.map { min(max($0 + offset, 0), items.count - 1) } ?? (offset > 0 ? 0 : items.count - 1)
+        guard target != current else { return }
+        await select(items[target])
+    }
+
     /// First pending error across child view models, for a single alert.
     var currentError: UserFacingError? { storageError ?? projects.error ?? sessions.error }
 

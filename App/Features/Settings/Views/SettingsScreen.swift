@@ -10,39 +10,39 @@ struct SettingsScreen: View {
     let agent: AgentSettingsViewModel
     let providers: ProviderSettingsViewModel
     let models: ModelsViewModel
+    /// Shared with the workspace, so both sidebars have the same width.
+    @Binding var sidebarWidth: Double
     /// False while another layer (the command palette) owns Esc.
     var closesWithEscape = true
     let onClose: () -> Void
 
     var body: some View {
-        NavigationSplitView {
+        SidebarLayout(isSidebarVisible: true, sidebarWidth: $sidebarWidth) {
             sidebar
-                .navigationSplitViewColumnWidth(
-                    min: AppLayout.sidebarMinWidth, ideal: AppLayout.sidebarIdealWidth, max: AppLayout.sidebarMaxWidth
-                )
         } detail: {
             page
-                .navigationTitle("Settings")
-                .navigationSubtitle(section.title)
-                .toolbarBackground(AppColors.background, for: .windowToolbar)
         }
+        .navigationTitle("Settings")
+        .navigationSubtitle(section.title)
+        .toolbarBackground(AppColors.background, for: .windowToolbar)
     }
 
     private var sidebar: some View {
-        List(selection: selection) {
-            Section {
-                ForEach(SettingsSection.allCases) { section in
-                    Label(section.title, systemImage: section.systemImage)
-                        .tag(section)
+        VStack(alignment: .leading, spacing: AppSpacing.xxs) {
+            backButton
+                .padding(.bottom, AppSpacing.sm)
+            SectionHeader(title: "Settings")
+                .padding(.horizontal, AppSpacing.sm)
+            ForEach(SettingsSection.allCases) { item in
+                SidebarRow(isSelected: item == section, action: { section = item }) {
+                    Label(item.title, systemImage: item.systemImage)
                 }
-            } header: {
-                SectionHeader(title: "Settings")
             }
+            Spacer(minLength: 0)
         }
-        .listStyle(.sidebar)
-        .scrollContentBackground(.hidden)
+        .padding(AppSpacing.sm)
+        .frame(maxHeight: .infinity, alignment: .top)
         .background(AppColors.background)
-        .safeAreaInset(edge: .top, spacing: 0) { backButton }
     }
 
     private var backButton: some View {
@@ -53,8 +53,6 @@ struct SettingsScreen: View {
         .buttonStyle(.subtle)
         .keyboardShortcut(closesWithEscape ? .cancelAction : nil)
         .help("Back to the workspace (Esc)")
-        .padding(.horizontal, AppSpacing.sm)
-        .padding(.top, AppSpacing.sm)
     }
 
     /// The selected section on the content panel, with its title above.
@@ -94,10 +92,5 @@ struct SettingsScreen: View {
         case .general: GeneralSettingsView(agent: agent)
         case .providers: ProvidersSettingsView(viewModel: providers, models: models)
         }
-    }
-
-    /// `List` selection is optional; a section is always selected.
-    private var selection: Binding<SettingsSection?> {
-        Binding(get: { section }, set: { if let value = $0 { section = value } })
     }
 }

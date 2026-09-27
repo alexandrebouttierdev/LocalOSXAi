@@ -97,6 +97,26 @@ struct WorkspaceViewModelTests {
         #expect(workspace.isSettingsPresented)
     }
 
+    @Test("the sidebar lists projects, then sessions, and ↑/↓ move the selection within it")
+    func sidebarKeyboardNavigation() async {
+        let project = Fixtures.project()
+        let older = Fixtures.session(projectID: project.id, title: "Old", updatedAt: Date(timeIntervalSinceReferenceDate: 1))
+        let newer = Fixtures.session(projectID: project.id, title: "New", updatedAt: Date(timeIntervalSinceReferenceDate: 2))
+        let workspace = makeWorkspace(projects: [project], sessions: [older, newer])
+        await workspace.load()
+
+        #expect(workspace.sidebarItems == [.project(project.id), .session(newer.id), .session(older.id)])
+        #expect(workspace.sidebarSelection == .session(newer.id))
+
+        await workspace.selectAdjacentSidebarItem(1)
+        #expect(workspace.selectedSessionID == older.id)
+        await workspace.selectAdjacentSidebarItem(1)
+        #expect(workspace.selectedSessionID == older.id)
+
+        await workspace.selectAdjacentSidebarItem(-1)
+        #expect(workspace.selectedSessionID == newer.id)
+    }
+
     @Test("each project gets its own panels, kept when switching back")
     func projectPanels() async throws {
         let first = Fixtures.project(name: "First", openedAt: Date(timeIntervalSinceReferenceDate: 2))

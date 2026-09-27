@@ -39,6 +39,13 @@ enum AppLayout {
     static let sidebarMinWidth: CGFloat = 200
     static let sidebarIdealWidth: CGFloat = 240
     static let sidebarMaxWidth: CGFloat = 320
+    /// Where the sidebar width is remembered (`@AppStorage`, a UI preference).
+    static let sidebarWidthKey = "layout.sidebarWidth"
+
+    /// A sidebar width within the allowed range.
+    static func clampedSidebarWidth(_ width: Double) -> CGFloat {
+        min(max(CGFloat(width), sidebarMinWidth), sidebarMaxWidth)
+    }
     static let inspectorMinWidth: CGFloat = 240
     static let inspectorIdealWidth: CGFloat = 280
     static let inspectorMaxWidth: CGFloat = 380

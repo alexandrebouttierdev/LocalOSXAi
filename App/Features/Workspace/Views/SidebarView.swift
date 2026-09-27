@@ -3,35 +3,46 @@ import SwiftUI
 /// Sidebar: command palette entry point, projects, sessions of the selected
 /// project, recent sessions elsewhere, and settings.
 ///
-/// Uses a native `List` so keyboard navigation, type-select and VoiceOver
-/// work out of the box; styling stays restrained to fit the Linear-like look.
+/// Linear's sidebar: flat on the window ground, rows with a neutral
+/// selection (`SidebarRow`). Built from plain views rather than a `List`,
+/// whose selection always takes the system accent; ↑/↓ still move the
+/// selection (`WorkspaceViewModel.selectAdjacentSidebarItem`), and every row
+/// is a labelled button for VoiceOver.
 struct SidebarView: View {
     @Bindable var viewModel: WorkspaceViewModel
     let onCommand: (WorkspaceCommand) -> Void
     @State private var projectPendingRemoval: Project?
+    /// Clicking a row focuses the list, so ↑/↓ continue from there.
+    @FocusState private var isListFocused: Bool
 
     var body: some View {
-        List(selection: selection) {
-            projectsSection
-            if viewModel.selectedProject != nil {
-                sessionsSection
-            }
-            if !viewModel.sessions.recentSessions.isEmpty {
-                recentSection
-            }
-        }
-        // Native sidebar behavior (selection, keyboard, disclosure) on Linear's
-        // opaque ground instead of the translucent sidebar material.
-        .listStyle(.sidebar)
-        .scrollContentBackground(.hidden)
-        .background(AppColors.background)
-        .safeAreaInset(edge: .top, spacing: 0) {
+        VStack(alignment: .leading, spacing: 0) {
             VStack(alignment: .leading, spacing: AppSpacing.xs) {
                 appHeader
                 searchButton
             }
+            ScrollView {
+                VStack(alignment: .leading, spacing: AppSpacing.lg) {
+                    projectsSection
+                    if viewModel.selectedProject != nil {
+                        sessionsSection
+                    }
+                    if !viewModel.sessions.recentSessions.isEmpty {
+                        recentSection
+                    }
+                }
+                .padding(.horizontal, AppSpacing.sm)
+                .padding(.bottom, AppSpacing.md)
+            }
+            .scrollIndicators(.never)
+            .focusable()
+            .focused($isListFocused)
+            .focusEffectDisabled()
+            .onKeyPress(.upArrow) { move(-1) }
+            .onKeyPress(.downArrow) { move(1) }
+            footer
         }
-        .safeAreaInset(edge: .bottom, spacing: 0) { footer }
+        .background(AppColors.background)
         .confirmationDialog(
             "Remove “\(projectPendingRemoval?.name ?? "")” from the list?",
             isPresented: Binding(get: { projectPendingRemoval != nil }, set: { if !$0 { projectPendingRemoval = nil } }),
@@ -45,84 +56,96 @@ struct SidebarView: View {
         }
     }
 
-    private var selection: Binding<WorkspaceViewModel.SidebarItem?> {
-        Binding(
-            get: { viewModel.sidebarSelection },
-            set: { item in Task { await viewModel.select(item) } }
-        )
+    private func move(_ offset: Int) -> KeyPress.Result {
+        Task { await viewModel.selectAdjacentSidebarItem(offset) }
+        return .handled
+    }
+
+    private func select(_ item: WorkspaceViewModel.SidebarItem) {
+        isListFocused = true
+        Task { await viewModel.select(item) }
     }
 
     // MARK: Sections
 
     private var projectsSection: some View {
-        Section {
-            if viewModel.projects.projects.isEmpty {
-                Text("No projects yet")
-                    .font(AppTypography.callout)
-                    .foregroundStyle(AppColors.textTertiary)
-                    .selectionDisabled()
-            }
-            ForEach(viewModel.projects.projects) { project in
-                Label {
-                    Text(project.name)
-                        .fontWeight(project.id == viewModel.selectedProjectID ? .semibold : .regular)
-                } icon: {
-                    ProjectBadge(name: project.name, size: 16)
-                }
-                .help(project.rootURL.path)
-                    .tag(WorkspaceViewModel.SidebarItem.project(project.id))
-                    .contextMenu {
-                        Button("Project Settings…") {
-                            Task { await viewModel.showProjectSettings(for: project.id) }
-                        }
-                        Button("Reveal in Finder") { NSWorkspace.shared.activateFileViewerSelecting([project.rootURL]) }
-                        Divider()
-                        Button("Remove from List…", role: .destructive) {
-                            projectPendingRemoval = project
-                        }
-                    }
-            }
-        } header: {
+        SidebarSection {
             SectionHeader(title: "Projects") {
                 addButton("Open Project…", command: .openProject)
+            }
+        } content: {
+            if viewModel.projects.projects.isEmpty {
+                placeholder("No projects yet")
+            }
+            ForEach(viewModel.projects.projects) { project in
+                let item = WorkspaceViewModel.SidebarItem.project(project.id)
+                SidebarRow(isSelected: viewModel.sidebarSelection == item, action: { select(item) }) {
+                    Label {
+                        Text(project.name)
+                            .fontWeight(project.id == viewModel.selectedProjectID ? .semibold : .regular)
+                            .lineLimit(1)
+                    } icon: {
+                        ProjectBadge(name: project.name, size: 16)
+                    }
+                }
+                .help(project.rootURL.path)
+                .contextMenu {
+                    Button("Project Settings…") {
+                        Task { await viewModel.showProjectSettings(for: project.id) }
+                    }
+                    Button("Reveal in Finder") { NSWorkspace.shared.activateFileViewerSelecting([project.rootURL]) }
+                    Divider()
+                    Button("Remove from List…", role: .destructive) {
+                        projectPendingRemoval = project
+                    }
+                }
             }
         }
     }
 
     private var sessionsSection: some View {
-        Section {
+        SidebarSection {
+            SectionHeader(title: "Sessions") {
+                addButton("New Session", command: .newSession)
+            }
+        } content: {
             if viewModel.sessions.sessions.isEmpty {
-                Text("No sessions yet")
-                    .font(AppTypography.callout)
-                    .foregroundStyle(AppColors.textTertiary)
-                    .selectionDisabled()
+                placeholder("No sessions yet")
             }
             ForEach(viewModel.sessions.sessions) { session in
-                SessionRow(session: session, subtitle: nil, showsToolCalls: true)
-                    .tag(WorkspaceViewModel.SidebarItem.session(session.id))
+                sessionRow(session, subtitle: nil, showsToolCalls: true)
                     .contextMenu {
                         Button("Delete Session", role: .destructive) {
                             Task { await viewModel.sessions.delete(session.id) }
                         }
                     }
             }
-        } header: {
-            SectionHeader(title: "Sessions") {
-                addButton("New Session", command: .newSession)
-            }
         }
     }
 
     private var recentSection: some View {
-        Section {
-            ForEach(viewModel.sessions.recentSessions) { session in
-                SessionRow(session: session, subtitle: viewModel.projects.project(id: session.projectID)?.name,
-                           showsToolCalls: false)
-                    .tag(WorkspaceViewModel.SidebarItem.session(session.id))
-            }
-        } header: {
+        SidebarSection {
             SectionHeader(title: "Recent")
+        } content: {
+            ForEach(viewModel.sessions.recentSessions) { session in
+                sessionRow(session, subtitle: viewModel.projects.project(id: session.projectID)?.name, showsToolCalls: false)
+            }
         }
+    }
+
+    private func sessionRow(_ session: Session, subtitle: String?, showsToolCalls: Bool) -> some View {
+        let item = WorkspaceViewModel.SidebarItem.session(session.id)
+        return SidebarRow(isSelected: viewModel.sidebarSelection == item, action: { select(item) }) {
+            SessionRow(session: session, subtitle: subtitle, showsToolCalls: showsToolCalls)
+        }
+    }
+
+    private func placeholder(_ text: String) -> some View {
+        Text(text)
+            .font(AppTypography.callout)
+            .foregroundStyle(AppColors.textTertiary)
+            .padding(.horizontal, AppSpacing.sm)
+            .frame(minHeight: AppLayout.rowHeight)
     }
 
     // MARK: Chrome
@@ -269,5 +292,19 @@ private struct SessionRow: View {
         }
         .padding(.vertical, AppSpacing.xxs)
         .accessibilityElement(children: .combine)
+    }
+}
+
+/// A titled group of sidebar rows.
+private struct SidebarSection<Header: View, Content: View>: View {
+    @ViewBuilder var header: Header
+    @ViewBuilder var content: Content
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: AppSpacing.xxs) {
+            header
+                .padding(.horizontal, AppSpacing.sm)
+            content
+        }
     }
 }
