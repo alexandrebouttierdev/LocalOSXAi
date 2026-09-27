@@ -328,7 +328,7 @@ struct RunContextTests {
             assistant,
             AgentMessage(role: .assistant, text: "x", state: .failed, createdAt: Date()),
             AgentMessage(role: .error, text: "boom", createdAt: Date())
-        ])
+        ]).messages
         #expect(converted.map(\.role) == [.user, .assistant])
         #expect(converted[1].content.contains(#"- read_file {"path":"a"} → Read a"#))
     }

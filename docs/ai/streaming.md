@@ -23,6 +23,9 @@
 5. `toolCallPreparing(draft)` reports a tool call still being generated (name, target path once
    readable from the partial arguments, characters so far). The draft is cleared when the call
    starts or the message ends.
+6. `historySummaryStarted(id, afterMessageID)` comes before the first `assistantMessageStarted`
+   of a run and is always followed by `historySummaryFinished(id, text)` or
+   `historySummaryDiscarded(id)`. A summary still unfinished when the run ends is removed.
 
 Under each agent turn, a line shows how long it took and how many tokens the model wrote
 (“12.4 s · 356 tokens”). While the turn streams it ticks every second and counts an estimate

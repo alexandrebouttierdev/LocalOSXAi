@@ -40,3 +40,4 @@ Accepted ADRs are not edited to change their decision. Write a new ADR that supe
 | [0019](0019-session-storage-shape.md) | Session storage shape: summaries for lists, tool calls as JSON | Accepted |
 | [0020](0020-per-project-command-rules.md) | Per-project command rules only move commands between “allowed” and “ask” | Accepted |
 | [0021](0021-custom-openai-compatible-servers.md) | Custom OpenAI-compatible servers declare what they cannot report | Accepted |
+| [0022](0022-conversation-summaries.md) | Summarize old conversation once per run, keep the summary in the transcript | Accepted |

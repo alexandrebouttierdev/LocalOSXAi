@@ -6,7 +6,8 @@ import Foundation
 /// instructions and the new request are never dropped; the current run's
 /// messages come next; earlier conversation is dropped oldest first. Before
 /// dropping anything from the current run, large results of earlier tool
-/// calls are truncated. Conversation summarization is not implemented yet.
+/// calls are truncated. Summarizing old history happens before a run starts
+/// (`HistoryCompaction`), so this type only ever drops what is left.
 struct RunContext: Sendable {
     /// Share of the context reserved for the model's answer.
     static let outputReserveRatio = 0.25
@@ -28,8 +29,10 @@ struct RunContext: Sendable {
     }
 
     /// Tokens available for the prompt.
-    var promptBudget: Int {
-        let reserve = max(Int(Double(contextTokens) * Self.outputReserveRatio), Self.minimumOutputReserve)
+    var promptBudget: Int { Self.promptBudget(contextTokens: contextTokens) }
+
+    static func promptBudget(contextTokens: Int) -> Int {
+        let reserve = max(Int(Double(contextTokens) * outputReserveRatio), minimumOutputReserve)
         return max(contextTokens - reserve, 0)
     }
 
@@ -88,8 +91,64 @@ struct RunContext: Sendable {
     }
 }
 
+/// Decides how much earlier conversation to summarize before a run.
+///
+/// Summarizing costs a model call, so it happens once, before the run, and
+/// only when the conversation already fills half of the prompt budget: the
+/// other half stays free for this run's tool calls and results, which would
+/// otherwise push history out one iteration at a time.
+enum HistoryCompaction {
+    /// Share of the prompt budget the run may start with before summarizing.
+    static let startRatio = 0.5
+    /// Latest history messages always kept verbatim: the last exchange.
+    static let keptRecentMessages = 2
+    /// A summary is not worth a model call for less than one exchange.
+    static let minimumSummarizedMessages = 2
+
+    /// Tokens a summary may take: an eighth of the prompt budget, at most 1K.
+    static func summaryTokens(promptBudget: Int) -> Int {
+        min(1_024, promptBudget / 8)
+    }
+
+    /// How many of the oldest `history` messages to replace with a summary,
+    /// or 0 when the run fits or nothing can usefully be summarized.
+    ///
+    /// The cut always falls before a user message, so the history kept
+    /// verbatim never starts with an answer. It is the smallest cut that
+    /// brings the start of the run under `startRatio`, else the largest one.
+    ///
+    /// - Parameters:
+    ///   - fixedTokens: the system prompt without any summary, plus the new request.
+    ///   - currentSummaryTokens: the summary already in use, which a new one replaces.
+    static func messagesToSummarize(history: [LLMMessage], fixedTokens: Int, currentSummaryTokens: Int,
+                                    promptBudget: Int) -> Int {
+        let target = Int(Double(promptBudget) * startRatio)
+        let sizes = history.map { TokenEstimator.estimate(messages: [$0.content]) }
+        guard fixedTokens + currentSummaryTokens + sizes.reduce(0, +) > target,
+              history.count - keptRecentMessages >= minimumSummarizedMessages else { return 0 }
+        let cuts = (minimumSummarizedMessages...(history.count - keptRecentMessages)).filter { history[$0].role == .user }
+        guard let largest = cuts.last else { return 0 }
+        let allowance = summaryTokens(promptBudget: promptBudget)
+        return cuts.first { fixedTokens + allowance + sizes[$0...].reduce(0, +) <= target } ?? largest
+    }
+}
+
 /// Converts the transcript and project into model messages.
 enum AgentPrompt {
+    /// The conversation a run starts from: the latest summary, if any, and
+    /// the messages after it, each with the transcript message it came from.
+    struct History: Sendable, Hashable {
+        struct Entry: Sendable, Hashable {
+            let messageID: UUID
+            let message: LLMMessage
+        }
+
+        var summary: String?
+        var entries: [Entry]
+
+        var messages: [LLMMessage] { entries.map(\.message) }
+    }
+
     static func system(projectName: String, instructions: [ProjectInstruction], toolsEnabled: Bool) -> String {
         var prompt = """
             You are a careful software engineering agent working in the project “\(projectName)”. \
@@ -119,21 +178,62 @@ enum AgentPrompt {
         return prompt
     }
 
-    /// Earlier conversation as model messages. Tool calls of earlier runs
-    /// are summarized in one line each rather than replayed, which keeps
-    /// history cheap while telling the model what it already did.
-    static func history(from messages: [AgentMessage]) -> [LLMMessage] {
-        messages.compactMap { message in
-            switch message.role {
-            case .user:
-                return .user(message.text)
-            case .assistant where message.state != .failed:
-                let tools = message.toolCalls.map { "- \($0.name) \($0.argumentsJSON) → \($0.summary ?? $0.status.rawValue)" }
-                let text = tools.isEmpty ? message.text : "[Tools used]\n" + tools.joined(separator: "\n") + "\n\n" + message.text
-                return text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? nil : .assistant(text)
-            case .assistant, .error:
-                return nil
-            }
+    /// The system prompt with the summary of earlier conversation, if any.
+    ///
+    /// The summary goes in the system message rather than in a message of
+    /// its own: many chat templates reject two user messages in a row.
+    static func system(_ system: String, summary: String?) -> String {
+        guard let summary else { return system }
+        return system + "\n\n# Earlier conversation (summary)\n\n" + summary
+    }
+
+    /// Earlier conversation as model messages, starting after the latest
+    /// complete summary. Tool calls of earlier runs are summarized in one
+    /// line each rather than replayed, which keeps history cheap while
+    /// telling the model what it already did.
+    static func history(from messages: [AgentMessage]) -> History {
+        let summaryIndex = messages.lastIndex { $0.role == .summary && $0.state == .complete }
+        let start = summaryIndex.map { $0 + 1 } ?? messages.startIndex
+        let entries = messages[start...].compactMap { message -> History.Entry? in
+            llmMessage(from: message).map { History.Entry(messageID: message.id, message: $0) }
         }
+        return History(summary: summaryIndex.map { messages[$0].text }, entries: entries)
+    }
+
+    private static func llmMessage(from message: AgentMessage) -> LLMMessage? {
+        switch message.role {
+        case .user:
+            return .user(message.text)
+        case .assistant where message.state != .failed:
+            let tools = message.toolCalls.map { "- \($0.name) \($0.argumentsJSON) → \($0.summary ?? $0.status.rawValue)" }
+            let text = tools.isEmpty ? message.text : "[Tools used]\n" + tools.joined(separator: "\n") + "\n\n" + message.text
+            return text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? nil : .assistant(text)
+        case .assistant, .error, .summary:
+            return nil
+        }
+    }
+
+    /// The request asking the model to summarize `messages`, folding in the
+    /// previous summary so one summary always covers everything before it.
+    /// The conversation is cut in the middle when it exceeds `maxInputTokens`.
+    static func summaryRequest(previousSummary: String?, messages: [LLMMessage], maxInputTokens: Int,
+                               maxSummaryTokens: Int) -> [LLMMessage] {
+        let words = maxSummaryTokens * 3 / 4
+        let instructions = """
+            You summarize a conversation between a user and a software engineering agent, so the agent \
+            can continue the work without the original messages. Keep: the user's goals and decisions, \
+            constraints and preferences they stated, files read or changed and why, commands run and \
+            their outcome, open problems and next steps. Drop pleasantries and repeated content. Write \
+            plain text in short sections, at most \(words) words. Do not add anything that was not said.
+            """
+        var conversation = messages.map { message in
+            (message.role == .user ? "User: " : "Agent: ") + message.content
+        }.joined(separator: "\n\n")
+        if let previousSummary {
+            conversation = "Summary of what came before:\n\(previousSummary)\n\n" + conversation
+        }
+        let maxCharacters = max(maxInputTokens - TokenEstimator.estimate(instructions), 0) * TokenEstimator.charactersPerToken
+        let limited = OutputLimiter.limit(conversation, maxCharacters: maxCharacters, note: "middle of the conversation omitted")
+        return [.system(instructions), .user("Summarize this conversation:\n\n" + limited)]
     }
 }

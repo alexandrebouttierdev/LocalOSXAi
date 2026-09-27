@@ -44,6 +44,7 @@ final class AgentViewModel: ToolApprover {
         switch last.role {
         case .error, .user: return true
         case .assistant: return last.state == .cancelled || last.state == .failed
+        case .summary: return false
         }
     }
 

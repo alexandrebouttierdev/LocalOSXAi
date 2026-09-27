@@ -17,6 +17,7 @@ struct AgentMessageView: View {
         case .user: userMessage
         case .assistant: assistantMessage
         case .error: errorMessage
+        case .summary: ConversationSummaryView(message: message)
         }
     }
 
@@ -189,6 +190,47 @@ private struct PreparingToolCallView: View {
         case "edit_file": return "Preparing an edit of \(target)…"
         case "run_command": return "Preparing a command…"
         default: return "Preparing \(draft.name)…"
+        }
+    }
+}
+
+/// Where the model's view of the conversation starts: messages above were
+/// summarized. Collapsed by default; while the model writes the summary, the
+/// elapsed time shows that the run is not stuck.
+private struct ConversationSummaryView: View {
+    let message: AgentMessage
+    @State private var isExpanded = false
+
+    var body: some View {
+        if message.state == .streaming {
+            HStack(spacing: AppSpacing.sm) {
+                ProgressView().controlSize(.mini)
+                TimelineView(.periodic(from: message.createdAt, by: 1)) { context in
+                    let seconds = max(Int(context.date.timeIntervalSince(message.createdAt)), 0)
+                    Text("Summarizing earlier messages to fit the context… \(seconds) s")
+                        .font(AppTypography.callout.monospacedDigit())
+                        .foregroundStyle(AppColors.textTertiary)
+                        .contentTransition(.numericText())
+                }
+            }
+            .accessibilityElement(children: .ignore)
+            .accessibilityLabel("Summarizing earlier messages to fit the context")
+        } else {
+            DisclosureGroup(isExpanded: $isExpanded) {
+                MarkdownText(message.text)
+                    .padding(.leading, AppSpacing.sm)
+                    .padding(.vertical, AppSpacing.xs)
+                    .overlay(alignment: .leading) {
+                        Rectangle().fill(AppColors.border).frame(width: 2)
+                    }
+                    .padding(.top, AppSpacing.xs)
+            } label: {
+                Label("Earlier messages summarized: the model now sees this summary instead",
+                      systemImage: "text.append")
+                    .font(AppTypography.callout)
+                    .foregroundStyle(AppColors.textTertiary)
+            }
+            .help("The messages above stay in the session; only the model's copy was summarized.")
         }
     }
 }

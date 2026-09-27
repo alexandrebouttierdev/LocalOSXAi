@@ -28,7 +28,7 @@ AgentViewModel ──▶ AgentService (protocol)            ◀── AgentRunti
 | Model | `AIModel` + `ModelCapabilities` + `ContextWindow` | ✅ |
 | Agent service | `AgentService.run(_:approver:)` | ✅ `AgentRuntime` (tool loop), simulated ✅ |
 | Tools | `AgentTool`, `ToolRegistry`, `ToolParameterSchema`, `ToolArguments`, `ToolResult` | ✅ 10 tools: filesystem, `run_command`, Git |
-| Context | `ContextUsage`, `TokenEstimator`, `AgentPrompt`, `RunContext` | ✅ (summarization planned) |
+| Context | `ContextUsage`, `TokenEstimator`, `AgentPrompt`, `RunContext` | ✅ (with conversation summaries, `HistoryCompaction`) |
 | Tool executor, permissions, approvals | `ToolExecutor`, `ToolPermissionPolicy`, `CommandPolicy`, `ToolApprover`, `FileChangeRecording` | ✅ |
 
 ## Documents

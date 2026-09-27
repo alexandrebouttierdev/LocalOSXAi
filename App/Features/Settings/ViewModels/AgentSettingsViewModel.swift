@@ -24,6 +24,10 @@ final class AgentSettingsViewModel {
         update { $0.toolTimeoutSeconds = value }
     }
 
+    func setSummarizesHistory(_ value: Bool) {
+        update { $0.summarizesHistory = value }
+    }
+
     func resetToDefaults() {
         update { $0 = .defaults }
     }

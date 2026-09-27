@@ -2,9 +2,9 @@
 
 **Status:** implemented in Phase 3 by `AgentPrompt` (system prompt, instructions, history
 conversion) and `RunContext` (budget and compaction), with the inspector meter
-(“38.4K / 100K context”) and the list of loaded instruction files. **Not implemented yet:**
-summarizing old turns with the model (see the compaction steps below). History is dropped instead.
-Git context and attached files arrive with Phases 4 and 6.
+(“38.4K / 100K context”) and the list of loaded instruction files. Summarizing old turns with
+the model was added in Phase 8 (`HistoryCompaction`, see below). Git context and attached files
+arrive with Phases 4 and 6.
 
 ## Inputs, in priority order
 
@@ -58,12 +58,40 @@ When the next request would exceed the budget:
    tail, with a marker), keeping the latest result intact;
 3. ✅ drop earlier conversation, oldest first, never leaving an answer without its question.
    Earlier runs' tool calls are already summarized to one line each in history;
-4. *planned*: summarize the oldest turns with the same model into a “Conversation summary”
-   message instead of dropping them (the session keeps the originals);
+4. ✅ before the run, summarize the oldest turns with the same model (see
+   [Conversation summaries](#conversation-summaries)), so step 3 rarely has anything to drop;
 5. ✅ if the run still does not fit, fail with `contextOverflow` and suggest a shorter message
    or a larger context.
 
 Compaction never removes priorities 1–3.
+
+## Conversation summaries
+
+A long session eventually fills the context, and dropping its oldest messages makes the agent
+forget decisions made at the start. So, **once, before a run**, `AgentRuntime` asks the same model
+to summarize them ([ADR 0022](../decisions/0022-conversation-summaries.md)):
+
+- **When**: the system prompt, the current summary, the earlier conversation and the new request
+  exceed **half** of the prompt budget (`HistoryCompaction.startRatio`). The other half stays
+  free for this run's tool calls and results.
+- **What**: the oldest messages, cut before a user message so kept history never starts with an
+  answer. The last exchange is always kept verbatim, and at least one exchange must be summarized.
+  The smallest cut that brings the run under half the budget is chosen, else the largest.
+- **How**: a separate model call without tools. The request folds in the previous summary, so a
+  single summary always covers everything before it. It asks for at most an eighth of the prompt
+  budget (1K tokens at most) and a longer answer is shortened.
+- **Where**: the summary is appended to the system prompt (“# Earlier conversation (summary)”),
+  not sent as a message: many chat templates reject two user messages in a row.
+- **Kept**: it is saved in the transcript as a `.summary` message, placed right after the last
+  message it covers. The UI shows it there as a collapsible “Earlier messages summarized” row
+  (“Summarizing earlier messages… 12 s” while the model writes it). Later runs start from the
+  latest summary and never summarize the same messages twice. The original messages stay in
+  the session.
+- **Failure**: an error or an empty summary is not a run failure. The summary row disappears, the
+  run continues on the unsummarized history, and step 3 drops what does not fit. Stopping the
+  run during the summary stops it like any other step.
+- **Off switch**: Settings › General › “Summarize earlier conversation” (on by default). Off, the
+  oldest messages are only dropped.
 
 ## Required tests
 

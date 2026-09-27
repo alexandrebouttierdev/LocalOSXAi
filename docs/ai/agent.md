@@ -15,7 +15,8 @@ protocol AgentService: Sendable {
 
 Events: `instructionsLoaded`, `contextUsageUpdated`, `assistantMessageStarted`, `textDelta`,
 `reasoningDelta`, `toolCallPreparing`, `toolCallStarted`, `toolCallStatusChanged` (awaiting approval → running),
-`toolCallFinished`, `finished(outcome)`. Failures throw. The UI applies events through
+`toolCallFinished`, `historySummaryStarted`/`historySummaryFinished`/`historySummaryDiscarded`
+(see [context.md](context.md#conversation-summaries)), `finished(outcome)`. Failures throw. The UI applies events through
 `TranscriptReducer`. `AgentViewModel` is the `ToolApprover`: it shows the approval banner and
 suspends the run until the user answers.
 

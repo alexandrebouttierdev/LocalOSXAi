@@ -12,7 +12,7 @@ prototype, and it is not meant to be a clone of Cline or OpenCode.
 
 ## Features
 
-Status as of **Phase 7 (custom OpenAI-compatible servers)**:
+Status as of **Phase 8 (conversation summaries)**:
 
 | Area | Status |
 |---|---|
@@ -25,6 +25,7 @@ Status as of **Phase 7 (custom OpenAI-compatible servers)**:
 | Agent with tools: read, list, search files and text, edit and write files | ✅ |
 | Approval of file changes (allow once / for the session / deny), stop anytime | ✅ |
 | Context management: budget, compaction, `AGENTS.md` loading | ✅ |
+| Conversation summaries: long sessions are summarized by the model instead of forgotten (can be turned off) | ✅ |
 | Streaming with reasoning, context meter, duration and tokens of each answer (live while it streams) | ✅ |
 | Ollama and LM Studio providers, model discovery, provider settings | ✅ |
 | Custom OpenAI-compatible servers (llama.cpp, vLLM, Jan…): declared tools and context, API key in the Keychain, warning for servers outside this Mac | ✅ |
@@ -137,3 +138,4 @@ first.
 6. **Polish** ✅: animations, accessibility audit, performance, error recovery
    (manual VoiceOver pass still to do).
 7. **More providers** ✅: custom OpenAI-compatible servers with optional API keys.
+8. **Long sessions** ✅: conversation summaries written by the model when history outgrows the context.

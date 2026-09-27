@@ -46,6 +46,10 @@ private struct GeneralSettingsView: View {
                         Text(Self.duration(seconds)).tag(seconds)
                     }
                 }
+
+                Toggle("Summarize earlier conversation", isOn: summarizesHistory)
+                    .help("When a long session no longer fits the model's context, the model first summarizes "
+                          + "its oldest messages. Off: they are dropped without a summary.")
             } header: {
                 Text("Agent")
             } footer: {
@@ -71,6 +75,10 @@ private struct GeneralSettingsView: View {
 
     private var maxIterations: Binding<Int> {
         Binding(get: { agent.settings.maxIterations }, set: { agent.setMaxIterations($0) })
+    }
+
+    private var summarizesHistory: Binding<Bool> {
+        Binding(get: { agent.settings.summarizesHistory }, set: { agent.setSummarizesHistory($0) })
     }
 
     private var toolTimeout: Binding<Int> {

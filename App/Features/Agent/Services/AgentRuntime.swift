@@ -1,4 +1,5 @@
 import Foundation
+import OSLog
 
 /// Limits that keep a run bounded and predictable.
 struct AgentLimits: Hashable, Sendable {
@@ -9,6 +10,9 @@ struct AgentLimits: Hashable, Sendable {
     var maxConsecutiveInvalidIterations = 3
     /// Characters of a single tool result sent to the model.
     var maxToolOutputCharacters = 16_000
+    /// Summarize earlier conversation before a run that starts too full
+    /// (`HistoryCompaction`); otherwise the oldest messages are only dropped.
+    var summarizesHistory = true
 }
 
 /// The agent loop: model → tool calls → tool results → model, until the
@@ -72,13 +76,10 @@ struct AgentRuntime: AgentService {
         if !instructions.isEmpty { emit(.instructionsLoaded(instructions.map(\.source))) }
 
         let contextTokens = resolved.model.contextWindow.effectiveTokens(choosing: request.options.generation.contextLength)
-        var context = RunContext(
-            contextTokens: contextTokens,
-            systemPrompt: AgentPrompt.system(projectName: request.projectRoot.lastPathComponent,
-                                             instructions: instructions, toolsEnabled: toolsEnabled),
-            history: AgentPrompt.history(from: request.history),
-            prompt: request.prompt
-        )
+        let system = AgentPrompt.system(projectName: request.projectRoot.lastPathComponent,
+                                        instructions: instructions, toolsEnabled: toolsEnabled)
+        var context = try await runContext(system: system, request: request, resolved: resolved, contextTokens: contextTokens,
+                                           summarizes: limits.summarizesHistory, emit: emit)
         let executor = makeExecutor(commandRules: request.options.commandRules, limits: limits)
         let toolContext = ToolContext(projectRoot: request.projectRoot, changeRecorder: changeRecorder)
         var consecutiveInvalidIterations = 0
@@ -116,6 +117,66 @@ struct AgentRuntime: AgentService {
             }
         }
         emit(.finished(.reachedIterationLimit))
+    }
+
+    /// The run's starting context: system prompt, earlier conversation
+    /// (summarized first when needed) and the new request.
+    private func runContext(system: String, request: AgentRunRequest, resolved: ResolvedModel, contextTokens: Int,
+                            summarizes: Bool, emit: @Sendable (AgentEvent) -> Void) async throws -> RunContext {
+        var history = AgentPrompt.history(from: request.history)
+        if summarizes {
+            history = try await summarizedIfNeeded(history, system: system, request: request, resolved: resolved,
+                                                   contextTokens: contextTokens, emit: emit)
+        }
+        return RunContext(contextTokens: contextTokens, systemPrompt: AgentPrompt.system(system, summary: history.summary),
+                          history: history.messages, prompt: request.prompt)
+    }
+
+    /// Replaces the oldest history with a summary written by the model when
+    /// the run would start too full (`HistoryCompaction`).
+    ///
+    /// A failed or empty summary is not an error: the run continues with the
+    /// history unchanged and the context manager drops the oldest messages,
+    /// as it did before summaries existed. Only cancellation ends the run.
+    private func summarizedIfNeeded(_ history: AgentPrompt.History, system: String, request: AgentRunRequest,
+                                    resolved: ResolvedModel, contextTokens: Int,
+                                    emit: @Sendable (AgentEvent) -> Void) async throws -> AgentPrompt.History {
+        let budget = RunContext.promptBudget(contextTokens: contextTokens)
+        let count = HistoryCompaction.messagesToSummarize(
+            history: history.messages,
+            fixedTokens: TokenEstimator.estimate(messages: [system, request.prompt]),
+            currentSummaryTokens: history.summary.map(TokenEstimator.estimate) ?? 0,
+            promptBudget: budget
+        )
+        guard count > 0 else { return history }
+        let summaryTokens = HistoryCompaction.summaryTokens(promptBudget: budget)
+        let id = UUID()
+        emit(.historySummaryStarted(id: id, afterMessageID: history.entries[count - 1].messageID))
+        do {
+            let messages = AgentPrompt.summaryRequest(previousSummary: history.summary,
+                                                      messages: Array(history.messages.prefix(count)),
+                                                      maxInputTokens: budget, maxSummaryTokens: summaryTokens)
+            var options = request.options.generation
+            options.contextLength = contextTokens
+            var text = ""
+            for try await event in resolved.provider.stream(request: LLMRequest(model: resolved.model.name, messages: messages,
+                                                                                 options: options)) {
+                if case .textDelta(let delta) = event { text += delta }
+            }
+            try Task.checkCancellation()
+            text = text.trimmingCharacters(in: .whitespacesAndNewlines)
+            guard !text.isEmpty else { throw AgentError.emptyResponse }
+            // A model that ignores the length asked for must not crowd out the run.
+            let limit = summaryTokens * TokenEstimator.charactersPerToken
+            text = OutputLimiter.limit(text, maxCharacters: limit, note: "summary shortened to save context")
+            emit(.historySummaryFinished(id: id, text: text))
+            return AgentPrompt.History(summary: text, entries: Array(history.entries.dropFirst(count)))
+        } catch {
+            if error is CancellationError || Task.isCancelled { throw CancellationError() }
+            Logger(category: .agent).error("History summary failed, dropping old messages instead: \(error)")
+            emit(.historySummaryDiscarded(id: id))
+            return history
+        }
     }
 
     /// The tool executor for one run, with the project's command rules.

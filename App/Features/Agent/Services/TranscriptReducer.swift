@@ -6,7 +6,8 @@ import Foundation
 /// synchronous and exhaustively testable without concurrency.
 ///
 /// Invariant: at most one assistant message is `.streaming` at a time, and it
-/// is the last assistant message of the transcript.
+/// is the last assistant message of the transcript. A summary is `.streaming`
+/// only while the model writes it, and is removed if it never completes.
 enum TranscriptReducer {
     static func apply(_ event: AgentEvent, to messages: inout [AgentMessage], now: Date) {
         switch event {
@@ -34,6 +35,18 @@ enum TranscriptReducer {
             }
         case .usage(let usage):
             updateStreaming(&messages, now: now) { $0.outputTokens = usage.completionTokens }
+        case let .historySummaryStarted(id, afterMessageID):
+            // Placed right after the last message it covers: everything above
+            // it is what the model no longer sees verbatim.
+            guard let index = messages.firstIndex(where: { $0.id == afterMessageID }) else { return }
+            messages.insert(AgentMessage(id: id, role: .summary, text: "", state: .streaming, createdAt: now), at: index + 1)
+        case let .historySummaryFinished(id, text):
+            guard let index = messages.firstIndex(where: { $0.id == id }) else { return }
+            messages[index].text = text
+            messages[index].state = .complete
+            messages[index].finishedAt = now
+        case .historySummaryDiscarded(let id):
+            messages.removeAll { $0.id == id }
         case .contextUsageUpdated, .instructionsLoaded:
             break
         case .finished:
@@ -58,7 +71,7 @@ enum TranscriptReducer {
 
     private static func updateStreaming(_ messages: inout [AgentMessage], now: Date,
                                         _ update: (inout AgentMessage) -> Void) {
-        if let index = messages.lastIndex(where: { $0.state == .streaming }) {
+        if let index = messages.lastIndex(where: { $0.role == .assistant && $0.state == .streaming }) {
             update(&messages[index])
         } else {
             // Tolerate services that omit `assistantMessageStarted`.
@@ -79,6 +92,8 @@ enum TranscriptReducer {
     }
 
     private static func finishStreaming(_ messages: inout [AgentMessage], as state: AgentMessage.State, now: Date) {
+        // An unfinished summary has no content worth keeping.
+        messages.removeAll { $0.role == .summary && $0.state == .streaming }
         for index in messages.indices where messages[index].state == .streaming {
             messages[index].state = state
             messages[index].finishedAt = now
