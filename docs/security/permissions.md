@@ -55,12 +55,15 @@ every action appears in the transcript with its arguments and result.
 
 ## Secrets and credentials
 
-- API keys (for remote OpenAI-compatible servers) are stored **only in the Keychain**
-  (`kSecClassGenericPassword`, service `dev.localosxai.app.provider.<id>`), never in SQLite,
-  `UserDefaults`, logs, crash reports or the prompt.
+- API keys of custom OpenAI-compatible servers are stored **only in the Keychain**
+  (`KeychainProviderSecretStore`: `kSecClassGenericPassword`, service
+  `dev.localosxai.app.provider.<id>`), never in SQLite, `UserDefaults`, logs, crash reports or
+  the prompt. They are written when settings are applied and deleted with their server. A
+  Keychain error message carries the operation and status, never the key.
 - Provider URLs are not secrets and live in `UserDefaults` (`providers.v1`). Only `http`/`https`
-  URLs with a host are accepted. A warning for non-local URLs (prompts, including file
-  contents, would leave the machine) is planned with remote-server support.
+  URLs with a host are accepted. ✅ A URL whose host is not this Mac (anything but `localhost`,
+  `127.x.x.x`, `::1`) shows a warning in Settings: prompts, including file contents, leave the
+  machine. The warning also says when an API key would be sent over plain HTTP.
 - Environment variables whose names contain `KEY`, `TOKEN`, `SECRET`, `PASSWORD`, `PASSWD` or
   `CREDENTIAL` are removed from the environment of every command. An allowlist is planned
   (not implemented yet).

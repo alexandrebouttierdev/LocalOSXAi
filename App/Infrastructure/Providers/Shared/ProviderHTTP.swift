@@ -24,10 +24,13 @@ enum ProviderHTTP {
         return URLSession(configuration: configuration)
     }
 
-    static func request(_ url: URL, method: String = "GET", body: JSONValue? = nil) -> URLRequest {
+    static func request(_ url: URL, method: String = "GET", body: JSONValue? = nil, bearerToken: String? = nil) -> URLRequest {
         var request = URLRequest(url: url)
         request.httpMethod = method
         request.setValue("application/json", forHTTPHeaderField: "Accept")
+        if let bearerToken, !bearerToken.isEmpty {
+            request.setValue("Bearer \(bearerToken)", forHTTPHeaderField: "Authorization")
+        }
         if let body {
             request.setValue("application/json", forHTTPHeaderField: "Content-Type")
             request.httpBody = Data(body.serialized().utf8)

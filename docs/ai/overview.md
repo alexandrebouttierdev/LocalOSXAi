@@ -23,7 +23,7 @@ AgentViewModel ──▶ AgentService (protocol)            ◀── AgentRunti
 
 | Component | Contract | Status |
 |---|---|---|
-| Provider | `LLMProvider`: `listModels()`, `stream(request:)` | ✅ Ollama, LM Studio, generic OpenAI-compatible |
+| Provider | `LLMProvider`: `listModels()`, `stream(request:)` | ✅ Ollama, LM Studio, custom OpenAI-compatible servers |
 | Model resolution | `ModelResolving` → `ProviderRegistry` (discovery, per-provider isolation) | ✅ |
 | Model | `AIModel` + `ModelCapabilities` + `ContextWindow` | ✅ |
 | Agent service | `AgentService.run(_:approver:)` | ✅ `AgentRuntime` (tool loop), simulated ✅ |

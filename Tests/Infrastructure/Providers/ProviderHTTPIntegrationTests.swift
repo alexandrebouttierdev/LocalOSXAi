@@ -153,6 +153,39 @@ struct ProviderHTTPIntegrationTests {
         #expect(route.requests.map(\.path) == ["/v1/models"])
     }
 
+    @Test("a generic server's models get the declared capabilities and context")
+    func genericDeclaredCapabilities() async throws {
+        let route = StubURLProtocol.route { _ in .json(OpenAIFixtures.openAIModels) }
+        let provider = OpenAICompatibleProvider(
+            configuration: .init(id: "server-1", displayName: "llama.cpp", baseURL: route.baseURL, flavor: .generic,
+                                 idleTimeout: 30, declaredCapabilities: .tools, contextTokens: 32_768),
+            session: route.session()
+        )
+        let model = try #require(try await provider.listModels().first)
+        #expect(model.capabilities == [.streaming, .tools])
+        #expect(model.contextWindow.effectiveTokens == 32_768)
+    }
+
+    @Test("an API key is sent as a bearer token on every request, and no header is sent without one")
+    func bearerToken() async throws {
+        let route = StubURLProtocol.route { request in
+            request.path == "/v1/models" ? .json(OpenAIFixtures.openAIModels)
+                : StubURLProtocol.Response(chunks: [OpenAIFixtures.fragmentedToolCalls])
+        }
+        let provider = OpenAICompatibleProvider(
+            configuration: .init(id: "server-1", displayName: "vLLM", baseURL: route.baseURL, flavor: .generic,
+                                 idleTimeout: 30, apiKey: "sk-test"),
+            session: route.session()
+        )
+        _ = try await provider.listModels()
+        _ = await collect(provider.stream(request: LLMRequest(model: "m", messages: [.user("x")])))
+        #expect(route.requests.map(\.authorization) == ["Bearer sk-test", "Bearer sk-test"])
+
+        let keyless = StubURLProtocol.route { _ in .json(OpenAIFixtures.lmStudioModels) }
+        _ = try await lmStudio(keyless).listModels()
+        #expect(keyless.requests.map(\.authorization) == [nil])
+    }
+
     @Test("an OpenAI-compatible server streams server-sent events")
     func openAIStream() async throws {
         let route = StubURLProtocol.route { _ in StubURLProtocol.Response(chunks: [OpenAIFixtures.fragmentedToolCalls]) }

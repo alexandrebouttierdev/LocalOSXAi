@@ -22,7 +22,7 @@
 | Per-project settings (`CLAUDE.md` opt-in, command rules) | SQLite `project` | ✅ |
 | Originals of files changed by the agent (Changes tab) | SQLite `changeOriginal` | ✅ |
 | UI preferences (appearance, panel visibility) | `UserDefaults` | 1 |
-| Provider settings (endpoints, enablement, Ollama context, idle timeout) | `UserDefaults` key `providers.v1`, JSON | 2 ✅ |
-| API keys for remote OpenAI-compatible servers | Keychain | 2+ |
+| Provider settings (endpoints, enablement, Ollama context, idle timeout, custom servers) | `UserDefaults` key `providers.v1`, JSON | 2 ✅, custom servers 7 ✅ |
+| API keys of custom OpenAI-compatible servers | Keychain (`KeychainProviderSecretStore`) | 7 ✅ |
 
 See [models.md](models.md), [persistence.md](persistence.md) and [migrations.md](migrations.md).

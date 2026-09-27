@@ -12,6 +12,7 @@ struct AppEnvironment {
     let sessionRepository: any SessionRepository
     let modelSettingsRepository: any ModelSettingsRepository
     let settingsStore: any ProviderSettingsStore
+    let secretStore: any ProviderSecretStore
     let agentSettingsStore: any AgentSettingsStore
     let registry: ProviderRegistry
     let services: WorkspaceServices
@@ -28,9 +29,10 @@ struct AppEnvironment {
     /// memory and says so; the file is left untouched for the next launch.
     static func live() -> AppEnvironment {
         let store = UserDefaultsProviderSettingsStore()
+        let secrets = KeychainProviderSecretStore()
         let agentSettings = UserDefaultsAgentSettingsStore()
         let storage = openStorage()
-        let registry = ProviderRegistry(providers: ProviderFactory.providers(for: store.load()))
+        let registry = ProviderRegistry(providers: ProviderFactory.providers(for: store.load(), secrets: secrets))
         let runner = PosixCommandRunner()
         let git = CLIGitService(runner: runner)
         let tracker = ChangeTracker(store: storage.changeOriginals)
@@ -42,12 +44,13 @@ struct AppEnvironment {
             sessionRepository: storage.sessions,
             modelSettingsRepository: storage.modelSettings,
             settingsStore: store,
+            secretStore: secrets,
             agentSettingsStore: agentSettings,
             registry: registry,
             services: WorkspaceServices(agentService: agent, commandRunner: runner, git: git, changeTracker: tracker,
                                         fileBrowser: LocalFileBrowser(), toolDefinitions: tools.definitions, isSimulated: false,
                                         storageError: storage.error),
-            makeProviders: ProviderFactory.providers(for:)
+            makeProviders: { ProviderFactory.providers(for: $0, secrets: secrets) }
         )
     }
 
@@ -91,6 +94,7 @@ struct AppEnvironment {
             sessionRepository: InMemorySessionRepository(),
             modelSettingsRepository: InMemoryModelSettingsRepository(),
             settingsStore: InMemoryProviderSettingsStore(),
+            secretStore: InMemoryProviderSecretStore(),
             agentSettingsStore: InMemoryAgentSettingsStore(),
             registry: ProviderRegistry(providers: [SimulatedLLMProvider()]),
             services: WorkspaceServices(agentService: SimulatedAgentService(), commandRunner: runner, git: CLIGitService(runner: runner),
@@ -128,7 +132,7 @@ struct AppEnvironment {
 
     func makeProviderSettingsViewModel(models: ModelsViewModel) -> ProviderSettingsViewModel {
         let makeProviders = makeProviders
-        return ProviderSettingsViewModel(store: settingsStore) { settings in
+        return ProviderSettingsViewModel(store: settingsStore, secrets: secretStore) { settings in
             await models.reconfigure(providers: makeProviders(settings))
         }
     }

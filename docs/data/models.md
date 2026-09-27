@@ -17,7 +17,8 @@
 | `FileChange`, `FileDiff` | Changes, Core | file, relative path, status (created/modified/deleted), diff hunks with line numbers and +/− counts | Original contents live in `ChangeTracker` (memory) until accepted or reverted |
 | `GitStatus`, `GitFileChange`, `GitCommit` | Git | branch, upstream, ahead/behind, changes (staged/unstaged), commits | Read from Git on demand |
 | `TerminalEntry` | Terminal | command, output chunks per stream, state (running/finished/cancelled/failed) | Per project, in memory |
-| `ProviderSettings` | Settings | Ollama and LM Studio endpoints (enabled, base URL), Ollama context tokens, idle timeout | Stored as versioned JSON in `UserDefaults` (`providers.v1`) |
+| `ProviderSettings` | Settings | Ollama and LM Studio endpoints (enabled, base URL), Ollama context tokens, idle timeout, `customServers` | Stored as versioned JSON in `UserDefaults` (`providers.v1`); `customServers` is optional when decoding, so older settings still load |
+| `ProviderSettings.CustomServer` | Settings | `id`, `name`, `isEnabled`, `baseURL`, `supportsTools`, `contextTokens`; `providerID` = `server-<id>` | Inside `providers.v1`. Its API key is in the Keychain only ([ADR 0021](../decisions/0021-custom-openai-compatible-servers.md)) |
 | `ModelSettings` | Models | `temperature`, `reasoning`, `contextTokens` (all optional) | SQLite `modelSettings`, per `AIModel.ID`; defaults are not stored |
 | `CommandRules` | Core | `mode` (standard / ask for everything), `allowedPrefixes` | Stored as JSON with the project ([ADR 0020](../decisions/0020-per-project-command-rules.md)) |
 | `TrackedOriginal` | Changes | `file`, `projectRoot`, `content` (`nil` = created by the agent) | SQLite `changeOriginal` |
