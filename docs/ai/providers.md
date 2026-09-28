@@ -117,7 +117,7 @@ A model that ignores that instruction no longer relies on this timeout alone: wh
 is known (always for Ollama, which allocates `num_ctx`; for LM Studio, once the model is loaded),
 `AgentRuntime` sends the context's reserved output margin as `max_tokens` (`num_predict` for Ollama), so the
 run fails fast with `toolCallCutOff`/`outputLimitReached` instead of generating for minutes
-before the idle timeout fires ([ADR 0029](../decisions/0029-bounded-generation-output.md),
+before the idle timeout fires ([ADR 0032](../decisions/0032-bounded-generation-output.md),
 [agent.md](agent.md#limits-agentlimits)).
 
 ## Error mapping

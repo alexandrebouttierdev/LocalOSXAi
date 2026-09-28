@@ -15,6 +15,9 @@ struct AgentLimits: Hashable, Sendable {
     var summarizesHistory = true
     /// Share of the prompt budget a run may start with before summarizing.
     var summaryStartRatio = HistoryCompaction.defaultStartRatio
+    /// The user's instructions from Settings, read with the limits at the
+    /// start of each run so an edit applies to the next message.
+    var customInstructions = ""
 }
 
 /// The agent loop: model → tool calls → tool results → model, until the
@@ -88,10 +91,11 @@ struct AgentRuntime: AgentService {
         )
         if !instructions.isEmpty { emit(.instructionsLoaded(instructions.map(\.source))) }
 
-        let system = AgentPrompt.system(projectName: request.projectRoot.lastPathComponent,
-                                        instructions: instructions, toolsEnabled: toolsEnabled)
+        let system = AgentPrompt.system(projectName: request.projectRoot.lastPathComponent, instructions: instructions,
+                                        toolsEnabled: toolsEnabled, customInstructions: limits.customInstructions)
+        let setup = RunSetup(request: request, resolved: resolved, limits: limits)
         // Its `contextTokens` is the run's budget from here on, re-read once (`rereadIfGuessed`).
-        var context = try await runContext(system: system, request: request, resolved: resolved, limits: limits, emit: emit)
+        var context = try await runContext(system: system, setup: setup, emit: emit)
         let executor = makeExecutor(commandRules: request.options.commandRules, limits: limits)
         let toolContext = ToolContext(projectRoot: request.projectRoot, changeRecorder: changeRecorder)
         var consecutiveInvalidIterations = 0
@@ -152,19 +156,27 @@ struct AgentRuntime: AgentService {
         context.contextTokens = refreshed.model.contextWindow.effectiveTokens(choosing: chosen)
     }
 
+    /// What a run was started with, resolved once at its start.
+    private struct RunSetup {
+        let request: AgentRunRequest
+        let resolved: ResolvedModel
+        let limits: AgentLimits
+
+        /// The context the run starts with.
+        var contextTokens: Int {
+            resolved.model.contextWindow.effectiveTokens(choosing: request.options.generation.contextLength)
+        }
+    }
+
     /// The run's starting context: system prompt, earlier conversation
     /// (summarized first when needed) and the new request.
-    private func runContext(system: String, request: AgentRunRequest, resolved: ResolvedModel,
-                            limits: AgentLimits, emit: @Sendable (AgentEvent) -> Void) async throws -> RunContext {
-        let contextTokens = resolved.model.contextWindow.effectiveTokens(choosing: request.options.generation.contextLength)
-        var history = AgentPrompt.history(from: request.history)
-        let prompt = AgentPrompt.userContent(request.prompt, attachments: request.attachments)
-        if limits.summarizesHistory {
-            history = try await summarizedIfNeeded(history, system: system, prompt: prompt, request: request,
-                                                   resolved: resolved, contextTokens: contextTokens,
-                                                   startRatio: limits.summaryStartRatio, emit: emit)
+    private func runContext(system: String, setup: RunSetup, emit: @Sendable (AgentEvent) -> Void) async throws -> RunContext {
+        var history = AgentPrompt.history(from: setup.request.history)
+        let prompt = AgentPrompt.userContent(setup.request.prompt, attachments: setup.request.attachments)
+        if setup.limits.summarizesHistory {
+            history = try await summarizedIfNeeded(history, system: system, prompt: prompt, setup: setup, emit: emit)
         }
-        return RunContext(contextTokens: contextTokens, systemPrompt: AgentPrompt.system(system, summary: history.summary),
+        return RunContext(contextTokens: setup.contextTokens, systemPrompt: AgentPrompt.system(system, summary: history.summary),
                           history: history.messages, prompt: prompt)
     }
 
@@ -175,22 +187,21 @@ struct AgentRuntime: AgentService {
     /// history unchanged and the context manager drops the oldest messages,
     /// as it did before summaries existed. Only cancellation ends the run.
     /// - Parameter prompt: the new message as sent, with its attachments.
-    private func summarizedIfNeeded(_ history: AgentPrompt.History, system: String, prompt: String, request: AgentRunRequest,
-                                    resolved: ResolvedModel, contextTokens: Int, startRatio: Double,
+    private func summarizedIfNeeded(_ history: AgentPrompt.History, system: String, prompt: String, setup: RunSetup,
                                     emit: @Sendable (AgentEvent) -> Void) async throws -> AgentPrompt.History {
         let count = HistoryCompaction.messagesToSummarize(
             history: history.messages,
             fixedTokens: TokenEstimator.estimate(messages: [system, prompt]),
             currentSummaryTokens: history.summary.map(TokenEstimator.estimate) ?? 0,
-            promptBudget: RunContext.promptBudget(contextTokens: contextTokens),
-            startRatio: startRatio
+            promptBudget: RunContext.promptBudget(contextTokens: setup.contextTokens),
+            startRatio: setup.limits.summaryStartRatio
         )
         guard count > 0 else { return history }
         let id = UUID()
         emit(.historySummaryStarted(id: id, afterMessageID: history.entries[count - 1].messageID))
         do {
-            let text = try await summary(of: history, count: count, resolved: resolved,
-                                         generation: request.options.generation, contextTokens: contextTokens)
+            let text = try await summary(of: history, count: count, resolved: setup.resolved,
+                                         generation: setup.request.options.generation, contextTokens: setup.contextTokens)
             emit(.historySummaryFinished(id: id, text: text))
             return AgentPrompt.History(summary: text, entries: Array(history.entries.dropFirst(count)))
         } catch {
@@ -230,7 +241,8 @@ struct AgentRuntime: AgentService {
             for: request.projectRoot, includingClaudeInstructions: request.options.includesClaudeInstructions
         )
         let system = AgentPrompt.system(projectName: request.projectRoot.lastPathComponent, instructions: instructions,
-                                        toolsEnabled: resolved.model.supportsTools && !tools.isEmpty)
+                                        toolsEnabled: resolved.model.supportsTools && !tools.isEmpty,
+                                        customInstructions: limits().customInstructions)
         let used = TokenEstimator.estimate(messages: [AgentPrompt.system(system, summary: text)])
         emit(.contextUsageUpdated(ContextUsage(usedTokens: used, budgetTokens: contextTokens)))
     }
@@ -271,7 +283,7 @@ struct AgentRuntime: AgentService {
     /// The model settings for this run, with the context length the budget uses and a cap on
     /// the answer so a model that ignores the "write in several steps" instruction fails fast
     /// (`toolCallCutOff`/`outputLimitReached`) instead of generating silently until the
-    /// provider's idle timeout (docs/ai/context.md § Budget, ADR 0029).
+    /// provider's idle timeout (docs/ai/context.md § Budget, ADR 0032).
     ///
     /// No cap when the context is only the fallback guess: a model its runtime loads on demand
     /// may get far more room, and a cap derived from the guess would cut a file it can write.

@@ -1,0 +1,171 @@
+# Every push to main publishes a GitHub release with the built app.
+#
+# The version comes from project.yml (CFBundleShortVersionString). The first
+# push of a version creates the release “v<version>”; later pushes of the
+# same version create pre-releases “v<version>-build.<run>”, so a push never
+# fails. Bump the version in project.yml to publish the next release.
+# Run by hand with “replace files”, it rebuilds the current version and
+# replaces the files of its existing release instead.
+#
+# Signed with a Developer ID and notarized when the repository secrets for
+# that exist (MACOS_CERTIFICATE_P12_BASE64, MACOS_CERTIFICATE_PASSWORD,
+# ASC_API_KEY_P8_BASE64, ASC_API_KEY_ID, ASC_API_ISSUER_ID), ad hoc and
+# un-notarized otherwise, so this workflow runs unchanged either way.
+# Details: docs/code/releasing.md.
+name: Release
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      replace_files:
+        description: "Rebuild the current version and replace its existing release's files"
+        type: boolean
+        default: false
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+jobs:
+  release:
+    runs-on: macos-15
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Select Xcode 26
+        run: |
+          xcode=$(ls -d /Applications/Xcode_26*.app | sort -V | tail -1)
+          echo "Using $xcode"
+          sudo xcode-select -s "$xcode"
+          xcodebuild -version
+
+      - name: Install XcodeGen and SwiftLint
+        run: brew install xcodegen swiftlint
+
+      - name: make check
+        run: make check
+
+      - name: Import the Developer ID certificate
+        if: ${{ secrets.MACOS_CERTIFICATE_P12_BASE64 != '' }}
+        env:
+          P12_BASE64: ${{ secrets.MACOS_CERTIFICATE_P12_BASE64 }}
+          P12_PASSWORD: ${{ secrets.MACOS_CERTIFICATE_PASSWORD }}
+        run: |
+          keychain="$RUNNER_TEMP/signing.keychain-db"
+          keychain_password=$(uuidgen)
+          p12="$RUNNER_TEMP/certificate.p12"
+          echo "$P12_BASE64" | base64 --decode > "$p12"
+
+          security create-keychain -p "$keychain_password" "$keychain"
+          security set-keychain-settings -lut 21600 "$keychain"
+          security unlock-keychain -p "$keychain_password" "$keychain"
+          security import "$p12" -k "$keychain" -P "$P12_PASSWORD" -T /usr/bin/codesign
+          security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k "$keychain_password" "$keychain"
+          security list-keychains -d user -s "$keychain" $(security list-keychains -d user | tr -d '"')
+          rm -f "$p12"
+
+          identity=$(security find-identity -v -p codesigning "$keychain" | grep -o '"Developer ID Application:[^"]*"' | head -1)
+          [[ -n "$identity" ]] || { echo "✘ No Developer ID Application identity in the imported certificate." >&2; exit 1; }
+          echo "SIGNING_IDENTITY=$identity" >> "$GITHUB_ENV"
+          echo "Using $identity"
+
+      - name: Prepare the notarization API key
+        if: ${{ secrets.ASC_API_KEY_P8_BASE64 != '' }}
+        env:
+          KEY_BASE64: ${{ secrets.ASC_API_KEY_P8_BASE64 }}
+        run: |
+          key_path="$RUNNER_TEMP/AuthKey.p8"
+          echo "$KEY_BASE64" | base64 --decode > "$key_path"
+          echo "NOTARY_KEY_PATH=$key_path" >> "$GITHUB_ENV"
+          echo "NOTARY_KEY_ID=${{ secrets.ASC_API_KEY_ID }}" >> "$GITHUB_ENV"
+          echo "NOTARY_ISSUER_ID=${{ secrets.ASC_API_ISSUER_ID }}" >> "$GITHUB_ENV"
+
+      - name: Choose the tag
+        id: version
+        env:
+          REPLACE_FILES: ${{ inputs.replace_files || false }}
+        run: |
+          version=$(scripts/app-version.sh)
+          replace=false
+          if [[ "$REPLACE_FILES" == "true" ]] && git rev-parse -q --verify "refs/tags/v$version" >/dev/null; then
+            tag="v$version"
+            prerelease=false
+            replace=true
+          elif git rev-parse -q --verify "refs/tags/v$version" >/dev/null; then
+            tag="v$version-build.$GITHUB_RUN_NUMBER"
+            prerelease=true
+          else
+            tag="v$version"
+            prerelease=false
+          fi
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          echo "tag=$tag" >> "$GITHUB_OUTPUT"
+          echo "prerelease=$prerelease" >> "$GITHUB_OUTPUT"
+          echo "replace=$replace" >> "$GITHUB_OUTPUT"
+          echo "Releasing $tag (pre-release: $prerelease, replacing files: $replace)"
+
+      - name: Build the app
+        run: scripts/build-release.sh "$GITHUB_RUN_NUMBER"
+
+      - name: Publish the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ steps.version.outputs.tag }}
+          VERSION: ${{ steps.version.outputs.version }}
+          PRERELEASE: ${{ steps.version.outputs.prerelease }}
+          REPLACE: ${{ steps.version.outputs.replace }}
+        run: |
+          image="dist/LocalOSXAi-$VERSION.dmg"
+          if [[ -n "${NOTARY_KEY_PATH:-}" ]]; then
+            install_step="3. Notarized by Apple: no warning, no extra step. If macOS still shows one (an older
+             download, say), right-click the app and choose **Open**."
+          else
+            install_step="3. The app is not notarized yet, so on the first launch macOS refuses it outright (“Apple could
+             not confirm…”, no “Open Anyway” on the dialog itself): open **System Settings › Privacy &
+             Security**, scroll to the message about LocalOSXAi being blocked and click **Open Anyway**,
+             then confirm once more when you reopen the app. (Or run
+             \`xattr -dr com.apple.quarantine /Applications/LocalOSXAi.app\` in Terminal instead.)"
+          fi
+          cat > notes.md <<NOTES
+          ## Install
+
+          1. Download **LocalOSXAi-$VERSION.dmg** below and open it.
+          2. Drag **LocalOSXAi** onto **Applications**.
+          $install_step
+
+          Requires macOS 15 or later, and Ollama, LM Studio or another local model server.
+          NOTES
+          if [[ "$REPLACE" == "true" ]]; then
+            gh release upload "$TAG" "$image" --clobber
+            # Files of an older build or format (e.g. a zip) go away.
+            gh release view "$TAG" --json assets --jq '.assets[].name' \
+              | { grep -vxF "$(basename "$image")" || true; } \
+              | while read -r name; do gh release delete-asset "$TAG" "$name" --yes; done
+            gh release edit "$TAG" --notes-file notes.md
+            exit 0
+          fi
+          flags=()
+          [[ "$PRERELEASE" == "true" ]] && flags+=(--prerelease)
+          gh release create "$TAG" "$image" \
+            --target "$GITHUB_SHA" \
+            --title "LocalOSXAi $TAG" \
+            --notes-file notes.md \
+            --generate-notes \
+            "${flags[@]}"
+
+      - name: Remove the signing keychain and notarization key
+        if: always()
+        run: |
+          keychain="$RUNNER_TEMP/signing.keychain-db"
+          if [[ -f "$keychain" ]]; then
+            security delete-keychain "$keychain" || true
+          fi
+          rm -f "$RUNNER_TEMP/AuthKey.p8"

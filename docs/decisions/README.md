@@ -47,4 +47,7 @@ Accepted ADRs are not edited to change their decision. Write a new ADR that supe
 | [0026](0026-compact-session.md) | “Compact session” summarizes everything on request; the automatic threshold is a setting | Accepted |
 | [0027](0027-notifications.md) | Notify only when the user is not looking; the sound follows its own switch | Accepted |
 | [0028](0028-text-attachments.md) | Attach text files by copying their content into the message | Accepted |
-| [0029](0029-bounded-generation-output.md) | Send the context's reserved output margin as the model's output cap (amends 0008) | Accepted |
+| [0029](0029-user-system-prompt.md) | The user's system prompt adds to the built-in one | Accepted |
+| [0030](0030-update-check.md) | Check GitHub Releases at launch; download in the browser | Accepted |
+| [0031](0031-code-signing-notarization.md) | Sign with a Developer ID and notarize, both optional | Accepted |
+| [0032](0032-bounded-generation-output.md) | Send the context's reserved output margin as the model's output cap (amends 0008) | Accepted |

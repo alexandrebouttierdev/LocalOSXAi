@@ -14,8 +14,10 @@ final class WorkspaceViewModel {
     let sessions: SessionsViewModel
     let models: ModelsViewModel
     let palette = CommandPaletteViewModel()
+    let updates: UpdatesViewModel
     let services: WorkspaceServices
     var isSimulated: Bool { services.isSimulated }
+    var appInfo: AppInfo { services.appInfo }
 
     private(set) var selectedProjectID: Project.ID?
     private(set) var selectedSessionID: Session.ID?
@@ -28,6 +30,7 @@ final class WorkspaceViewModel {
     var isCommandPalettePresented = false
     var isProjectImporterPresented = false
     var isProjectSettingsPresented = false
+    var isAboutPresented = false
     /// The settings screen replaces the workspace in the main window.
     private(set) var isSettingsPresented = false
     /// The app is frontmost. Set by the window; a session is only “seen”
@@ -47,6 +50,8 @@ final class WorkspaceViewModel {
         self.sessions = sessions
         self.models = models
         self.services = services
+        updates = UpdatesViewModel(currentVersion: services.appInfo.version, checker: services.releaseChecker,
+                                   checksAtLaunch: services.checksForUpdatesAtLaunch)
         storageError = services.storageError.map {
             UserFacingError($0, title: "History is not being saved", category: .persistence)
         }
@@ -117,6 +122,8 @@ final class WorkspaceViewModel {
 
     func load() async {
         prepareNotifications()
+        // Not awaited: the answer from GitHub must never delay the workspace.
+        Task { await updates.checkAtLaunch() }
         await projects.load()
         await models.refresh()
         if selectedProjectID == nil, let mostRecent = projects.projects.first {
@@ -259,8 +266,10 @@ final class WorkspaceViewModel {
 
     func disabledReason(for command: WorkspaceCommand) -> String? {
         switch command {
-        case .openProject, .toggleSidebar, .toggleInspector, .openSettings:
+        case .openProject, .toggleSidebar, .toggleInspector, .openSettings, .about:
             nil
+        case .checkForUpdates:
+            updates.canCheck ? nil : "Update checks are off in simulated mode"
         case .newSession, .projectSettings, .showAgent, .showFiles, .showChanges, .openTerminal, .searchFiles:
             selectedProjectID == nil ? "Open a project first" : nil
         case .changeModel:
@@ -294,10 +303,20 @@ final class WorkspaceViewModel {
             activePanels?.files.requestSearchFocus()
         case .changeModel: showModelPalette()
         case .compactSession: activeAgent?.compact()
+        case .toggleSidebar, .toggleInspector, .openSettings, .about, .checkForUpdates: performWindowCommand(command)
+        case .showAgent, .showFiles, .showChanges, .openTerminal: break
+        }
+    }
+
+    /// Commands that only change what the window shows.
+    private func performWindowCommand(_ command: WorkspaceCommand) {
+        switch command {
         case .toggleSidebar: isSidebarVisible.toggle()
         case .toggleInspector: isInspectorPresented.toggle()
         case .openSettings: showSettings()
-        case .showAgent, .showFiles, .showChanges, .openTerminal: break
+        case .about: isAboutPresented = true
+        case .checkForUpdates: Task { await updates.checkNow() }
+        default: break
         }
     }
 

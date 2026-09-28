@@ -28,6 +28,7 @@ struct MarkdownText: View {
                 .font(AppTypography.body)
                 .foregroundStyle(AppColors.textPrimary)
                 .lineSpacing(3)
+                .fixedSize(horizontal: false, vertical: true)
         case let .heading(level, text):
             Text(Self.inline(text))
                 .font(level <= 2 ? AppTypography.title : AppTypography.headline)
@@ -44,6 +45,7 @@ struct MarkdownText: View {
                     .font(AppTypography.body)
                     .foregroundStyle(AppColors.textPrimary)
                     .lineSpacing(3)
+                    .fixedSize(horizontal: false, vertical: true)
             }
         case let .code(language, code):
             CodeBlockView(language: language, code: code)
@@ -54,10 +56,22 @@ struct MarkdownText: View {
 
     /// Inline Markdown (bold, italics, `code`, links). Falls back to plain
     /// text if the fragment is not valid Markdown.
+    ///
+    /// Inline code gets a monospaced face one point smaller than the body, a
+    /// hue and a faint background, like Linear: at the system's default size
+    /// it was taller than the line and looked cut.
     static func inline(_ text: String) -> AttributedString {
         let options = AttributedString.MarkdownParsingOptions(interpretedSyntax: .inlineOnlyPreservingWhitespace)
-        return (try? AttributedString(markdown: text, options: options)) ?? AttributedString(text)
+        var attributed = (try? AttributedString(markdown: text, options: options)) ?? AttributedString(text)
+        for run in attributed.runs where run.inlinePresentationIntent?.contains(.code) == true {
+            attributed[run.range].font = inlineCodeFont
+            attributed[run.range].foregroundColor = AppColors.Hue.orange
+            attributed[run.range].backgroundColor = AppColors.codeBackground
+        }
+        return attributed
     }
+
+    static let inlineCodeFont = Font.system(size: AppTypography.bodySize - 1, design: .monospaced)
 }
 
 /// A fenced code block: language label, copy button, monospaced text.

@@ -119,34 +119,50 @@ private struct AgentComposer: View {
     }
 }
 
-/// The messages, scrolled to the bottom while an answer streams in.
+/// The messages, kept at the bottom while the user is there.
+///
+/// When the content or the room around it changes (an answer streaming in,
+/// the approval card appearing or leaving, the composer growing), the view
+/// scrolls back to the end if it was there just before. Approving a change
+/// therefore never leaves an empty gap, and a user who scrolled up to read
+/// is left where they are.
 private struct TranscriptView: View {
     let viewModel: AgentViewModel
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @State private var position = ScrollPosition(edge: .bottom)
 
-    /// Marks the end of the transcript, where sending a message scrolls to.
-    private static let bottomID = "transcript-bottom"
+    /// How close to the end still counts as “at the bottom”.
+    private static let bottomTolerance: CGFloat = 48
+
+    /// Where the scroll stands relative to its end.
+    private struct Metrics: Equatable {
+        /// Largest possible offset: changes with the content and the room around it.
+        var maxOffset: CGFloat
+        /// Distance left to the end; negative past it (an empty gap).
+        var distanceToEnd: CGFloat
+    }
 
     var body: some View {
-        ScrollViewReader { proxy in
-            ScrollView {
-                VStack(spacing: 0) {
-                    transcriptContent
-                    Color.clear
-                        .frame(height: 1)
-                        .id(Self.bottomID)
-                        .accessibilityHidden(true)
-                }
+        ScrollView {
+            transcriptContent
+        }
+        .scrollPosition($position)
+        .defaultScrollAnchor(.bottom)
+        .onScrollGeometryChange(for: Metrics.self) { geometry in
+            let maxOffset = geometry.contentSize.height + geometry.contentInsets.bottom - geometry.containerSize.height
+            return Metrics(maxOffset: maxOffset, distanceToEnd: maxOffset - geometry.contentOffset.y)
+        } action: { old, new in
+            // Only a resize moves the view: the user's own scrolling, elastic
+            // bounce included, never does.
+            let resized = abs(new.maxOffset - old.maxOffset) > 0.5
+            if resized, old.distanceToEnd <= Self.bottomTolerance || new.distanceToEnd < 0 {
+                position.scrollTo(edge: .bottom)
             }
-            // Keeps the newest content visible while the answer streams in,
-            // without scrolling code that would fight the user's own scrolling.
-            .defaultScrollAnchor(.bottom)
-            .defaultScrollAnchor(.bottom, for: .sizeChanges)
-            // Sending a message always shows it, even after the user scrolled
-            // up to read: it is the user's own action, so it cannot fight them.
-            .onChange(of: viewModel.latestPromptID) {
-                proxy.scrollTo(Self.bottomID, anchor: .bottom)
-            }
+        }
+        // Sending a message always shows it, even after the user scrolled
+        // up to read: it is the user's own action, so it cannot fight them.
+        .onChange(of: viewModel.latestPromptID) {
+            position.scrollTo(edge: .bottom)
         }
     }
 
@@ -178,10 +194,12 @@ private struct TranscriptView: View {
                     .transition(.opacity)
             }
         }
+        // Lets `position` scroll to a message by id when earlier ones are loaded.
+        .scrollTargetLayout()
         .frame(maxWidth: AppLayout.readableWidth, alignment: .leading)
         .padding(.horizontal, AppSpacing.xl)
         .padding(.top, AppSpacing.xl)
-        .padding(.bottom, AppSpacing.lg)
+        .padding(.bottom, AppSpacing.xl)
         .frame(maxWidth: .infinity)
         .appAnimation(AppAnimation.standard, value: viewModel.messages.count)
     }
@@ -189,7 +207,7 @@ private struct TranscriptView: View {
     /// Loads the previous page when scrolled into view, like an endless list;
     /// clicking it does the same for keyboard and VoiceOver users.
     private func earlierMessagesButton(count: Int) -> some View {
-        Button(action: viewModel.showEarlierMessages) {
+        Button(action: showEarlierMessages) {
             Label("Show \(count) earlier message\(count == 1 ? "" : "s")", systemImage: "arrow.up")
                 .font(AppTypography.callout)
         }
@@ -197,8 +215,16 @@ private struct TranscriptView: View {
         .controlSize(.small)
         .frame(maxWidth: .infinity)
         .onScrollVisibilityChange { isVisible in
-            if isVisible { viewModel.showEarlierMessages() }
+            if isVisible { showEarlierMessages() }
         }
+    }
+
+    /// Loads the previous page and keeps the message that was first in view
+    /// at the top, so the page appears above instead of moving the reader.
+    private func showEarlierMessages() {
+        let firstShown = viewModel.messages[viewModel.firstVisibleIndex].id
+        viewModel.showEarlierMessages()
+        position.scrollTo(id: firstShown, anchor: .top)
     }
 
     private var retryButton: some View {

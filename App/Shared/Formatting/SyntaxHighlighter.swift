@@ -57,12 +57,92 @@ enum SyntaxHighlighter {
     ]
 
     static func tokens(in line: String, language: Language) -> [Token] {
-        var tokens: [Token] = []
-        let characters = Array(line)
+        var scanner = Scanner(characters: Array(line), language: language)
+        while !scanner.isAtEnd { scanner.scanNext() }
+        return scanner.tokens
+    }
+
+    /// One pass over a line; each `scan…` method consumes one token.
+    private struct Scanner {
+        let characters: [Character]
+        let language: Language
         var index = 0
+        var tokens: [Token] = []
+        /// Between `<tag` and `>` in markup, where names before `=` are attributes.
         var insideTag = false
 
-        func emit(_ kind: Kind, _ end: Int) {
+        var isAtEnd: Bool { index >= characters.count }
+
+        mutating func scanNext() {
+            let character = characters[index]
+            if scanComment() { return }
+            if character == "\"" || character == "'" || character == "`" {
+                scanString(closingWith: character)
+            } else if character.isNumber, index == 0 || !SyntaxHighlighter.isIdentifier(characters[index - 1]) {
+                scanNumber()
+            } else if SyntaxHighlighter.isIdentifierStart(character) {
+                scanWord()
+            } else {
+                if character == ">" { insideTag = false }
+                emit(language.hasMarkup && (character == "<" || character == ">") ? .tag : .plain, until: index + 1)
+            }
+        }
+
+        /// A markup comment, or a line comment to the end of the line. `#`
+        /// starts a comment only at the start of a word, so `url#anchor` is not one.
+        private mutating func scanComment() -> Bool {
+            if language.hasMarkup, starts(with: "<!--", at: index) {
+                let close = (index..<characters.count).first { starts(with: "-->", at: $0) }.map { $0 + 3 }
+                emit(.comment, until: close ?? characters.count)
+                return true
+            }
+            let startsWord = index == 0 || characters[index - 1].isWhitespace || language.lineComments != ["#"]
+            guard startsWord, language.lineComments.contains(where: { starts(with: $0, at: index) }) else { return false }
+            emit(.comment, until: characters.count)
+            return true
+        }
+
+        private mutating func scanString(closingWith quote: Character) {
+            var end = index + 1
+            while end < characters.count, characters[end] != quote {
+                end += characters[end] == "\\" ? 2 : 1
+            }
+            emit(.string, until: min(end + 1, characters.count))
+        }
+
+        private mutating func scanNumber() {
+            var end = index + 1
+            while end < characters.count,
+                  characters[end].isNumber || characters[end].isLetter || characters[end] == "." || characters[end] == "_" {
+                end += 1
+            }
+            emit(.number, until: end)
+        }
+
+        private mutating func scanWord() {
+            var end = index + 1
+            while end < characters.count,
+                  SyntaxHighlighter.isIdentifier(characters[end]) || characters[end] == "-" && insideTag {
+                end += 1
+            }
+            let word = String(characters[index..<end])
+            let previous = characters[..<index].last { !$0.isWhitespace }
+            let kind: Kind
+            if language.hasMarkup, previous == "<" || (previous == "/" && index >= 2 && characters[index - 2] == "<") {
+                kind = .tag
+                insideTag = true
+            } else if insideTag, end < characters.count, characters[end] == "=" {
+                kind = .attribute
+            } else if SyntaxHighlighter.keywords.contains(word) {
+                kind = .keyword
+            } else {
+                kind = characters[index].isUppercase ? .type : .plain
+            }
+            emit(kind, until: end)
+        }
+
+        /// Adds `characters[index..<end]` as a token, merged with the previous one of the same kind.
+        private mutating func emit(_ kind: Kind, until end: Int) {
             let text = String(characters[index..<end])
             if let last = tokens.last, last.kind == kind {
                 tokens[tokens.count - 1] = Token(kind: kind, text: last.text + text)
@@ -71,66 +151,18 @@ enum SyntaxHighlighter {
             }
             index = end
         }
-        func starts(with prefix: String, at position: Int) -> Bool {
+
+        private func starts(with prefix: String, at position: Int) -> Bool {
             let prefix = Array(prefix)
             return position + prefix.count <= characters.count && Array(characters[position..<position + prefix.count]) == prefix
         }
-
-        while index < characters.count {
-            let character = characters[index]
-            if language.hasMarkup, starts(with: "<!--", at: index) {
-                let close = (index..<characters.count).first { starts(with: "-->", at: $0) }.map { $0 + 3 }
-                emit(.comment, close ?? characters.count)
-            } else if language.lineComments.contains(where: { starts(with: $0, at: index) }),
-                      index == 0 || characters[index - 1].isWhitespace || language.lineComments != ["#"] {
-                emit(.comment, characters.count)
-            } else if character == "\"" || character == "'" || character == "`" {
-                var end = index + 1
-                while end < characters.count, characters[end] != character {
-                    end += characters[end] == "\\" ? 2 : 1
-                }
-                emit(.string, min(end + 1, characters.count))
-            } else if character.isNumber, index == 0 || !Self.isIdentifier(characters[index - 1]) {
-                var end = index + 1
-                while end < characters.count, characters[end].isNumber || characters[end].isLetter
-                        || characters[end] == "." || characters[end] == "_" {
-                    end += 1
-                }
-                emit(.number, end)
-            } else if Self.isIdentifierStart(character) {
-                var end = index + 1
-                while end < characters.count, Self.isIdentifier(characters[end]) || characters[end] == "-" && insideTag {
-                    end += 1
-                }
-                let word = String(characters[index..<end])
-                let previous = characters[..<index].last { !$0.isWhitespace }
-                let kind: Kind
-                if language.hasMarkup, previous == "<" || (previous == "/" && index >= 2 && characters[index - 2] == "<") {
-                    kind = .tag
-                    insideTag = true
-                } else if insideTag, end < characters.count, characters[end] == "=" {
-                    kind = .attribute
-                } else if keywords.contains(word) {
-                    kind = .keyword
-                } else if character.isUppercase {
-                    kind = .type
-                } else {
-                    kind = .plain
-                }
-                emit(kind, end)
-            } else {
-                if character == ">" { insideTag = false }
-                emit(language.hasMarkup && (character == "<" || character == ">") ? .tag : .plain, index + 1)
-            }
-        }
-        return tokens
     }
 
-    private static func isIdentifierStart(_ character: Character) -> Bool {
+    fileprivate static func isIdentifierStart(_ character: Character) -> Bool {
         character.isLetter || character == "_" || character == "$" || character == "@"
     }
 
-    private static func isIdentifier(_ character: Character) -> Bool {
+    fileprivate static func isIdentifier(_ character: Character) -> Bool {
         character.isLetter || character.isNumber || character == "_" || character == "$"
     }
 }

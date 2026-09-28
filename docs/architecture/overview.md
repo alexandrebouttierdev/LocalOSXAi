@@ -36,7 +36,8 @@
 | Terminal | Integrated terminal: `CommandRunner` port, history, streamed output, stop | 4 |
 | Git | `GitService` port, porcelain parsing, inspector summary | 4 |
 | Changes | `ChangeTracker`, review of the agent's edits: diff, accept, revert | 4 |
-| Files | File browser with fuzzy search (⌘P) and preview | 4 | Their folders are created
+| Files | File browser with fuzzy search (⌘P) and preview | 4 |
+| Updates | Checks GitHub Releases for a newer version at launch or on request (ADR 0030) | 9 | Their folders are created
 when their implementation starts; the UI already shows labelled placeholders for them.
 
 ## Single module, enforced boundaries

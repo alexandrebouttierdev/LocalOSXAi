@@ -40,7 +40,7 @@ struct RunContext: Sendable {
     /// `GenerationOptions.maxOutputTokens` (`AgentRuntime.generationOptions`), so a model that
     /// ignores the "write in several steps" instruction hits this limit and fails fast with
     /// `toolCallCutOff`/`outputLimitReached` instead of running until the provider's idle
-    /// timeout (docs/ai/providers.md § Timeouts, ADR 0029).
+    /// timeout (docs/ai/providers.md § Timeouts, ADR 0032).
     static func outputReserve(contextTokens: Int) -> Int {
         max(Int(Double(contextTokens) * outputReserveRatio), minimumOutputReserve)
     }
@@ -161,7 +161,10 @@ enum AgentPrompt {
         var messages: [LLMMessage] { entries.map(\.message) }
     }
 
-    static func system(projectName: String, instructions: [ProjectInstruction], toolsEnabled: Bool) -> String {
+    /// - Parameter customInstructions: the user's own, from Settings: after the
+    ///   built-in rules they refine, before the project's, which are more specific.
+    static func system(projectName: String, instructions: [ProjectInstruction], toolsEnabled: Bool,
+                       customInstructions: String = "") -> String {
         var prompt = """
             You are a careful software engineering agent working in the project “\(projectName)”. \
             Paths are relative to the project root. Today is \(Date().formatted(date: .complete, time: .omitted)).
@@ -184,6 +187,10 @@ enum AgentPrompt {
                 You cannot read or modify files with this model: answer from the conversation only, \
                 and say when you would need to inspect code.
                 """
+        }
+        let custom = customInstructions.trimmingCharacters(in: .whitespacesAndNewlines)
+        if !custom.isEmpty {
+            prompt += "\n\n# Instructions from the user\n\n\(custom)"
         }
         for instruction in instructions {
             prompt += "\n\n# Project instructions (\(instruction.source))\n\n\(instruction.content)"

@@ -10,7 +10,7 @@ arrive with Phases 4 and 6.
 
 | Priority | Input | Truncatable? |
 |---|---|---|
-| 1 | System prompt (agent role, tool-use rules, safety rules) | No |
+| 1 | System prompt (agent role, tool-use rules, safety rules), then the user's instructions from Settings › System Prompt (“# Instructions from the user”, at most 20,000 characters, [ADR 0032](../decisions/0029-user-system-prompt.md)) | No |
 | 2 | Project instructions (AGENTS.md etc.) | Only by an explicit, reported cap |
 | 3 | Current task: the latest user message | No |
 | 4 | Latest tool results of the current run | Yes: large outputs truncated with a marker |
@@ -27,7 +27,7 @@ budget = model.contextWindow.effectiveTokens − reserved output (e.g. 25%, min 
 - The reserved output (`RunContext.outputReserve`) is not just a margin for the prompt: it is
   also sent to the provider as `GenerationOptions.maxOutputTokens` when the effective size is
   known, not the fallback (`ContextWindow.isEffectiveSizeKnown`; `AgentRuntime.generationOptions`,
-  [ADR 0029](../decisions/0029-bounded-generation-output.md)), so a model that ignores the
+  [ADR 0032](../decisions/0032-bounded-generation-output.md)), so a model that ignores the
   "write in several steps" instruction hits this limit and fails fast with
   `toolCallCutOff`/`outputLimitReached` instead of generating silently until the provider's idle
   timeout (see [providers.md](providers.md#timeouts)).

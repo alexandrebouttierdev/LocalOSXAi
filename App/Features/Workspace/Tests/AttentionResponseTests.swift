@@ -8,7 +8,7 @@ struct AttentionResponseTests {
 
     private func response(_ attention: AgentAttention = .answered(preview: "Done."), visible: Bool,
                           notifications: Bool = true, sound: Bool = true) -> AttentionResponse {
-        AttentionResponse.response(to: attention, sessionID: sessionID, sessionTitle: "Fix login", projectName: "App",
+        AttentionResponse.response(to: attention, session: NotifiedSession(id: sessionID, title: "Fix login", projectName: "App"),
                                    isSessionVisible: visible,
                                    preferences: NotificationPreferences(showsNotifications: notifications, playsSound: sound))
     }

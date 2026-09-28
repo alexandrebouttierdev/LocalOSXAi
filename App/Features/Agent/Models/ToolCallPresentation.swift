@@ -4,10 +4,16 @@ import Foundation
 /// (“Read Makefile”, “Searched for “struct App””) instead of raw JSON, which
 /// stays available in the expanded details.
 struct ToolCallPresentation: Hashable, Sendable {
+    /// What the call does, which the row shows as the icon's hue.
+    enum Kind: Hashable, Sendable {
+        case read, search, edit, write, command, git, other
+    }
+
     let systemImage: String
     let title: String
     /// Secondary detail, e.g. the searched folder or file pattern.
     let detail: String?
+    let kind: Kind
 
     init(_ call: ToolCallRecord) {
         let arguments = (try? JSONValue.parse(call.argumentsJSON))?.objectValue ?? [:]
@@ -20,24 +26,33 @@ struct ToolCallPresentation: Hashable, Sendable {
 
         switch call.name {
         case "read_file":
-            self.init(systemImage: "doc.text", title: "Read \(path ?? "a file")", detail: nil)
+            self.init(.read, "doc.text", "Read \(path ?? "a file")")
         case "list_directory":
-            self.init(systemImage: "folder", title: "Listed \(path.map { $0 == "." ? "project root" : $0 } ?? "project root")", detail: nil)
+            self.init(.read, "folder", "Listed \(path.map { $0 == "." ? "project root" : $0 } ?? "project root")")
         case "search_files":
-            self.init(systemImage: "doc.text.magnifyingglass", title: "Found files matching \(string("pattern") ?? "…")", detail: place)
+            self.init(.search, "doc.text.magnifyingglass", "Found files matching \(string("pattern") ?? "…")", detail: place)
         case "search_text":
-            self.init(systemImage: "magnifyingglass", title: "Searched for “\(string("query") ?? "…")”",
+            self.init(.search, "magnifyingglass", "Searched for “\(string("query") ?? "…")”",
                       detail: [place, string("file_pattern")].compactMap { $0 }.joined(separator: " · ").nilIfEmpty)
         case "edit_file":
-            self.init(systemImage: "pencil", title: "Edited \(path ?? "a file")", detail: nil)
+            self.init(.edit, "pencil", "Edited \(path ?? "a file")")
         case "write_file":
-            self.init(systemImage: "square.and.pencil", title: "Wrote \(path ?? "a file")", detail: nil)
+            self.init(.write, "square.and.pencil", "Wrote \(path ?? "a file")")
+        case "run_command":
+            self.init(.command, "terminal", "Ran \(string("command").map { "“\($0)”" } ?? "a command")")
+        case "git_status":
+            self.init(.git, "arrow.triangle.branch", "Checked the Git status")
+        case "git_diff":
+            self.init(.git, "plusminus", "Read the Git diff", detail: place)
+        case "git_log":
+            self.init(.git, "clock.arrow.circlepath", "Read the Git history")
         default:
-            self.init(systemImage: "wrench.and.screwdriver", title: call.name, detail: nil)
+            self.init(.other, "wrench.and.screwdriver", call.name)
         }
     }
 
-    private init(systemImage: String, title: String, detail: String?) {
+    private init(_ kind: Kind, _ systemImage: String, _ title: String, detail: String? = nil) {
+        self.kind = kind
         self.systemImage = systemImage
         self.title = title
         self.detail = detail

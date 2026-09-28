@@ -137,4 +137,3 @@ private struct PanelHeader: View {
         .accessibilityLabel(label)
     }
 }
-

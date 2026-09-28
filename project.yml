@@ -45,11 +45,11 @@ targets:
       path: App/Resources/Info.plist
       properties:
         CFBundleDisplayName: LocalOSXAi
-        CFBundleShortVersionString: "0.1.0"
+        CFBundleShortVersionString: "0.0.0.1"
         CFBundleVersion: "1"
         LSApplicationCategoryType: public.app-category.developer-tools
         LSMinimumSystemVersion: "15.0"
-        NSHumanReadableCopyright: ""
+        NSHumanReadableCopyright: "© 2026 Alexandre Bouttier. MIT License."
         # Inter (OFL, App/Resources/Fonts) is copied flat into Contents/Resources.
         ATSApplicationFontsPath: "."
     settings:

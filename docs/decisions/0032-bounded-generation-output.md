@@ -1,4 +1,4 @@
-# 0029: Send the context's reserved output margin as the model's output cap (amends 0008)
+# 0032: Send the context's reserved output margin as the model's output cap (amends 0008)
 
 **Status:** Accepted
 

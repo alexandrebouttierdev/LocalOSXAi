@@ -70,6 +70,20 @@ struct ToolCallPresentationTests {
         #expect(presentation.detail == "in Sources · *.swift")
     }
 
+    @Test("commands and Git read as sentences too, and every call has a kind for its color")
+    func commandsGitAndKinds() {
+        #expect(present("run_command", #"{"command":"swift test"}"#).title == "Ran “swift test”")
+        #expect(present("git_status", "{}").title == "Checked the Git status")
+        #expect(present("git_diff", #"{"path":"App"}"#).detail == "in App")
+        #expect(present("git_log", "{}").kind == .git)
+        #expect(present("read_file", "{}").kind == .read)
+        #expect(present("search_text", "{}").kind == .search)
+        #expect(present("edit_file", "{}").kind == .edit)
+        #expect(present("write_file", "{}").kind == .write)
+        #expect(present("run_command", "{}").kind == .command)
+        #expect(present("custom_tool", "{}").kind == .other)
+    }
+
     @Test("malformed arguments and unknown tools still render")
     func fallbacks() {
         #expect(present("read_file", "{broken").title == "Read a file")

@@ -20,3 +20,6 @@ xcuserdata/
 
 # Coverage artifacts
 *.profraw
+
+# Release archives (scripts/build-release.sh)
+dist/

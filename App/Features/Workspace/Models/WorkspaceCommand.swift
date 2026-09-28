@@ -18,6 +18,8 @@ enum WorkspaceCommand: String, CaseIterable, Identifiable, Sendable {
     case toggleSidebar
     case toggleInspector
     case openSettings
+    case about
+    case checkForUpdates
 
     var id: String { rawValue }
 
@@ -36,6 +38,8 @@ enum WorkspaceCommand: String, CaseIterable, Identifiable, Sendable {
         case .toggleSidebar: "Toggle Sidebar"
         case .toggleInspector: "Toggle Inspector"
         case .openSettings: "Open Settings"
+        case .about: "About LocalOSXAi"
+        case .checkForUpdates: "Check for Updates…"
         }
     }
 
@@ -54,6 +58,8 @@ enum WorkspaceCommand: String, CaseIterable, Identifiable, Sendable {
         case .toggleSidebar: "sidebar.left"
         case .toggleInspector: "sidebar.right"
         case .openSettings: "gearshape"
+        case .about: "info.circle"
+        case .checkForUpdates: "arrow.down.circle"
         }
     }
 
@@ -72,6 +78,7 @@ enum WorkspaceCommand: String, CaseIterable, Identifiable, Sendable {
         case .toggleSidebar: CommandShortcut("s", modifiers: [.control, .command])
         case .toggleInspector: CommandShortcut("i", modifiers: [.option, .command])
         case .openSettings: CommandShortcut(",")
+        case .about, .checkForUpdates: nil
         }
     }
 
@@ -80,7 +87,7 @@ enum WorkspaceCommand: String, CaseIterable, Identifiable, Sendable {
         case .openProject, .newSession, .projectSettings, .searchFiles: "Project"
         case .changeModel, .compactSession: "Agent"
         case .showAgent, .showFiles, .showChanges, .openTerminal: "Navigation"
-        case .toggleSidebar, .toggleInspector, .openSettings: "Window"
+        case .toggleSidebar, .toggleInspector, .openSettings, .about, .checkForUpdates: "Window"
         }
     }
 
@@ -98,6 +105,8 @@ enum WorkspaceCommand: String, CaseIterable, Identifiable, Sendable {
         case .openTerminal: ["shell", "command", "run"]
         case .toggleSidebar, .toggleInspector: ["panel", "hide", "show"]
         case .openSettings: ["preferences", "configuration"]
+        case .about: ["version", "github", "author", "license", "website"]
+        case .checkForUpdates: ["update", "upgrade", "new version", "release", "download"]
         }
     }
 

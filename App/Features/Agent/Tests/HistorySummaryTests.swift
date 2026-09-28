@@ -78,6 +78,18 @@ struct AgentPromptSummaryTests {
         #expect(history.entries.map(\.messageID) == [messages[4].id, messages[6].id])
     }
 
+    @Test("the user's instructions come after the built-in prompt and before the project's")
+    func customInstructions() throws {
+        let project = ProjectInstruction(source: "AGENTS.md", content: "Use tabs.", isTruncated: false)
+        let prompt = AgentPrompt.system(projectName: "Demo", instructions: [project], toolsEnabled: true,
+                                        customInstructions: "  Answer in French.\n")
+        let custom = try #require(prompt.range(of: "# Instructions from the user\n\nAnswer in French."))
+        let agents = try #require(prompt.range(of: "# Project instructions (AGENTS.md)"))
+        #expect(custom.lowerBound < agents.lowerBound)
+        #expect(!AgentPrompt.system(projectName: "Demo", instructions: [], toolsEnabled: true, customInstructions: " \n")
+            .contains("Instructions from the user"))
+    }
+
     @Test("the summary is appended to the system prompt, not sent as a message")
     func systemWithSummary() {
         #expect(AgentPrompt.system("S", summary: nil) == "S")

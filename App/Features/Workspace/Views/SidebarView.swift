@@ -166,7 +166,7 @@ struct SidebarView: View {
     private var viewRows: some View {
         VStack(alignment: .leading, spacing: 1) {
             ForEach(Self.views) { tab in
-                SidebarRow(isSelected: viewModel.selectedTab == tab, action: { viewModel.selectedTab = tab }) {
+                SidebarRow(isSelected: viewModel.selectedTab == tab, action: { viewModel.selectedTab = tab }, label: {
                     HStack(spacing: AppSpacing.sm) {
                         SidebarIcon(systemImage: tab.systemImage, tint: Self.tint(for: tab))
                         Text(tab.title)
@@ -178,7 +178,7 @@ struct SidebarView: View {
                                 .accessibilityLabel("\(viewModel.pendingChangesCount) pending")
                         }
                     }
-                }
+                })
             }
         }
     }
@@ -217,9 +217,9 @@ struct SidebarView: View {
         return SidebarRow(isSelected: isSelected, action: {
             isListFocused = true
             Task { await viewModel.selectSession(session.id) }
-        }) {
+        }, label: {
             SessionRowLabel(session: session, activity: viewModel.activity(of: session.id))
-        }
+        })
         .contextMenu {
             Button("Delete Session", role: .destructive) {
                 Task { await viewModel.sessions.delete(session.id) }
@@ -248,6 +248,35 @@ struct SidebarView: View {
     // MARK: Chrome
 
     private var footer: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            footerRow
+            HStack(spacing: AppSpacing.sm) {
+                versionButton
+                Spacer(minLength: 0)
+                if let release = viewModel.updates.availableRelease, viewModel.updates.showsBadge {
+                    UpdateBadge(release: release, action: viewModel.updates.showAvailableUpdate)
+                        .transition(.opacity.combined(with: .scale(scale: 0.9)))
+                }
+            }
+            .padding(.horizontal, AppSpacing.sm)
+            .padding(.bottom, AppSpacing.sm)
+            .appAnimation(AppAnimation.quick, value: viewModel.updates.showsBadge)
+        }
+    }
+
+    /// The app's version, at the very bottom; opens the About window.
+    private var versionButton: some View {
+        Button { onCommand(.about) } label: {
+            Text("LocalOSXAi \(viewModel.appInfo.shortVersion)")
+                .font(AppTypography.caption.monospacedDigit())
+                .foregroundStyle(AppColors.textTertiary)
+        }
+        .buttonStyle(.subtle)
+        .help("About LocalOSXAi")
+        .accessibilityLabel("About LocalOSXAi, \(viewModel.appInfo.fullVersion)")
+    }
+
+    private var footerRow: some View {
         HStack(spacing: AppSpacing.sm) {
             Button {
                 onCommand(.openSettings)

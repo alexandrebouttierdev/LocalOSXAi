@@ -12,13 +12,23 @@ final class AgentSettingsViewModel {
     /// `nil` without a notifier or before the first read.
     private(set) var notificationPermission: NotificationPermission?
 
+    /// The prompt every run starts with, before the user's instructions,
+    /// shown read-only so the user knows what they add to.
+    let builtInPrompt: String
+
     private let store: any AgentSettingsStore
     private let notifier: (any UserNotifying)?
 
-    init(store: any AgentSettingsStore, notifier: (any UserNotifying)? = nil) {
+    init(store: any AgentSettingsStore, notifier: (any UserNotifying)? = nil, builtInPrompt: String = "") {
         self.store = store
         self.notifier = notifier
+        self.builtInPrompt = builtInPrompt
         settings = store.load()
+    }
+
+    /// Saved as typed; text past the limit is cut.
+    func setCustomInstructions(_ value: String) {
+        update { $0.customInstructions = value }
     }
 
     func setMaxIterations(_ value: Int) {
@@ -35,6 +45,10 @@ final class AgentSettingsViewModel {
 
     func setCompactThresholdPercent(_ value: Int) {
         update { $0.compactThresholdPercent = value }
+    }
+
+    func setChecksForUpdates(_ value: Bool) {
+        update { $0.checksForUpdates = value }
     }
 
     /// Turning notifications on asks macOS for permission if it never was.

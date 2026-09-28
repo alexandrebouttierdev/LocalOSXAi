@@ -8,6 +8,11 @@ struct AppCommands: Commands {
     var body: some Commands {
         // Settings… (⌘,) opens the settings screen of the main window: the app
         // has no separate Settings window (ADR 0024).
+        CommandGroup(replacing: .appInfo) {
+            Button("About LocalOSXAi") { workspace.perform(.about) }
+            button(.checkForUpdates)
+        }
+
         CommandGroup(replacing: .appSettings) {
             Button("Settings…") { workspace.perform(.openSettings) }
                 .keyboardShortcut(WorkspaceCommand.openSettings.shortcut?.keyboardShortcut)
