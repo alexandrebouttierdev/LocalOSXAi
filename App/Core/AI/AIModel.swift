@@ -61,11 +61,23 @@ struct ContextWindow: Hashable, Sendable, Codable {
     var loadedTokens: Int?
     /// Size explicitly configured by the user for this model.
     var configuredTokens: Int?
+    /// The runtime allocates the context length sent with each request
+    /// (Ollama's `num_ctx`), so the effective size is real even when it is the fallback.
+    var allocatesRequestedTokens: Bool
 
-    init(advertisedTokens: Int? = nil, loadedTokens: Int? = nil, configuredTokens: Int? = nil) {
+    init(advertisedTokens: Int? = nil, loadedTokens: Int? = nil, configuredTokens: Int? = nil,
+         allocatesRequestedTokens: Bool = false) {
         self.advertisedTokens = advertisedTokens
         self.loadedTokens = loadedTokens
         self.configuredTokens = configuredTokens
+        self.allocatesRequestedTokens = allocatesRequestedTokens
+    }
+
+    /// False when the effective size is only the fallback guessed for a model
+    /// that its runtime will load on demand with a size of its own (LM Studio
+    /// after unloading an idle model): the model may get far more room.
+    func isEffectiveSizeKnown(choosing chosen: Int?) -> Bool {
+        allocatesRequestedTokens || chosen != nil || configuredTokens != nil || loadedTokens != nil
     }
 
     /// The token budget the context manager must respect, and the context

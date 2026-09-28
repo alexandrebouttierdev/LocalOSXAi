@@ -25,7 +25,8 @@ budget = model.contextWindow.effectiveTokens − reserved output (e.g. 25%, min 
 ```
 
 - The reserved output (`RunContext.outputReserve`) is not just a margin for the prompt: it is
-  also sent to the provider as `GenerationOptions.maxOutputTokens` (`AgentRuntime.generationOptions`,
+  also sent to the provider as `GenerationOptions.maxOutputTokens` when the effective size is
+  known, not the fallback (`ContextWindow.isEffectiveSizeKnown`; `AgentRuntime.generationOptions`,
   [ADR 0029](../decisions/0029-bounded-generation-output.md)), so a model that ignores the
   "write in several steps" instruction hits this limit and fails fast with
   `toolCallCutOff`/`outputLimitReached` instead of generating silently until the provider's idle

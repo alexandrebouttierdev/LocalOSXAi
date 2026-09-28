@@ -34,7 +34,8 @@ struct ProviderHTTPIntegrationTests {
         #expect(models.count == 1)
         #expect(model.name == "gemma4:26b")
         #expect(model.capabilities == [.streaming, .tools, .vision, .reasoning])
-        #expect(model.contextWindow == ContextWindow(advertisedTokens: 262_144, loadedTokens: 65_536, configuredTokens: 32_768))
+        #expect(model.contextWindow == ContextWindow(advertisedTokens: 262_144, loadedTokens: 65_536, configuredTokens: 32_768,
+                                                     allocatesRequestedTokens: true))
     }
 
     @Test("Ollama falls back to /api/show for servers without capabilities in tags")
@@ -134,6 +135,8 @@ struct ProviderHTTPIntegrationTests {
         #expect(loaded.capabilities == [.streaming, .tools, .vision])
         #expect(loaded.contextWindow.effectiveTokens == 80_128)
         #expect(models[1].contextWindow.loadedTokens == nil)
+        // LM Studio loads an unloaded model with its own size: the fallback is only a guess.
+        #expect(!models[1].contextWindow.isEffectiveSizeKnown(choosing: nil))
         #expect(route.requests.map(\.path) == ["/api/v0/models"])
     }
 

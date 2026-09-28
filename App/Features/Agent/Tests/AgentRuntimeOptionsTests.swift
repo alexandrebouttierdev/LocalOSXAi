@@ -46,14 +46,26 @@ struct AgentRuntimeOptionsTests {
         #expect(result.elements.contains { if case .contextUsageUpdated(let usage) = $0 { usage.budgetTokens == 16_384 } else { false } })
     }
 
-    @Test("a run's output is capped to the context's reserved margin, so a runaway generation fails fast")
+    @Test("with a known context, output is capped to its reserved margin, so a runaway generation fails fast")
     func generationIsCappedToOutputReserve() async throws {
         let provider = FakeLLMProvider(turns: [.response("ok")])
-        let result = await collect(try runtime(provider).run(Fixtures.runRequest(), approver: StubApprover()))
+        var model = Fixtures.toolModel
+        model.contextWindow.loadedTokens = 16_384
+        let runtime = AgentRuntime(resolver: StubResolver(model: model, provider: provider), tools: try ToolRegistry([EchoTool()]),
+                                   instructionsLoader: StubInstructionsLoader())
 
-        // Fixtures.toolModel has no configured or loaded context, so it falls back to 8,192 tokens.
-        #expect(provider.requests.first?.options.maxOutputTokens == RunContext.outputReserve(contextTokens: 8_192))
+        let result = await collect(runtime.run(Fixtures.runRequest(), approver: StubApprover()))
+
+        #expect(provider.requests.first?.options.maxOutputTokens == RunContext.outputReserve(contextTokens: 16_384))
         #expect(result.error == nil)
+    }
+
+    @Test("with only the fallback context, output is not capped: the runtime may load the model with more room")
+    func guessedContextIsNotCapped() async throws {
+        let provider = FakeLLMProvider(turns: [.response("ok")])
+        // Fixtures.toolModel has no configured or loaded context: it falls back to 8,192 tokens.
+        _ = await collect(try runtime(provider).run(Fixtures.runRequest(), approver: StubApprover()))
+        #expect(provider.requests.first?.options.maxOutputTokens == nil)
     }
 
     @Test("an explicit maxOutputTokens is kept instead of the computed reserve")

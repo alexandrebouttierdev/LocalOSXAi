@@ -113,8 +113,9 @@ move to the new default; any other value is kept. The system prompt and the `wri
 description ask models to write long files in several steps, which keeps each call short.
 LM Studio was observed accepting a connection and sending nothing for more than 60 s while busy.
 
-A model that ignores that instruction no longer relies on this timeout alone: `AgentRuntime`
-sends the context's reserved output margin as `max_tokens` (`num_predict` for Ollama), so the
+A model that ignores that instruction no longer relies on this timeout alone: when the context
+is known (always for Ollama, which allocates `num_ctx`; for LM Studio, once the model is loaded),
+`AgentRuntime` sends the context's reserved output margin as `max_tokens` (`num_predict` for Ollama), so the
 run fails fast with `toolCallCutOff`/`outputLimitReached` instead of generating for minutes
 before the idle timeout fires ([ADR 0029](../decisions/0029-bounded-generation-output.md),
 [agent.md](agent.md#limits-agentlimits)).

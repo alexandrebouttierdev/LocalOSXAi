@@ -61,7 +61,7 @@ header per turn.
 | Tool timeout | 30 s | Failed tool result, and the run continues |
 | Consecutive all-invalid iterations | 3 | Run fails with `AgentError.tooManyInvalidToolCalls` |
 | Tool output sent to the model | 16,000 characters (head + tail) | Truncated with a marker |
-| Model output per turn | The context's reserved output margin (`RunContext.outputReserve`, e.g. 25%, min 1K), sent as `GenerationOptions.maxOutputTokens` unless the run already set one ([ADR 0029](../decisions/0029-bounded-generation-output.md)) | `toolCallCutOff` or `outputLimitReached` |
+| Model output per turn | The context's reserved output margin (`RunContext.outputReserve`, e.g. 25%, min 1K), sent as `GenerationOptions.maxOutputTokens` unless the run already set one or the context is only the 8K fallback ([ADR 0029](../decisions/0029-bounded-generation-output.md)) | `toolCallCutOff` or `outputLimitReached` |
 | Model silence | Provider idle timeout, 900 s by default (Settings) | `ProviderError.timedOut` |
 
 Steps per run (5–100) and the tool timeout (15 s–5 min) are set in Settings › General › Agent

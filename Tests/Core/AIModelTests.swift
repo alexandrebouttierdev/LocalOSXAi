@@ -30,6 +30,15 @@ struct AIModelTests {
         #expect(ContextWindow(configuredTokens: 20_000).effectiveTokens == 20_000)
     }
 
+    @Test("the effective size is known when allocated per request, chosen, configured or loaded, not when guessed")
+    func effectiveSizeKnown() {
+        #expect(!ContextWindow(advertisedTokens: 262_144).isEffectiveSizeKnown(choosing: nil))
+        #expect(ContextWindow(advertisedTokens: 262_144).isEffectiveSizeKnown(choosing: 16_384))
+        #expect(ContextWindow(advertisedTokens: 262_144, allocatesRequestedTokens: true).isEffectiveSizeKnown(choosing: nil))
+        #expect(ContextWindow(configuredTokens: 20_000).isEffectiveSizeKnown(choosing: nil))
+        #expect(ContextWindow(loadedTokens: 80_128).isEffectiveSizeKnown(choosing: nil))
+    }
+
     @Test("a small advertised window lowers the fallback")
     func smallAdvertisedWindow() {
         #expect(ContextWindow(advertisedTokens: 4_096).effectiveTokens == 4_096)

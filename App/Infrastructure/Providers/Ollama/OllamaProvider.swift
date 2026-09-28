@@ -74,7 +74,8 @@ struct OllamaProvider: LLMProvider {
             contextWindow: ContextWindow(
                 advertisedTokens: advertised,
                 loadedTokens: loadedContext,
-                configuredTokens: configuration.contextTokens
+                configuredTokens: configuration.contextTokens,
+                allocatesRequestedTokens: true
             ),
             capabilities: capabilities
         )

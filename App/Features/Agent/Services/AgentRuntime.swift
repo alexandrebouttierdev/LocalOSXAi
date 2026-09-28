@@ -105,7 +105,8 @@ struct AgentRuntime: AgentService {
             let response = try await streamResponse(
                 LLMRequest(model: resolved.model.name, messages: messages,
                            tools: toolsEnabled ? tools.definitions : [],
-                           options: generationOptions(request.options.generation, contextTokens: contextTokens)),
+                           options: generationOptions(request.options.generation, model: resolved.model,
+                                                      contextTokens: contextTokens)),
                 provider: resolved.provider, contextTokens: contextTokens, emit: emit
             )
             // A call cut by the length limit has truncated arguments: running
@@ -232,7 +233,7 @@ struct AgentRuntime: AgentService {
                                                   maxInputTokens: budget, maxSummaryTokens: summaryTokens)
         var text = ""
         let llmRequest = LLMRequest(model: resolved.model.name, messages: messages,
-                                    options: generationOptions(generation, contextTokens: contextTokens))
+                                    options: generationOptions(generation, model: resolved.model, contextTokens: contextTokens))
         for try await event in resolved.provider.stream(request: llmRequest) {
             if case .textDelta(let delta) = event { text += delta }
         }
@@ -256,10 +257,15 @@ struct AgentRuntime: AgentService {
     /// the answer so a model that ignores the "write in several steps" instruction fails fast
     /// (`toolCallCutOff`/`outputLimitReached`) instead of generating silently until the
     /// provider's idle timeout (docs/ai/context.md § Budget, ADR 0029).
-    private func generationOptions(_ chosen: GenerationOptions, contextTokens: Int) -> GenerationOptions {
+    ///
+    /// No cap when the context is only the fallback guess: a model its runtime loads on demand
+    /// may get far more room, and a cap derived from the guess would cut a file it can write.
+    private func generationOptions(_ chosen: GenerationOptions, model: AIModel, contextTokens: Int) -> GenerationOptions {
         var options = chosen
         options.contextLength = contextTokens
-        options.maxOutputTokens = chosen.maxOutputTokens ?? RunContext.outputReserve(contextTokens: contextTokens)
+        if options.maxOutputTokens == nil, model.contextWindow.isEffectiveSizeKnown(choosing: chosen.contextLength) {
+            options.maxOutputTokens = RunContext.outputReserve(contextTokens: contextTokens)
+        }
         return options
     }
 

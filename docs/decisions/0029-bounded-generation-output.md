@@ -26,8 +26,14 @@ still fails.
 
 `AgentRuntime.generationOptions` sends `RunContext.outputReserve(contextTokens:)` as
 `GenerationOptions.maxOutputTokens`, unless the run already set one (a future per-model override
-stays possible). This applies to every model call the runtime makes, including the summary
-request (`AgentRuntime.summary`): the reserve is always larger than the ~1K tokens a summary asks
+stays possible), **and only when the effective context is known**
+(`ContextWindow.isEffectiveSizeKnown`): the runtime allocates the size sent with each request
+(Ollama's `num_ctx`, `allocatesRequestedTokens`), or the size was chosen, configured, or reported
+for the loaded model. When it is only the 8K fallback, no cap is sent: LM Studio unloads idle
+models and loads them again on demand with a size of its own (80K in the run that showed this),
+and a 2K cap derived from the guess cut a landing page that the model could write in 11K tokens.
+
+The cap applies to every model call the runtime makes, including the summary request (`AgentRuntime.summary`): the reserve is always larger than the ~1K tokens a summary asks
 for, so it never cuts a summary short.
 
 ## Alternatives
@@ -47,6 +53,8 @@ for, so it never cuts a summary short.
 - A tool call or answer that would have run away now fails fast with `toolCallCutOff` or
   `outputLimitReached`, both of which already tell the model (and the user, via
   `recoverySuggestion`) to split the work into smaller steps or use a larger context.
+- A run on a model whose runtime has not loaded it yet (fallback context) keeps the old
+  behavior for that run: no cap, and the idle timeout as the only guard.
 - Very small context windows (near the 1,024-token floor) leave little room for a real answer;
   this was already true of the prompt budget before this change, so no new failure mode is
   introduced, only a faster one.
