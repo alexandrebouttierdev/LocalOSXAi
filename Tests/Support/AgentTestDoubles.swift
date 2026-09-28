@@ -34,6 +34,20 @@ struct StubResolver: ModelResolving {
     func resolve(_ id: AIModel.ID) async -> ResolvedModel? { resolved }
 }
 
+/// Resolves to each model in turn (the last one from then on) and counts the
+/// calls, like a runtime that loads the model on demand between two resolutions.
+struct SequenceResolver: ModelResolving {
+    let models: [AIModel?]
+    let provider: any LLMProvider
+    let calls = LockedValue(0)
+
+    func resolve(_ id: AIModel.ID) async -> ResolvedModel? {
+        let index = min(calls.value, models.count - 1)
+        calls.value += 1
+        return models[index].map { ResolvedModel(model: $0, provider: provider) }
+    }
+}
+
 /// Returns fixed instructions, plus `claudeInstructions` when the run opted in.
 struct StubInstructionsLoader: ProjectInstructionsLoading {
     var instructions: [ProjectInstruction] = []

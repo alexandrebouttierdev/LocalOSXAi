@@ -27,6 +27,7 @@ run(request, approver):
   resolve model (ModelResolving) · load AGENTS.md · build RunContext
   tools offered only if the model declares .tools
   repeat up to maxIterations:
+      second iteration: context was only the fallback? re-read the model; use its loaded size
       fit context (compact / drop history, or fail with contextOverflow) → emit contextUsageUpdated
       emit assistantMessageStarted; stream the model (text & reasoning forwarded live)
       tool calls cut by length → fail with toolCallCutOff (never run: their arguments are truncated)

@@ -15,7 +15,8 @@ struct RunContext: Sendable {
     /// Size kept (head + tail) of a tool result when compacting.
     static let compactedToolOutputCharacters = 1_500
 
-    let contextTokens: Int
+    /// Can grow (or shrink) during a run when the model's real size becomes known.
+    var contextTokens: Int
     private let system: LLMMessage
     private var history: [LLMMessage]
     /// The user's request followed by this run's assistant and tool messages.

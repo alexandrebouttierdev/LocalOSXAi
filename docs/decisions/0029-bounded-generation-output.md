@@ -53,8 +53,10 @@ for, so it never cuts a summary short.
 - A tool call or answer that would have run away now fails fast with `toolCallCutOff` or
   `outputLimitReached`, both of which already tell the model (and the user, via
   `recoverySuggestion`) to split the work into smaller steps or use a larger context.
-- A run on a model whose runtime has not loaded it yet (fallback context) keeps the old
-  behavior for that run: no cap, and the idle timeout as the only guard.
+- The first request of a run on a model its runtime has not loaded yet (fallback context) keeps
+  the old behavior: no cap, and the idle timeout as the only guard. After that request the run
+  re-reads the model once (`AgentRuntime.rereadIfGuessed`) and, if the loaded size is reported,
+  budgets and caps the rest of the run for it.
 - Very small context windows (near the 1,024-token floor) leave little room for a real answer;
   this was already true of the prompt budget before this change, so no new failure mode is
   introduced, only a faster one.

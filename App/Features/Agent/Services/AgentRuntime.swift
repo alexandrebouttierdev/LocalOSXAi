@@ -79,7 +79,7 @@ struct AgentRuntime: AgentService {
     private func execute(_ request: AgentRunRequest, approver: any ToolApprover,
                          emit: @escaping @Sendable (AgentEvent) -> Void) async throws {
         guard let modelID = request.model else { throw AgentError.noModelSelected }
-        guard let resolved = await resolver.resolve(modelID) else { throw AgentError.modelUnavailable(name: modelID.name) }
+        guard var resolved = await resolver.resolve(modelID) else { throw AgentError.modelUnavailable(name: modelID.name) }
 
         let limits = limits()
         let toolsEnabled = resolved.model.supportsTools && !tools.isEmpty
@@ -88,31 +88,31 @@ struct AgentRuntime: AgentService {
         )
         if !instructions.isEmpty { emit(.instructionsLoaded(instructions.map(\.source))) }
 
-        let contextTokens = resolved.model.contextWindow.effectiveTokens(choosing: request.options.generation.contextLength)
         let system = AgentPrompt.system(projectName: request.projectRoot.lastPathComponent,
                                         instructions: instructions, toolsEnabled: toolsEnabled)
-        var context = try await runContext(system: system, request: request, resolved: resolved, contextTokens: contextTokens,
-                                           limits: limits, emit: emit)
+        // Its `contextTokens` is the run's budget from here on, re-read once (`rereadIfGuessed`).
+        var context = try await runContext(system: system, request: request, resolved: resolved, limits: limits, emit: emit)
         let executor = makeExecutor(commandRules: request.options.commandRules, limits: limits)
         let toolContext = ToolContext(projectRoot: request.projectRoot, changeRecorder: changeRecorder)
         var consecutiveInvalidIterations = 0
 
-        for _ in 0..<limits.maxIterations {
+        for iteration in 0..<limits.maxIterations {
             try Task.checkCancellation()
+            if iteration == 1 { await rereadIfGuessed(request, resolved: &resolved, context: &context) }
             let (messages, estimated) = try context.fittedMessages()
-            emit(.contextUsageUpdated(ContextUsage(usedTokens: estimated, budgetTokens: contextTokens)))
+            emit(.contextUsageUpdated(ContextUsage(usedTokens: estimated, budgetTokens: context.contextTokens)))
 
             let response = try await streamResponse(
                 LLMRequest(model: resolved.model.name, messages: messages,
                            tools: toolsEnabled ? tools.definitions : [],
                            options: generationOptions(request.options.generation, model: resolved.model,
-                                                      contextTokens: contextTokens)),
-                provider: resolved.provider, contextTokens: contextTokens, emit: emit
+                                                      contextTokens: context.contextTokens)),
+                provider: resolved.provider, contextTokens: context.contextTokens, emit: emit
             )
             // A call cut by the length limit has truncated arguments: running
             // it could write half a file, and retrying hits the same limit.
             if response.finishReason == .length, !response.toolCalls.isEmpty {
-                throw AgentError.toolCallCutOff(contextTokens: contextTokens)
+                throw AgentError.toolCallCutOff(contextTokens: context.contextTokens)
             }
             context.appendAssistant(text: response.text, toolCalls: response.toolCalls)
             guard !response.toolCalls.isEmpty else {
@@ -138,10 +138,25 @@ struct AgentRuntime: AgentService {
         emit(.finished(.reachedIterationLimit))
     }
 
+    /// Re-reads the model after the run's first request when the run started on the fallback
+    /// context: LM Studio unloads idle models and loads them on demand with a size of its own,
+    /// which only the listing after loading reports. The rest of the run then budgets, and caps
+    /// the output, for that size. Nothing changes while the size is still unknown
+    /// (docs/ai/context.md § Budget).
+    private func rereadIfGuessed(_ request: AgentRunRequest, resolved: inout ResolvedModel, context: inout RunContext) async {
+        let chosen = request.options.generation.contextLength
+        guard let id = request.model, !resolved.model.contextWindow.isEffectiveSizeKnown(choosing: chosen),
+              let refreshed = await resolver.resolve(id),
+              refreshed.model.contextWindow.isEffectiveSizeKnown(choosing: chosen) else { return }
+        resolved = refreshed
+        context.contextTokens = refreshed.model.contextWindow.effectiveTokens(choosing: chosen)
+    }
+
     /// The run's starting context: system prompt, earlier conversation
     /// (summarized first when needed) and the new request.
-    private func runContext(system: String, request: AgentRunRequest, resolved: ResolvedModel, contextTokens: Int,
+    private func runContext(system: String, request: AgentRunRequest, resolved: ResolvedModel,
                             limits: AgentLimits, emit: @Sendable (AgentEvent) -> Void) async throws -> RunContext {
+        let contextTokens = resolved.model.contextWindow.effectiveTokens(choosing: request.options.generation.contextLength)
         var history = AgentPrompt.history(from: request.history)
         let prompt = AgentPrompt.userContent(request.prompt, attachments: request.attachments)
         if limits.summarizesHistory {

@@ -33,6 +33,11 @@ budget = model.contextWindow.effectiveTokens − reserved output (e.g. 25%, min 
   timeout (see [providers.md](providers.md#timeouts)).
 - The effective window comes from `ContextWindow` and is never the advertised maximum alone
   (see [model-capabilities.md](model-capabilities.md)).
+- A run that starts on the 8K fallback (LM Studio unloaded the idle model) re-reads the model once,
+  after the first response, when the runtime has loaded it (`AgentRuntime.rereadIfGuessed`). If the
+  loaded size is now reported, the rest of the run budgets for it (the meter shows the new budget)
+  and gets the output cap. The inspector's Model › Context row keeps the size found at discovery
+  until the models are refreshed.
 - Counting uses `TokenEstimator`, a deliberately conservative heuristic of about 4 characters
   per token, plus 4 tokens of overhead per message. When a provider reports real usage
   (`LLMEvent.usage`), the manager recalibrates its ratio for that model for the rest of the session.
